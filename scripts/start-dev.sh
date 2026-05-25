@@ -14,7 +14,7 @@ if [ ! -d frontend/node_modules ]; then
   exit 1
 fi
 
-(cd infra && docker compose up -d)
+(cd infra && docker compose -f docker-compose.dev.yml up -d)
 
 (cd backend/InsightVault.API && dotnet run --launch-profile http) &
 (cd ai-service && ./venv/bin/python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000) &

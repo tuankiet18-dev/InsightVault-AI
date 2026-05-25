@@ -12,7 +12,7 @@ if (-not (Test-Path "frontend\node_modules")) {
 }
 
 Push-Location "infra"
-docker compose up -d
+docker compose -f docker-compose.dev.yml up -d
 Pop-Location
 
 Start-Process powershell -ArgumentList @(

@@ -10,7 +10,26 @@ InsightVault AI is a collaborative AI-powered knowledge workspace for project do
 - Python 3.13
 - Docker Desktop
 
-## First-Time Setup On Windows
+## Run The Full Stack With Docker
+
+Use this when onboarding, demoing, or checking that the whole system boots from a clean clone.
+
+Windows:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start-docker.ps1
+```
+
+macOS/Linux:
+
+```bash
+chmod +x scripts/*.sh
+./scripts/start-docker.sh
+```
+
+This starts frontend, backend, AI service, PostgreSQL, MinIO, and RabbitMQ.
+
+## Native Development Setup On Windows
 
 Run from the repository root:
 
@@ -18,7 +37,7 @@ Run from the repository root:
 powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
 ```
 
-## First-Time Setup On macOS/Linux
+## Native Development Setup On macOS/Linux
 
 ```bash
 chmod +x scripts/*.sh
@@ -31,13 +50,13 @@ Then open `ai-service\.env` and set:
 GEMINI_API_KEY=your_key_here
 ```
 
-## Start Local Development On Windows
+## Start Native Development On Windows
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\start-dev.ps1
 ```
 
-## Start Local Development On macOS/Linux
+## Start Native Development On macOS/Linux
 
 ```bash
 ./scripts/start-dev.sh
@@ -52,6 +71,11 @@ Local URLs:
 - RabbitMQ console: http://localhost:15672
 
 Default local infrastructure credentials are in `infra\.env.example`.
+
+## Docker Compose Files
+
+- `infra/docker-compose.yml`: full stack for onboarding/demo/integration.
+- `infra/docker-compose.dev.yml`: infrastructure only for native coding/debug.
 
 ## Verify Before Commit
 
