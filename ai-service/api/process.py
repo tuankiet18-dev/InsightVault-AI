@@ -1,7 +1,4 @@
-"""
-POST /process-document
-Full pipeline: read MinIO → extract text → chunk → embed → store pgvector → summarize.
-"""
+"""POST /process-document: extract, chunk, embed, store, summarize."""
 
 import logging
 
@@ -10,11 +7,16 @@ from minio import Minio
 
 from core.config import settings
 from models.process import ProcessDocumentRequest, ProcessDocumentResponse
-from services.extractor import extract
 from services.chunker import chunk_text
+from services.document_store import (
+    mark_document_completed,
+    mark_document_failed,
+    mark_document_processing,
+)
 from services.embedder import embed_documents
-from services.vector_store import insert_chunks, delete_chunks_by_document
+from services.extractor import extract
 from services.summarizer import generate_summary
+from services.vector_store import delete_chunks_by_document, insert_chunks
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -31,16 +33,36 @@ def _get_minio_client() -> Minio:
 
 @router.post("/process-document", response_model=ProcessDocumentResponse)
 async def process_document(req: ProcessDocumentRequest) -> ProcessDocumentResponse:
-    """
-    Full AI document processing pipeline.
-    Called by the backend worker after file upload to MinIO.
-    """
+    """Run the full AI processing pipeline for a document stored in MinIO."""
     logger.info(
         "Processing document %s (%s) for workspace %s",
-        req.document_id, req.file_name, req.workspace_id,
+        req.document_id,
+        req.file_name,
+        req.workspace_id,
     )
+    try:
+        mark_document_processing(req.document_id)
+    except Exception as exc:
+        logger.warning("Could not mark document %s as processing: %s", req.document_id, exc)
 
-    # ── Step 1: Read file from MinIO ──────────────────────────────────────────
+    try:
+        return _process_document(req)
+    except HTTPException as exc:
+        _mark_failed_safely(req.document_id, str(exc.detail))
+        raise
+    except Exception as exc:
+        _mark_failed_safely(req.document_id, str(exc))
+        raise
+
+
+def _mark_failed_safely(document_id: str, error: str) -> None:
+    try:
+        mark_document_failed(document_id, error)
+    except Exception as exc:
+        logger.warning("Could not mark document %s as failed: %s", document_id, exc)
+
+
+def _process_document(req: ProcessDocumentRequest) -> ProcessDocumentResponse:
     try:
         minio_client = _get_minio_client()
         response = minio_client.get_object(req.minio_bucket, req.minio_object_key)
@@ -51,7 +73,6 @@ async def process_document(req: ProcessDocumentRequest) -> ProcessDocumentRespon
         logger.error("Failed to read from MinIO: %s", exc)
         raise HTTPException(status_code=502, detail=f"MinIO read error: {exc}")
 
-    # ── Step 2: Extract text ──────────────────────────────────────────────────
     try:
         text = extract(req.file_type, file_content)
     except ValueError as exc:
@@ -66,22 +87,18 @@ async def process_document(req: ProcessDocumentRequest) -> ProcessDocumentRespon
             detail="Document appears to be empty or contains no extractable text.",
         )
 
-    # ── Step 3: Chunk text ────────────────────────────────────────────────────
     chunks = chunk_text(text)
     if not chunks:
         raise HTTPException(status_code=422, detail="Could not generate chunks from document.")
 
     logger.info("Generated %d chunks for document %s", len(chunks), req.document_id)
 
-    # ── Step 4: Embed chunks ──────────────────────────────────────────────────
     try:
-        texts = [c.content for c in chunks]
-        embeddings = embed_documents(texts)
+        embeddings = embed_documents([c.content for c in chunks])
     except Exception as exc:
         logger.error("Embedding failed for %s: %s", req.document_id, exc)
         raise HTTPException(status_code=502, detail=f"Embedding error: {exc}")
 
-    # ── Step 5: Delete old chunks (if reprocessing) + insert new ─────────────
     try:
         delete_chunks_by_document(req.document_id)
         insert_chunks(
@@ -97,12 +114,23 @@ async def process_document(req: ProcessDocumentRequest) -> ProcessDocumentRespon
         logger.error("pgvector insert failed for %s: %s", req.document_id, exc)
         raise HTTPException(status_code=500, detail=f"Vector store error: {exc}")
 
-    # ── Step 6: Generate summary ──────────────────────────────────────────────
     summary_result = generate_summary(text)
+    try:
+        mark_document_completed(
+            document_id=req.document_id,
+            summary=summary_result.get("summary", ""),
+            key_points=summary_result.get("key_points", []),
+            keywords=summary_result.get("keywords", []),
+        )
+    except Exception as exc:
+        logger.error("Failed to persist document summary/status for %s: %s", req.document_id, exc)
+        raise HTTPException(status_code=500, detail=f"Document status update error: {exc}")
 
     logger.info(
         "Document %s processed successfully: %d chunks, summary %d chars",
-        req.document_id, len(chunks), len(summary_result.get("summary", "")),
+        req.document_id,
+        len(chunks),
+        len(summary_result.get("summary", "")),
     )
 
     return ProcessDocumentResponse(

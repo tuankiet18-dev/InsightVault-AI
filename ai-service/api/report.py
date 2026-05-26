@@ -17,9 +17,14 @@ async def report(req: GenerateReportRequest) -> GenerateReportResponse:
     try:
         result = generate_report(
             workspace_id=req.workspace_id,
+            folder_id=req.folder_id,
+            created_by_id=req.created_by_id,
+            ai_job_id=req.ai_job_id,
             document_ids=req.document_ids,
             report_type=req.report_type,
+            title=req.title,
             custom_prompt=req.custom_prompt,
+            store_report=req.store_report,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
