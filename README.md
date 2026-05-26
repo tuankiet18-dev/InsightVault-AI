@@ -20,6 +20,12 @@ Windows:
 powershell -ExecutionPolicy Bypass -File .\scripts\start-docker.ps1
 ```
 
+After images have been built once, use the faster cached start:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start-docker-fast.ps1
+```
+
 macOS/Linux:
 
 ```bash
