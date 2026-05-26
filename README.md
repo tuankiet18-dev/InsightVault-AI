@@ -3,7 +3,7 @@
 InsightVault AI là hệ thống quản lý và phân tích tài liệu thông minh tích hợp trí tuệ nhân tạo. Dự án bao gồm các thành phần:
 
 - **Frontend**: React, Vite, TypeScript
-- **Backend**: ASP.NET Core 8 Web API
+- **Backend**: ASP.NET Core 10 Web API
 - **AI Service**: Python 3, FastAPI, Gemini API
 - **Infrastructure**: PostgreSQL (pgvector), MinIO (chạy qua Docker)
 
@@ -12,7 +12,7 @@ InsightVault AI là hệ thống quản lý và phân tích tài liệu thông m
 Để chạy dự án trên máy local, bạn cần cài đặt:
 1. **Docker Desktop** (bắt buộc phải bật Docker Desktop trước khi chạy)
 2. **Node.js** (v18+ cho Frontend)
-3. **.NET 8 SDK** (cho Backend)
+3. **.NET 10 SDK** (cho Backend)
 4. **Python 3.10+** (cho AI Service)
 5. **Git**
 
