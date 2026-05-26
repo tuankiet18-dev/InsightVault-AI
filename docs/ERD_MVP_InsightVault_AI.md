@@ -1,41 +1,49 @@
 # ERD MVP - InsightVault AI
 
-## 1. Mục Tiêu Thiết Kế
+File này là bản ERD source-of-truth cho MVP của InsightVault AI. Mục tiêu là giúp team hiểu database model trước khi implement code-first bằng ASP.NET Core + EF Core.
 
-ERD này được thiết kế cho MVP của **InsightVault AI**: một collaborative AI-powered knowledge workspace cho nhóm project.
+## 1. Mục tiêu thiết kế
 
-MVP hỗ trợ:
+InsightVault AI là collaborative AI-powered knowledge workspace cho nhóm học tập/project.
 
-- Đăng nhập bằng Google OAuth.
-- Phân quyền hệ thống `user/admin`.
-- Shared workspace với member roles `owner/editor/viewer`.
-- Folder và document management.
-- Lưu file gốc trên MinIO.
-- Lưu metadata, chunk text và vector embedding trong PostgreSQL + pgvector.
-- Xử lý tài liệu bằng background job.
-- RAG chat theo workspace/folder/document.
-- So sánh tài liệu, phát hiện gap/conflict và lưu kết quả dưới dạng report.
-- Tạo Markdown report.
+MVP cần hỗ trợ:
 
-Thiết kế hỗ trợ co-work cơ bản qua bảng `workspace_members`. MVP không hỗ trợ realtime editing, cursor presence hoặc realtime team chat.
+- Google OAuth login và JWT nội bộ.
+- System role: `user`, `admin`.
+- Shared workspace với member roles: `owner`, `editor`, `viewer`.
+- Folder nhiều cấp trong workspace.
+- Upload tài liệu vào MinIO, lưu metadata trong PostgreSQL.
+- Background AI jobs cho document processing, compare, report.
+- Chunking + embedding + pgvector cho RAG.
+- RAG chat theo scope: workspace, folder, document.
+- Lưu sources/citations cho câu trả lời AI.
+- Lưu Markdown reports, bao gồm summary, comparison, gap/conflict, folder report.
+- Soft delete cho dữ liệu user-facing.
 
-## 2. Công Nghệ Liên Quan Đến ERD
+## 2. Quyết định đã chốt
 
-| Thành phần | Công nghệ |
+| Chủ đề | Quyết định |
 |---|---|
-| Authentication | Google OAuth + JWT nội bộ |
-| Backend | ASP.NET Core Web API |
-| AI Service | Python service |
-| AI Provider | Gemini API |
-| Embedding Model | Gemini Embedding API |
 | Database | PostgreSQL |
-| Vector Search | pgvector |
-| File Storage | MinIO |
-| Background Job | `.NET BackgroundService + ai_jobs`; RabbitMQ optional |
+| Vector search | pgvector |
+| File storage | MinIO |
+| Primary key | `uuid` |
+| Backend implementation | EF Core code-first |
+| Folder | Hỗ trợ nhiều cấp bằng `parent_folder_id` |
+| Delete behavior | Soft delete bằng `deleted_at` cho bảng user-facing |
+| Viewer permission | Viewer được hỏi AI trong phạm vi được quyền xem |
+| Chat sources | Tách bảng `chat_message_sources` |
+| Report source documents | Lưu JSONB trong `reports.source_documents` |
+| Embedding model | Gemini embedding model |
+| Embedding dimension | `vector(768)` |
+| Folder chat scope | Hỏi ở folder cha sẽ include subfolders |
+| Auto compare/gap detection | Để sau MVP nếu thiếu thời gian; schema hiện tại không cần đổi lớn |
+| Trash UI | Không bắt buộc ngay; schema đã có `deleted_at` để hỗ trợ restore/delete permanently sau |
+| Report regeneration | Tạo report mới để giữ lịch sử/version |
 
-## 3. Danh Sách Bảng
+## 3. Danh sách bảng
 
-ERD MVP gồm 10 bảng:
+MVP có 11 bảng chính:
 
 1. `users`
 2. `workspaces`
@@ -46,478 +54,425 @@ ERD MVP gồm 10 bảng:
 7. `ai_jobs`
 8. `chat_sessions`
 9. `chat_messages`
-10. `reports`
+10. `chat_message_sources`
+11. `reports`
 
-## 4. Mô Tả Bảng
+## 4. ERD quan hệ chính
 
-### 4.1. users
+```mermaid
+erDiagram
+  users ||--o{ workspaces : owns
+  users ||--o{ workspace_members : joins
+  workspaces ||--o{ workspace_members : has
+  workspaces ||--o{ folders : contains
+  folders ||--o{ folders : parent_of
+  workspaces ||--o{ documents : contains
+  folders ||--o{ documents : contains
+  documents ||--o{ document_chunks : split_into
+  workspaces ||--o{ ai_jobs : has
+  documents ||--o{ ai_jobs : processed_by
+  workspaces ||--o{ chat_sessions : has
+  chat_sessions ||--o{ chat_messages : has
+  chat_messages ||--o{ chat_message_sources : cites
+  documents ||--o{ chat_message_sources : cited_by
+  document_chunks ||--o{ chat_message_sources : cited_by
+  workspaces ||--o{ reports : has
+  users ||--o{ reports : creates
+  ai_jobs ||--o{ reports : produces
+```
 
-Lưu thông tin tài khoản người dùng đăng nhập bằng Google OAuth.
+## 5. Bảng và field chính
 
-Điểm quan trọng:
+### 5.1. users
 
-- Không lưu mật khẩu vì hệ thống không dùng đăng nhập bằng password.
-- `google_subject` là định danh duy nhất do Google cung cấp.
-- `role` phân biệt user thường và admin.
-- `is_active` cho phép admin khóa hoặc mở tài khoản.
+Lưu tài khoản đăng nhập bằng Google OAuth. Hệ thống không lưu password.
 
-### 4.2. workspaces
+| Field | Ghi chú |
+|---|---|
+| `id` | UUID primary key |
+| `google_id` | Định danh Google, unique |
+| `email` | Email user, unique |
+| `full_name` | Tên hiển thị |
+| `avatar_url` | Avatar từ Google |
+| `system_role` | `user` hoặc `admin` |
+| `is_active` | Admin có thể khóa/mở tài khoản |
+| `last_login_at` | Lần đăng nhập gần nhất |
+| `created_at`, `updated_at` | Audit timestamps |
+
+### 5.2. workspaces
 
 Lưu workspace do user tạo.
 
-`owner_id` xác định owner chính của workspace. Tuy nhiên quyền truy cập thực tế vẫn phải kiểm tra qua `workspace_members`.
+| Field | Ghi chú |
+|---|---|
+| `id` | UUID primary key |
+| `owner_id` | FK tới `users.id` |
+| `name` | Tên workspace |
+| `description` | Mô tả |
+| `is_archived` | Ẩn/lưu trữ workspace |
+| `created_at`, `updated_at`, `deleted_at` | Audit + soft delete |
 
-Khi tạo workspace, hệ thống nên tạo luôn một record trong `workspace_members` cho owner:
+Ghi chú: khi tạo workspace, backend nên tạo luôn một record `workspace_members` cho owner với `role = owner`, `status = active`.
+
+### 5.3. workspace_members
+
+Lưu thành viên và role trong workspace.
+
+| Field | Ghi chú |
+|---|---|
+| `id` | UUID primary key |
+| `workspace_id` | FK tới workspace |
+| `user_id` | FK tới user, có thể null khi mới invite |
+| `email` | Email được mời |
+| `role` | `owner`, `editor`, `viewer` |
+| `status` | `invited`, `active`, `removed` |
+| `invited_by` | User mời |
+| `invited_at`, `joined_at`, `removed_at` | Invite lifecycle |
+| `created_at`, `updated_at` | Audit timestamps |
+
+Unique rules:
+
+- Unique `(workspace_id, email)`.
+- Unique `(workspace_id, user_id)`.
+
+### 5.4. folders
+
+Lưu folder trong workspace. Folder hỗ trợ nhiều cấp.
+
+| Field | Ghi chú |
+|---|---|
+| `id` | UUID primary key |
+| `workspace_id` | FK tới workspace |
+| `parent_folder_id` | FK tự trỏ tới `folders.id`, null nếu là folder gốc |
+| `name` | Tên folder |
+| `description` | Mô tả |
+| `created_by` | User tạo folder |
+| `created_at`, `updated_at`, `deleted_at` | Audit + soft delete |
+
+Unique rule:
+
+- Unique `(workspace_id, name)` khi `parent_folder_id IS NULL`, dùng cho folder cấp root.
+- Unique `(workspace_id, parent_folder_id, name)` khi `parent_folder_id IS NOT NULL`, dùng cho folder con.
+
+Ví dụ:
 
 ```text
-workspace_members.role = owner
-workspace_members.status = active
+Workspace: Nhóm học tập
+- Môn A
+  - Chương 1
+  - Chương 2
+  - Bài tập
+- Môn B
+- Môn C
 ```
 
-### 4.3. workspace_members
+### 5.5. documents
 
-Lưu thành viên và quyền của từng user trong workspace.
+Lưu metadata document. File gốc nằm trong MinIO, không lưu trực tiếp trong database.
 
-Role:
+| Field | Ghi chú |
+|---|---|
+| `id` | UUID primary key |
+| `workspace_id` | FK tới workspace, giúp check permission/query nhanh |
+| `folder_id` | FK tới folder, nullable |
+| `uploaded_by` | User upload |
+| `file_name` | Tên file dùng trong hệ thống |
+| `original_file_name` | Tên file gốc |
+| `file_type`, `mime_type` | Loại file |
+| `file_size_bytes` | Dung lượng |
+| `minio_bucket`, `minio_object_key` | Vị trí file trong MinIO |
+| `status` | `uploaded`, `processing`, `completed`, `failed` |
+| `summary` | Summary mới nhất |
+| `key_points` | JSONB array |
+| `keywords` | JSONB array |
+| `extracted_text_hash` | Hash text đã extract, dùng cho reprocess sau này |
+| `processing_error` | Lỗi xử lý nếu failed |
+| `processed_at` | Thời điểm xử lý xong |
+| `created_at`, `updated_at`, `deleted_at` | Audit + soft delete |
 
-- `owner`: quản lý workspace và thành viên.
-- `editor`: upload document, tạo folder, dùng AI features, tạo report.
-- `viewer`: xem tài liệu, summary, report và có thể dùng chức năng đọc.
+### 5.6. document_chunks
 
-Status:
+Lưu chunks và embedding vector cho RAG.
 
-- `invited`: đã được mời nhưng chưa tham gia.
-- `active`: đang là member.
-- `removed`: đã bị remove khỏi workspace.
+| Field | Ghi chú |
+|---|---|
+| `id` | UUID primary key |
+| `document_id` | FK tới document |
+| `workspace_id` | Denormalized để filter RAG nhanh |
+| `folder_id` | Denormalized để filter RAG nhanh |
+| `chunk_index` | Thứ tự chunk trong document |
+| `content` | Nội dung chunk |
+| `token_count` | Số token ước tính |
+| `char_start`, `char_end` | Vị trí trong text gốc |
+| `embedding` | `vector(768)` tạm thời |
+| `embedding_model` | Tên model embedding |
+| `metadata` | JSONB, ví dụ page number, heading |
+| `created_at` | Created timestamp |
 
-Bảng này là nguồn phân quyền chính cho workspace.
+Unique rule:
 
-### 4.4. folders
+- Unique `(document_id, chunk_index)`.
 
-Lưu folder/section bên trong workspace.
-
-Một workspace có nhiều folder. Tên folder trong cùng một workspace nên unique.
-
-### 4.5. documents
-
-Lưu metadata của tài liệu đã upload.
-
-File gốc không lưu trực tiếp trong database. File được lưu trong MinIO, database chỉ lưu:
-
-```text
-storage_bucket
-storage_object_key
-```
-
-Bảng này cũng lưu summary cơ bản:
-
-- `summary`
-- `key_points`
-- `keywords`
-
-Lý do gộp summary vào `documents`: MVP chỉ cần bản summary mới nhất cho mỗi document, chưa cần versioning.
-
-### 4.6. document_chunks
-
-Lưu các đoạn văn bản sau khi tài liệu được extract và chunk.
-
-Mỗi chunk có:
-
-- Nội dung text.
-- Số token.
-- Embedding vector.
-- Metadata bổ sung.
-
-Cột `embedding` dùng kiểu `vector(768)` của pgvector. Nếu dbdiagram.io không hỗ trợ kiểu này khi vẽ, có thể đổi tạm thành `text`, nhưng khi triển khai PostgreSQL thật nên dùng pgvector.
-
-### 4.7. ai_jobs
+### 5.7. ai_jobs
 
 Lưu trạng thái các tác vụ AI/background job.
 
-Job types:
+| Field | Ghi chú |
+|---|---|
+| `id` | UUID primary key |
+| `workspace_id` | Workspace liên quan |
+| `document_id` | Document liên quan, nullable |
+| `created_by` | User tạo job, nullable nếu system tạo |
+| `job_type` | `document_processing`, `summary_generation`, `rag_chat`, `document_comparison`, `report_generation` |
+| `status` | `queued`, `processing`, `completed`, `failed`, `cancelled` |
+| `input_payload` | JSONB input cho worker/AI service |
+| `output_payload` | JSONB output hoặc metadata kết quả |
+| `error_message` | Lỗi nếu failed |
+| `retry_count` | Số lần retry |
+| `started_at`, `completed_at` | Thời gian chạy |
+| `created_at`, `updated_at` | Audit timestamps |
 
-- `process_document`
-- `generate_report`
-- `compare_documents`
+Lý do cần `ai_jobs`: upload file nên phản hồi nhanh cho user, còn extract/chunk/embedding/summary/compare/report chạy ngầm.
 
-MVP mặc định dùng `.NET BackgroundService + ai_jobs`. RabbitMQ chỉ là optional để trigger worker, không thay thế bảng tracking này.
+### 5.8. chat_sessions
 
-### 4.8. chat_sessions
+Lưu một phiên chat theo workspace/folder/document.
 
-Lưu một phiên chat giữa user và hệ thống.
+| Field | Ghi chú |
+|---|---|
+| `id` | UUID primary key |
+| `workspace_id` | Luôn có để check permission |
+| `created_by` | User tạo session |
+| `title` | Tên session |
+| `scope_type` | `workspace`, `folder`, `document` |
+| `scope_workspace_id` | Scope workspace |
+| `scope_folder_id` | Scope folder |
+| `scope_document_id` | Scope document |
+| `include_subfolders` | Mặc định true khi scope là folder |
+| `created_at`, `updated_at`, `deleted_at` | Audit + soft delete |
 
-Chat có thể theo một trong ba scope:
+Ghi chú: `scope_*` giúp biết session đang hỏi trong phạm vi nào. Nếu scope là folder, AI retrieve chunks trong folder đó và các folder con.
 
-- `workspace`
-- `folder`
-- `document`
+### 5.9. chat_messages
 
-`folder_id` và `document_id` có thể null tùy theo `scope_type`.
+Lưu tin nhắn trong chat session.
 
-### 4.9. chat_messages
+| Field | Ghi chú |
+|---|---|
+| `id` | UUID primary key |
+| `chat_session_id` | FK tới chat session |
+| `role` | `user`, `assistant`, `system` |
+| `content` | Nội dung message |
+| `model_name` | Model AI dùng để trả lời |
+| `prompt_tokens`, `completion_tokens` | Token usage nếu lấy được |
+| `latency_ms` | Thời gian trả lời |
+| `metadata` | JSONB bổ sung |
+| `created_at` | Created timestamp |
 
-Lưu từng message trong một chat session.
+### 5.10. chat_message_sources
 
-`sender_type`:
+Lưu citations/sources cho câu trả lời của assistant.
 
-- `user`
-- `assistant`
-- `system`
+| Field | Ghi chú |
+|---|---|
+| `id` | UUID primary key |
+| `chat_message_id` | FK tới assistant message |
+| `document_id` | Document được trích dẫn |
+| `document_chunk_id` | Chunk được trích dẫn |
+| `file_name` | Tên file hiển thị |
+| `snippet` | Đoạn trích ngắn |
+| `similarity_score` | Score từ vector search |
+| `source_order` | Thứ tự hiển thị |
+| `created_at` | Created timestamp |
 
-`sources_json` lưu các chunk được dùng làm nguồn khi AI trả lời.
+Lý do tách bảng: RAG cần source rõ ràng, có FK tới document/chunk và dễ debug retrieval.
 
-Ví dụ:
+### 5.11. reports
+
+Lưu Markdown report do AI tạo.
+
+| Field | Ghi chú |
+|---|---|
+| `id` | UUID primary key |
+| `workspace_id` | Workspace chứa report |
+| `folder_id` | Folder liên quan, nullable |
+| `created_by` | User tạo report |
+| `ai_job_id` | Job sinh report, nullable |
+| `title` | Tiêu đề report |
+| `report_type` | `summary_report`, `comparison_report`, `gap_conflict_report`, `folder_report`, `custom_report` |
+| `markdown_content` | Nội dung Markdown |
+| `source_documents` | JSONB danh sách tài liệu nguồn |
+| `structured_result` | JSONB kết quả có cấu trúc |
+| `model_name` | Model AI dùng |
+| `created_at`, `updated_at`, `deleted_at` | Audit + soft delete |
+
+`source_documents` dùng JSONB trong MVP để linh hoạt, ví dụ:
 
 ```json
 [
   {
-    "document_id": 1,
-    "chunk_id": 15,
-    "similarity_score": 0.86
+    "documentId": "...",
+    "fileName": "proposal.pdf",
+    "sourceRole": "primary",
+    "sourceOrder": 1
   }
 ]
 ```
 
-Thiết kế này giúp MVP có citation/source mà không cần thêm bảng `message_sources`.
+Nếu sau này cần query mạnh kiểu "document này xuất hiện trong những report nào", có thể tách thêm bảng `report_documents`.
 
-### 4.10. reports
+## 6. Permission model
 
-Lưu báo cáo do AI tạo.
+Permission chính dựa vào `workspace_members`.
 
-Report types:
+| Role | Quyền chính |
+|---|---|
+| `owner` | Manage workspace, members, folders, documents, AI features, reports |
+| `editor` | Manage folders/documents, ask AI, compare, generate report |
+| `viewer` | View folders/documents/reports, ask AI trong phạm vi được xem |
 
-- `summary_report`
-- `comparison_report`
-- `gap_analysis_report`
-- `section_report`
+Admin là system role trong `users.system_role`, dùng để quản lý toàn hệ thống như users, AI jobs, error logs. Admin khác với workspace owner.
 
-Kết quả compare documents lưu trong `reports` với:
+## 7. Soft delete rules
 
-```text
-report_type = comparison_report
+Các bảng user-facing dùng `deleted_at`:
+
+- `workspaces`
+- `folders`
+- `documents`
+- `chat_sessions`
+- `reports`
+
+Các bảng log/detail không cần soft delete trong MVP:
+
+- `document_chunks`
+- `ai_jobs`
+- `chat_messages`
+- `chat_message_sources`
+
+Trash UI có thể làm sau bằng cách query các record có `deleted_at IS NOT NULL`. Delete permanently sẽ hard delete record và dữ liệu liên quan theo cascade/set-null rule.
+
+## 8. Index gợi ý
+
+Index sẽ được tạo bằng EF Core migration hoặc raw SQL migration khi cần.
+
+Index thường:
+
+- `users(email)`
+- `users(google_id)`
+- `workspaces(owner_id)`
+- `workspace_members(workspace_id, user_id)`
+- `workspace_members(workspace_id, email)`
+- `folders(workspace_id, name)` filtered by `parent_folder_id IS NULL`
+- `folders(workspace_id, parent_folder_id, name)` filtered by `parent_folder_id IS NOT NULL`
+- `documents(workspace_id)`
+- `documents(folder_id)`
+- `documents(status)`
+- `document_chunks(document_id)`
+- `document_chunks(workspace_id)`
+- `document_chunks(folder_id)`
+- `ai_jobs(status)`
+- `ai_jobs(job_type)`
+- `chat_sessions(workspace_id)`
+- `chat_messages(chat_session_id)`
+- `chat_message_sources(chat_message_id)`
+- `reports(workspace_id)`
+- `reports(report_type)`
+
+Vector index:
+
+```sql
+CREATE INDEX idx_document_chunks_embedding_hnsw
+ON document_chunks
+USING hnsw (embedding vector_cosine_ops);
 ```
 
-MVP không cần bảng `compare_results` riêng.
+Ghi chú: HNSW index là phần đặc thù của pgvector. Trong code hiện tại mình config được bằng Fluent API của provider; nếu provider thiếu hỗ trợ ở môi trường khác thì có thể fallback sang raw SQL migration.
 
-## 5. Quan Hệ Chính
+## 9. Luồng dữ liệu chính
 
-```text
-users 1 - n workspaces
-users 1 - n workspace_members
-workspaces 1 - n workspace_members
-workspaces 1 - n folders
-folders 1 - n documents
-documents 1 - n document_chunks
-workspaces 1 - n ai_jobs
-documents 1 - n ai_jobs
-users 1 - n chat_sessions
-workspaces 1 - n chat_sessions
-chat_sessions 1 - n chat_messages
-workspaces 1 - n reports
-users 1 - n reports
-```
-
-## 6. DBML Cho dbdiagram.io
-
-```dbml
-Enum user_role {
-  user
-  admin
-}
-
-Enum workspace_member_role {
-  owner
-  editor
-  viewer
-}
-
-Enum workspace_member_status {
-  invited
-  active
-  removed
-}
-
-Enum document_status {
-  uploaded
-  processing
-  completed
-  failed
-}
-
-Enum ai_job_type {
-  process_document
-  generate_report
-  compare_documents
-}
-
-Enum ai_job_status {
-  pending
-  processing
-  completed
-  failed
-}
-
-Enum chat_sender_type {
-  user
-  assistant
-  system
-}
-
-Enum chat_scope_type {
-  workspace
-  folder
-  document
-}
-
-Table users {
-  id integer [pk, increment]
-  email varchar(255) [unique, not null]
-  full_name varchar(255) [not null]
-  avatar_url varchar(500)
-  google_subject varchar(255) [unique, not null]
-  role user_role [default: 'user']
-  is_active boolean [default: true]
-  created_at timestamp [default: `CURRENT_TIMESTAMP`]
-  updated_at timestamp
-  last_login_at timestamp
-}
-
-Table workspaces {
-  id integer [pk, increment]
-  owner_id integer [not null]
-  name varchar(255) [not null]
-  description text
-  ai_system_prompt text
-  created_at timestamp [default: `CURRENT_TIMESTAMP`]
-  updated_at timestamp
-}
-
-Table workspace_members {
-  id integer [pk, increment]
-  workspace_id integer [not null]
-  user_id integer [not null]
-  role workspace_member_role [default: 'viewer']
-  status workspace_member_status [default: 'active']
-  invited_by integer
-  invited_at timestamp
-  joined_at timestamp
-  created_at timestamp [default: `CURRENT_TIMESTAMP`]
-  updated_at timestamp
-
-  indexes {
-    (workspace_id, user_id) [unique]
-  }
-}
-
-Table folders {
-  id integer [pk, increment]
-  workspace_id integer [not null]
-  created_by integer [not null]
-  name varchar(255) [not null]
-  description text
-  created_at timestamp [default: `CURRENT_TIMESTAMP`]
-  updated_at timestamp
-
-  indexes {
-    (workspace_id, name) [unique]
-  }
-}
-
-Table documents {
-  id integer [pk, increment]
-  folder_id integer [not null]
-  uploaded_by integer [not null]
-  original_file_name varchar(255) [not null]
-  file_type varchar(50) [not null]
-  file_size_bytes integer
-  storage_bucket varchar(255) [not null]
-  storage_object_key varchar(500) [not null]
-  status document_status [default: 'uploaded']
-  summary text
-  key_points text
-  keywords text
-  error_message text
-  uploaded_at timestamp [default: `CURRENT_TIMESTAMP`]
-  processed_at timestamp
-  updated_at timestamp
-}
-
-Table document_chunks {
-  id integer [pk, increment]
-  document_id integer [not null]
-  chunk_index integer [not null]
-  content text [not null]
-  token_count integer [default: 0]
-  embedding vector(768)
-  metadata jsonb
-  created_at timestamp [default: `CURRENT_TIMESTAMP`]
-
-  indexes {
-    (document_id, chunk_index) [unique]
-  }
-}
-
-Table ai_jobs {
-  id integer [pk, increment]
-  workspace_id integer [not null]
-  document_id integer
-  created_by integer
-  job_type ai_job_type [not null]
-  status ai_job_status [default: 'pending']
-  retry_count integer [default: 0]
-  result_json jsonb
-  error_message text
-  created_at timestamp [default: `CURRENT_TIMESTAMP`]
-  started_at timestamp
-  completed_at timestamp
-}
-
-Table chat_sessions {
-  id integer [pk, increment]
-  workspace_id integer [not null]
-  user_id integer [not null]
-  folder_id integer
-  document_id integer
-  scope_type chat_scope_type [not null]
-  title varchar(255) [not null]
-  created_at timestamp [default: `CURRENT_TIMESTAMP`]
-  updated_at timestamp
-}
-
-Table chat_messages {
-  id integer [pk, increment]
-  session_id integer [not null]
-  sender_type chat_sender_type [not null]
-  content text [not null]
-  sources_json jsonb
-  ai_model varchar(100)
-  created_at timestamp [default: `CURRENT_TIMESTAMP`]
-}
-
-Table reports {
-  id integer [pk, increment]
-  workspace_id integer [not null]
-  created_by integer [not null]
-  title varchar(255) [not null]
-  report_type varchar(50) [not null]
-  content_markdown text [not null]
-  source_document_ids jsonb
-  result_json jsonb
-  ai_model varchar(100)
-  created_at timestamp [default: `CURRENT_TIMESTAMP`]
-  updated_at timestamp
-}
-
-Ref: users.id < workspaces.owner_id [delete: cascade]
-
-Ref: workspaces.id < workspace_members.workspace_id [delete: cascade]
-Ref: users.id < workspace_members.user_id [delete: cascade]
-Ref: users.id < workspace_members.invited_by [delete: set null]
-
-Ref: workspaces.id < folders.workspace_id [delete: cascade]
-Ref: users.id < folders.created_by [delete: set null]
-
-Ref: folders.id < documents.folder_id [delete: cascade]
-Ref: users.id < documents.uploaded_by [delete: set null]
-
-Ref: documents.id < document_chunks.document_id [delete: cascade]
-
-Ref: workspaces.id < ai_jobs.workspace_id [delete: cascade]
-Ref: documents.id < ai_jobs.document_id [delete: set null]
-Ref: users.id < ai_jobs.created_by [delete: set null]
-
-Ref: workspaces.id < chat_sessions.workspace_id [delete: cascade]
-Ref: users.id < chat_sessions.user_id [delete: cascade]
-Ref: folders.id < chat_sessions.folder_id [delete: set null]
-Ref: documents.id < chat_sessions.document_id [delete: set null]
-
-Ref: chat_sessions.id < chat_messages.session_id [delete: cascade]
-
-Ref: workspaces.id < reports.workspace_id [delete: cascade]
-Ref: users.id < reports.created_by [delete: set null]
-```
-
-## 7. Luồng Dữ Liệu Tương Ứng Với ERD
-
-### 7.1. Đăng Nhập
+### 9.1. Login
 
 ```text
-User đăng nhập bằng Google
+User login bằng Google
 -> Backend nhận Google identity
 -> Tạo hoặc cập nhật users
--> Phát hành JWT nội bộ cho frontend
+-> Backend phát hành JWT nội bộ
 ```
 
-### 7.2. Tạo Shared Workspace
+### 9.2. Tạo workspace
 
 ```text
 User tạo workspace
--> Tạo record workspaces
--> Tạo record workspace_members với role owner
+-> Tạo workspaces
+-> Tạo workspace_members với role = owner, status = active
 ```
 
-### 7.3. Mời Thành Viên
-
-```text
-Owner mời user bằng email
--> Tạo/cập nhật workspace_members
--> Member truy cập workspace theo role được gán
-```
-
-### 7.4. Upload Tài Liệu
+### 9.3. Upload document
 
 ```text
 Owner/Editor upload file
--> Kiểm tra workspace permission
+-> Backend check workspace permission
 -> File lưu vào MinIO
 -> Metadata lưu vào documents
--> Tạo ai_jobs với type process_document
+-> Tạo ai_jobs type = document_processing
+-> UI hiển thị file đã upload và đang processing
 ```
 
-### 7.5. Xử Lý Tài Liệu
+### 9.4. Xử lý document
 
 ```text
-Background job lấy document
+Worker lấy ai_job queued
 -> Đọc file từ MinIO
 -> Extract text
 -> Chunk text
--> Gọi Gemini Embedding API
--> Lưu chunk + embedding vào document_chunks
--> Lưu summary/key_points/keywords vào documents
+-> Generate embedding
+-> Lưu document_chunks
+-> Generate summary/key_points/keywords
 -> Cập nhật documents.status = completed
+-> Cập nhật ai_jobs.status = completed
 ```
 
-### 7.6. Chat RAG
+### 9.5. RAG chat
 
 ```text
-User tạo chat session
--> Gửi câu hỏi
--> Kiểm tra membership theo workspace
--> Query được embedding
--> pgvector tìm document_chunks liên quan theo scope
--> Context gửi sang Gemini API
--> Câu trả lời lưu vào chat_messages
--> Sources lưu vào chat_messages.sources_json
+User hỏi AI trong workspace/folder/document
+-> Backend check workspace membership
+-> AI service embed câu hỏi
+-> pgvector retrieve chunks theo scope
+-> Gemini trả lời dựa trên context
+-> Lưu chat_messages
+-> Lưu citations vào chat_message_sources
 ```
 
-### 7.7. Generate Report Hoặc Compare Documents
+### 9.6. Compare hoặc generate report
 
 ```text
-User yêu cầu generate report hoặc compare documents
--> Kiểm tra workspace role
--> Tạo ai_jobs
--> Lấy document chunks liên quan
--> Gửi context sang Gemini API
--> Lưu kết quả vào reports
+User chọn documents/folder và bấm compare/report
+-> Backend tạo ai_jobs
+-> AI service retrieve/prepare context
+-> Gemini tạo kết quả
+-> Backend lưu Markdown và structured result vào reports
 ```
 
-## 8. Lưu Ý Mở Rộng Sau MVP
+Không nên chặn upload để compare ngay lập tức. Nếu cần auto gap/conflict detection sau upload, nên chạy background job ngầm và thông báo sau.
 
-Nếu sau này cần mở rộng, có thể thêm:
+## 10. Quyết định còn lại cho implementation
 
-- `document_summaries`: lưu nhiều phiên bản summary.
-- `message_sources`: chuẩn hóa citation/source thay vì dùng JSONB.
-- `report_sources`: chuẩn hóa nguồn tài liệu của report.
-- `compare_results` và `compare_documents`: tách riêng module compare documents.
-- `ai_request_logs`: thống kê token, chi phí và lỗi khi gọi Gemini API.
-- `activity_logs`: lưu hoạt động của member trong workspace.
+1. Dùng Gemini embedding model với output dimension 768.
+2. Khi hỏi AI ở folder cha, mặc định include subfolders.
+3. Auto compare/gap detection sau upload là nice-to-have. Nếu chưa kịp, vẫn giữ schema hiện tại và chỉ làm compare khi user bấm nút trước.
+4. Trash UI không bắt buộc trong MVP. `deleted_at` đã đủ để thêm restore/delete permanently sau.
+5. Report generate lại sẽ tạo report mới để giữ lịch sử/version.
+
+## 11. Ghi chú triển khai code-first
+
+Team sẽ implement bằng EF Core code-first:
+
+```text
+C# Entity -> DbContext config -> EF Core Migration -> PostgreSQL
+```
+
+Các phần bình thường như FK, unique constraint, index thường có thể config bằng Fluent API.
+
+Các phần đặc thù như `vector(768)` và HNSW index đã được config trong EF Core. Nếu migration sinh ra thiếu annotation/index mong muốn thì mới cần chỉnh bằng raw SQL.
