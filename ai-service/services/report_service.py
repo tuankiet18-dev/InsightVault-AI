@@ -11,6 +11,7 @@ from typing import Literal
 from core.config import settings
 from core.database import get_connection
 from core.gemini import gemini_chat_model
+from services.report_store import insert_report
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +117,12 @@ def generate_report(
     workspace_id: str,
     document_ids: list[str],
     report_type: ReportType,
+    folder_id: str | None = None,
+    created_by_id: str | None = None,
+    ai_job_id: str | None = None,
+    title: str | None = None,
     custom_prompt: str | None = None,
+    store_report: bool = True,
 ) -> dict:
     """
     Generate a Markdown report using Gemini.
@@ -161,10 +167,23 @@ def generate_report(
         try:
             response = gemini_chat_model.generate_content(prompt)
             markdown_content = response.text.strip()
+            report_id = None
+            if store_report:
+                report_id = insert_report(
+                    workspace_id=workspace_id,
+                    folder_id=folder_id,
+                    created_by_id=created_by_id,
+                    ai_job_id=ai_job_id,
+                    report_type=report_type,
+                    markdown_content=markdown_content,
+                    source_document_ids=document_ids,
+                    title=title or _default_report_title(report_type, docs),
+                )
             logger.info("Report generation completed (%d chars)", len(markdown_content))
             return {
                 "report_type": report_type,
                 "markdown_content": markdown_content,
+                "report_id": report_id,
             }
         except Exception as exc:
             last_error = exc
@@ -176,3 +195,8 @@ def generate_report(
     raise RuntimeError(
         f"Report generation failed after {settings.GEMINI_MAX_RETRIES} retries: {last_error}"
     )
+
+
+def _default_report_title(report_type: str, docs: list[tuple[str, str]]) -> str:
+    doc_label = docs[0][0] if len(docs) == 1 else f"{len(docs)} documents"
+    return f"{report_type.replace('_', ' ').title()} - {doc_label}"

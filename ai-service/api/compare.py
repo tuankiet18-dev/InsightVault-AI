@@ -23,8 +23,13 @@ async def compare(req: CompareRequest) -> CompareResponse:
     try:
         result = compare_documents(
             workspace_id=req.workspace_id,
+            folder_id=req.folder_id,
+            created_by_id=req.created_by_id,
+            ai_job_id=req.ai_job_id,
             document_ids=req.document_ids,
             document_names=req.document_names,
+            title=req.title,
+            store_report=req.store_report,
         )
     except RuntimeError as exc:
         logger.error("Compare failed: %s", exc)

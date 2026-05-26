@@ -10,6 +10,7 @@ import time
 from core.config import settings
 from core.database import get_connection
 from core.gemini import gemini_chat_model
+from services.report_store import insert_report
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +73,11 @@ def compare_documents(
     workspace_id: str,
     document_ids: list[str],
     document_names: list[str],
+    folder_id: str | None = None,
+    created_by_id: str | None = None,
+    ai_job_id: str | None = None,
+    title: str | None = None,
+    store_report: bool = True,
 ) -> dict:
     """
     Compare multiple documents and detect gaps/conflicts.
@@ -114,6 +120,20 @@ def compare_documents(
                     raw = raw[4:]
 
             result = json.loads(raw)
+            report_id = None
+            raw_markdown = result.get("raw_markdown", "")
+            if store_report:
+                report_id = insert_report(
+                    workspace_id=workspace_id,
+                    folder_id=folder_id,
+                    created_by_id=created_by_id,
+                    ai_job_id=ai_job_id,
+                    report_type="comparison_report",
+                    markdown_content=raw_markdown or _markdown_from_compare_result(result),
+                    source_document_ids=document_ids,
+                    title=title or f"Comparison Report - {len(document_ids)} documents",
+                    structured_result=result,
+                )
             logger.info("Document comparison completed successfully")
             return {
                 "objectives": result.get("objectives", ""),
@@ -123,7 +143,8 @@ def compare_documents(
                 "missing_information": result.get("missing_information", []),
                 "potential_conflicts": result.get("potential_conflicts", []),
                 "recommendations": result.get("recommendations", []),
-                "raw_markdown": result.get("raw_markdown", ""),
+                "raw_markdown": raw_markdown,
+                "report_id": report_id,
             }
 
         except json.JSONDecodeError as exc:
@@ -140,3 +161,24 @@ def compare_documents(
     raise RuntimeError(
         f"Document comparison failed after {settings.GEMINI_MAX_RETRIES} retries: {last_error}"
     )
+
+
+def _markdown_from_compare_result(result: dict) -> str:
+    sections = [
+        "# Document Comparison",
+        "## Objectives",
+        str(result.get("objectives", "")),
+        "## Scope",
+        str(result.get("scope", "")),
+    ]
+    for key, title in [
+        ("similarities", "Similarities"),
+        ("differences", "Differences"),
+        ("missing_information", "Missing Information"),
+        ("potential_conflicts", "Potential Conflicts"),
+        ("recommendations", "Recommendations"),
+    ]:
+        values = result.get(key, [])
+        sections.append(f"## {title}")
+        sections.extend(f"- {value}" for value in values)
+    return "\n\n".join(sections)
