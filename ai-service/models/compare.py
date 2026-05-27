@@ -1,4 +1,11 @@
 from pydantic import BaseModel, Field
+from typing import Literal
+
+
+class WebSearchOptions(BaseModel):
+    enabled: bool = False
+    provider: Literal["duckduckgo", "searxng", "brave"] | None = None
+    max_results: int = Field(5, ge=1, le=10)
 
 
 class CompareRequest(BaseModel):
@@ -10,6 +17,10 @@ class CompareRequest(BaseModel):
     document_names: list[str] = Field(..., description="Display names matching document_ids")
     title: str | None = Field(None, description="Report title when persisted")
     store_report: bool = Field(True, description="Persist comparison result into reports table")
+    web_search_options: WebSearchOptions | None = Field(
+        None,
+        description="Reserved for later web search phase. Current AI service ignores it.",
+    )
 
 
 class CompareResponse(BaseModel):

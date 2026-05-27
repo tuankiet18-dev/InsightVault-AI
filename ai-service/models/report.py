@@ -3,6 +3,12 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
+class WebSearchOptions(BaseModel):
+    enabled: bool = False
+    provider: Literal["duckduckgo", "searxng", "brave"] | None = None
+    max_results: int = Field(5, ge=1, le=10)
+
+
 class GenerateReportRequest(BaseModel):
     workspace_id: str = Field(..., description="Workspace UUID")
     folder_id: str | None = Field(None, description="Optional folder UUID for saved report")
@@ -15,6 +21,10 @@ class GenerateReportRequest(BaseModel):
     title: str | None = Field(None, description="Report title when persisted")
     custom_prompt: str | None = Field(None, description="Additional instruction for section_report")
     store_report: bool = Field(True, description="Persist generated Markdown into reports table")
+    web_search_options: WebSearchOptions | None = Field(
+        None,
+        description="Reserved for later web search phase. Current AI service ignores it.",
+    )
 
 
 class GenerateReportResponse(BaseModel):
