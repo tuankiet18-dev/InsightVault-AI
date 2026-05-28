@@ -33,7 +33,7 @@ export function ActivityRail() {
         IV
       </div>
       
-      <nav className="flex flex-col gap-2 w-full px-2">
+      <nav aria-label="Primary navigation" className="flex flex-col gap-2 w-full px-2">
         {NAV_ITEMS.map((item) => (
           <button
             key={item.id}
