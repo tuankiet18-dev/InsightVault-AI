@@ -1,0 +1,17 @@
+using InsightVault.API.Application.Abstractions.Auth;
+using InsightVault.API.Application.Abstractions.Services.Folders;
+using InsightVault.API.Application.Services.Auth;
+using InsightVault.API.Application.Services.Folders;
+
+namespace InsightVault.API.Application;
+
+public static class DependencyInjection
+{
+    public static IServiceCollection AddApplicationServices(this IServiceCollection services)
+    {
+        services.AddScoped<IWorkspacePermissionService, WorkspacePermissionService>();
+        services.AddScoped<IFolderService, FolderService>();
+
+        return services;
+    }
+}
