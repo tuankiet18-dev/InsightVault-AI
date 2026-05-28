@@ -16,10 +16,16 @@ class GenerateReportRequest(BaseModel):
     ai_job_id: str | None = Field(None, description="Optional AI job UUID")
     document_ids: list[str] = Field(..., min_length=1, description="Source document UUIDs")
     report_type: Literal[
-        "summary_report", "comparison_report", "gap_analysis_report", "section_report"
+        "summary_report",
+        "comparison_report",
+        "gap_analysis_report",
+        "gap_conflict_report",
+        "folder_report",
+        "section_report",
+        "custom_report",
     ] = Field("summary_report")
     title: str | None = Field(None, description="Report title when persisted")
-    custom_prompt: str | None = Field(None, description="Additional instruction for section_report")
+    custom_prompt: str | None = Field(None, description="Additional instruction for section_report/custom_report")
     store_report: bool = Field(True, description="Persist generated Markdown into reports table")
     web_search_options: WebSearchOptions | None = Field(
         None,

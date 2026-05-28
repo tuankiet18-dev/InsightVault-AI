@@ -2,9 +2,9 @@ namespace InsightVault.API.Domain.Enums;
 
 public enum AiJobType
 {
-    DocumentProcessing,
-    SummaryGeneration,
+    ProcessDocument,
+    GenerateSummary,
     RagChat,
-    DocumentComparison,
-    ReportGeneration
+    GenerateReport,
+    CompareDocuments
 }

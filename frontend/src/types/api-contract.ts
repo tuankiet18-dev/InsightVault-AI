@@ -7,15 +7,23 @@ export type DocumentStatus =
   | 'processing'
   | 'completed'
   | 'failed'
-export type AiJobType = 'process_document' | 'generate_report' | 'compare_documents'
-export type AiJobStatus = 'queued' | 'processing' | 'completed' | 'failed'
+export type AiJobType =
+  | 'process_document'
+  | 'generate_summary'
+  | 'rag_chat'
+  | 'generate_report'
+  | 'compare_documents'
+export type AiJobStatus = 'queued' | 'processing' | 'completed' | 'failed' | 'cancelled'
 export type ChatScopeType = 'workspace' | 'folder' | 'document'
 export type ChatMessageRole = 'user' | 'assistant'
 export type ReportType =
   | 'summary_report'
   | 'comparison_report'
   | 'gap_analysis_report'
+  | 'gap_conflict_report'
+  | 'folder_report'
   | 'section_report'
+  | 'custom_report'
 export type WebSearchProvider = 'duckduckgo' | 'searxng' | 'brave'
 
 export type ApiError = {

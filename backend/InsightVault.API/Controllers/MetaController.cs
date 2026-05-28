@@ -1,3 +1,4 @@
+using InsightVault.API.DTOs.Common;
 using Microsoft.AspNetCore.Mvc;
 
 namespace InsightVault.API.Controllers;
@@ -24,5 +25,3 @@ public sealed class MetaController : ControllerBase
             ]));
     }
 }
-
-public sealed record ProjectMetaResponse(string Name, string Description, string[] MvpCapabilities);
