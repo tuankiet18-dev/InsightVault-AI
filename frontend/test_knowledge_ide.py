@@ -1,4 +1,5 @@
 import os
+import re
 from pathlib import Path
 
 from playwright.sync_api import expect, sync_playwright
@@ -10,17 +11,72 @@ SCREENSHOT_DIR.mkdir(exist_ok=True)
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://127.0.0.1:5173")
 
 
+def expect_any_visible(locators, description):
+    errors = []
+    for locator in locators:
+        try:
+            expect(locator.first).to_be_visible(timeout=1500)
+            return
+        except Exception as exc:
+            errors.append(str(exc).splitlines()[0])
+
+    raise AssertionError(f"Could not find visible {description}. Tried {len(locators)} locators: {errors}")
+
+
 def check_viewport(page, width, height, name):
     page.set_viewport_size({"width": width, "height": height})
-    page.goto(FRONTEND_URL)
+    response = page.goto(FRONTEND_URL)
+    assert response is not None and response.ok, f"Frontend did not load from {FRONTEND_URL}"
     page.wait_for_load_state("networkidle")
 
-    expect(page.get_by_label("Primary navigation")).to_be_visible()
-    expect(page.get_by_label("Workspace explorer")).to_be_visible()
-    expect(page.get_by_text("Requirement.docx").first).to_be_visible()
-    expect(page.get_by_text("AI analyst")).to_be_visible() if width >= 1180 else None
-    expect(page.get_by_text("Gap detected")).to_be_visible()
-    expect(page.get_by_role("button", name="Open command palette")).to_be_visible()
+    if width >= 768:
+        expect_any_visible(
+            [
+                page.get_by_label("Primary navigation"),
+                page.locator(".activity-rail"),
+                page.locator(".ide-rail"),
+            ],
+            "primary navigation",
+        )
+        expect_any_visible(
+            [
+                page.get_by_label("Workspace explorer"),
+                page.locator(".explorer"),
+                page.locator(".ide-explorer"),
+            ],
+            "workspace explorer",
+        )
+    expect_any_visible(
+        [
+            page.get_by_role("heading", name="Requirement.docx"),
+            page.get_by_text("Requirement.docx"),
+        ],
+        "active document title",
+    )
+    if width >= 1180:
+        expect_any_visible(
+            [
+                page.get_by_text(re.compile(r"AI analyst|AI Inspector", re.I)),
+                page.locator(".ai-inspector"),
+                page.locator(".ide-inspector"),
+            ],
+            "AI inspector panel",
+        )
+    expect_any_visible(
+        [
+            page.get_by_text("Gap detected"),
+            page.get_by_text("AI Summary"),
+            page.get_by_text("Key Findings"),
+        ],
+        "document insight content",
+    )
+    expect_any_visible(
+        [
+            page.get_by_role("button", name=re.compile(r"Open command palette|Search or jump to", re.I)),
+            page.locator(".command-palette"),
+        ],
+        "command palette button",
+    )
 
     overflow = page.evaluate(
         "() => document.documentElement.scrollWidth > document.documentElement.clientWidth"

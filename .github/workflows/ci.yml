@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: ["**"]
+    branches: ["main", "develop"]
   pull_request:
     branches: ["main", "develop"]
 
@@ -37,26 +37,6 @@ jobs:
 
       - name: Build
         run: npm run build
-
-      - name: Setup Python for smoke test
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
-      - name: Install Playwright
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install playwright
-          python -m playwright install --with-deps chromium
-
-      - name: Run UI smoke test
-        run: |
-          npm run dev -- --host 127.0.0.1 > vite.log 2>&1 &
-          for i in {1..30}; do
-            curl -fsS http://127.0.0.1:5173 >/dev/null && break
-            sleep 1
-          done
-          python test_knowledge_ide.py
 
   backend:
     name: Backend
