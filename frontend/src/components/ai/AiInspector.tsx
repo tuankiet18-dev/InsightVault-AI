@@ -2,10 +2,11 @@ import { AiModeSelector } from './AiModeSelector'
 import { PromptInput } from './PromptInput'
 import { AiAnswer } from './AiAnswer'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { useDocument } from '@/hooks/useDocuments'
 
 export function AiInspector() {
-  const { getSelectedDocument, activeWorkspaceId } = useWorkspaceStore()
-  const doc = getSelectedDocument()
+  const { selectedDocumentId, activeWorkspaceId } = useWorkspaceStore()
+  const { data: doc } = useDocument(selectedDocumentId)
 
   if (!activeWorkspaceId) return null
 

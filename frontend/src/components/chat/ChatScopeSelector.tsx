@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import { Folder, File, Layers, ChevronDown } from 'lucide-react'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { useWorkspace } from '@/hooks/useWorkspaces'
 import { SCOPE_OPTIONS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 
 export function ChatScopeSelector() {
   const [isOpen, setIsOpen] = useState(false)
   const [scope, setScope] = useState<typeof SCOPE_OPTIONS[number]>('Workspace')
-  const { getActiveWorkspace } = useWorkspaceStore()
-  const activeWs = getActiveWorkspace()
+  const { activeWorkspaceId } = useWorkspaceStore()
+  const { data: activeWs } = useWorkspace(activeWorkspaceId)
 
   const getScopeIcon = () => {
     switch (scope) {

@@ -12,6 +12,7 @@ export type TabItem = {
   label: string
   type: 'document' | 'compare' | 'report' | 'chat'
   documentId?: string
+  reportId?: string
   closable?: boolean
 }
 

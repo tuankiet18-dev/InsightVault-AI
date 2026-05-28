@@ -4,6 +4,8 @@ import { TopBar } from './TopBar'
 import { StatusBar } from './StatusBar'
 import { ExplorerPanel } from '../explorer/ExplorerPanel'
 import { UploadModal } from '../upload/UploadModal'
+import { CreateWorkspaceModal } from '../workspace/CreateWorkspaceModal'
+import { CreateFolderModal } from '../workspace/CreateFolderModal'
 import { useUiStore } from '@/stores/uiStore'
 import { cn } from '@/lib/utils'
 
@@ -37,6 +39,8 @@ export function AppShell({ children, rightPanel }: { children: ReactNode; rightP
 
       <StatusBar />
       <UploadModal />
+      <CreateWorkspaceModal />
+      <CreateFolderModal />
     </div>
   )
 }

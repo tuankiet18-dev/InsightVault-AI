@@ -1,15 +1,23 @@
 import { useTabStore } from '@/stores/tabStore'
 import { FileText, Download, Share2 } from 'lucide-react'
-import { mockReports } from '@/data/mockReports'
+import { useReport } from '@/hooks/useReports'
 
 export function ReportViewer() {
   const { getActiveTab } = useTabStore()
   const activeTab = getActiveTab()
   
+  const reportId = activeTab?.type === 'report' ? (activeTab.reportId || '1') : null
+  const { data: report, isLoading } = useReport(reportId)
+
   if (!activeTab || activeTab.type !== 'report') return null
 
-  // In a real app, this would use activeTab.reportId to fetch
-  const report = mockReports[0]
+  if (isLoading) {
+    return <div className="flex-1 p-8 text-surface-500">Loading report...</div>
+  }
+
+  if (!report) {
+    return <div className="flex-1 p-8 text-surface-500">Report not found.</div>
+  }
 
   return (
     <div className="flex flex-col flex-1 min-h-0 bg-surface-50">

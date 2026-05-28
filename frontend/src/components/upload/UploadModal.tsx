@@ -3,16 +3,20 @@ import { useUiStore } from '@/stores/uiStore'
 import { useState } from 'react'
 import { cn, formatFileSize, FILE_TYPES_ACCEPTED, MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from '@/lib/utils'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { useRequestPresignedUploadUrl, useConfirmUpload } from '@/hooks/useDocuments'
+import type { ConfirmUploadRequest } from '@/types/api'
 
 export function UploadModal() {
-  const { uploadModalOpen, setUploadModalOpen } = useUiStore()
-  const { folders } = useWorkspaceStore()
+  const { uploadModalOpen, setUploadModalOpen, uploadTargetFolderId } = useUiStore()
+  const { activeWorkspaceId } = useWorkspaceStore()
   const [dragActive, setDragActive] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [selectedFolder, setSelectedFolder] = useState<string>('')
   const [status, setStatus] = useState<'idle' | 'uploading' | 'success'>('idle')
   const [progress, setProgress] = useState(0)
+
+  const requestUrlMutation = useRequestPresignedUploadUrl(activeWorkspaceId!)
+  const confirmUploadMutation = useConfirmUpload(activeWorkspaceId!)
 
   if (!uploadModalOpen) return null
 
@@ -65,22 +69,52 @@ export function UploadModal() {
     }
   }
 
-  const handleUpload = () => {
-    if (!file) return
+  const handleUpload = async () => {
+    if (!file || !activeWorkspaceId) return
     
     setStatus('uploading')
     
-    // Simulate upload progress
-    const interval = setInterval(() => {
-      setProgress(p => {
-        if (p >= 100) {
-          clearInterval(interval)
-          setStatus('success')
-          return 100
-        }
-        return p + 10
+    try {
+      // 1. Request presigned URL
+      const { documentId } = await requestUrlMutation.mutateAsync({
+        fileName: file.name,
+        contentType: file.type,
+        fileSizeBytes: file.size,
+        folderId: uploadTargetFolderId || undefined
       })
-    }, 200)
+
+      // 2. Simulate S3 upload progress (in a real app, use axios/fetch to uploadUrl)
+      await new Promise<void>((resolve) => {
+        let p = 0
+        const interval = setInterval(() => {
+          p += 20
+          setProgress(p)
+          if (p >= 100) {
+            clearInterval(interval)
+            resolve()
+          }
+        }, 200)
+      })
+
+      // 3. Confirm upload
+      await confirmUploadMutation.mutateAsync({
+        documentId,
+        data: {
+          fileSizeBytes: file.size,
+          contentType: file.type,
+          // Sending extra metadata for mock backend to use
+          _folderId: uploadTargetFolderId || undefined,
+          _fileName: file.name
+        } as ConfirmUploadRequest
+      })
+
+      setStatus('success')
+    } catch (e) {
+      console.error(e)
+      setError('An error occurred during upload.')
+      setStatus('idle')
+      setProgress(0)
+    }
   }
 
   const resetAndClose = () => {
@@ -130,20 +164,6 @@ export function UploadModal() {
             </div>
           ) : (
             <>
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-surface-900 mb-1.5">Destination folder</label>
-                <select 
-                  value={selectedFolder}
-                  onChange={(e) => setSelectedFolder(e.target.value)}
-                  className="w-full h-10 px-3 rounded-lg border border-border bg-surface-0 text-surface-900 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
-                >
-                  <option value="">Workspace root</option>
-                  {folders.map(f => (
-                    <option key={f.id} value={f.id}>{f.name}</option>
-                  ))}
-                </select>
-              </div>
-
               {!file ? (
                 <div 
                   onDragEnter={handleDrag}

@@ -1,56 +1,88 @@
-import { ChevronRight, ChevronDown, Folder, File, FileText, Image as ImageIcon } from 'lucide-react'
+import { ChevronRight, ChevronDown, Folder, File, FileText, Image as ImageIcon, Plus, UploadCloud } from 'lucide-react'
 import { useState } from 'react'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useTabStore } from '@/stores/tabStore'
+import { useUiStore } from '@/stores/uiStore'
+import { useFolders } from '@/hooks/useFolders'
+import { useDocuments } from '@/hooks/useDocuments'
 import { getFileTypeColor, getStatusColor, cn } from '@/lib/utils'
-import type { DocumentDto } from '@/types/api-contract'
+import type { DocumentDto } from '@/types/api'
 
 export function FolderTree() {
-  const { activeWorkspaceId, folders } = useWorkspaceStore()
+  const { activeWorkspaceId } = useWorkspaceStore()
+  const { data: folders = [] } = useFolders(activeWorkspaceId)
+  const { setCreateFolderModalOpen } = useUiStore()
   
   if (!activeWorkspaceId) return null
   
   return (
     <section className="px-3 py-4 border-t border-border">
-      <div className="mb-2 px-2 text-xs font-semibold text-surface-500 uppercase tracking-wider">
-        Documents
+      <div className="mb-2 px-2 flex items-center justify-between">
+        <span className="text-xs font-semibold text-surface-500 uppercase tracking-wider">
+          Documents
+        </span>
+        <div className="flex items-center gap-0.5">
+         
+          <button
+            onClick={() => setCreateFolderModalOpen(true)}
+            className="p-1.5 rounded hover:bg-surface-200 text-surface-500 transition-colors"
+            title="New folder"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
       <div className="flex flex-col">
         {folders.map(folder => (
-          <FolderRow key={folder.id} folderId={folder.id} name={folder.name} />
+          <FolderRow key={folder.id} folderId={folder.id} name={folder.name} workspaceId={activeWorkspaceId} />
         ))}
       </div>
     </section>
   )
 }
 
-function FolderRow({ folderId, name }: { folderId: string; name: string }) {
+function FolderRow({ folderId, name, workspaceId }: { folderId: string; name: string; workspaceId: string }) {
   const [expanded, setExpanded] = useState(true)
-  const { getFolderDocuments, selectedFolderId, setSelectedFolder } = useWorkspaceStore()
-  const documents = getFolderDocuments(folderId)
+  const { selectedFolderId, setSelectedFolder } = useWorkspaceStore()
+  const { openUploadModal } = useUiStore()
+  const { data: documents = [] } = useDocuments(workspaceId, { folderId })
   
   const isSelected = selectedFolderId === folderId
 
   return (
     <div className="flex flex-col">
-      <button
-        onClick={() => {
-          setExpanded(!expanded)
-          setSelectedFolder(folderId)
-        }}
+      <div
         className={cn(
-          "flex items-center gap-1.5 w-full px-2 py-1.5 rounded-md text-sm text-left transition-colors",
+          "flex items-center gap-1.5 w-full px-2 py-1.5 rounded-md text-sm text-left transition-colors group relative",
           isSelected ? "bg-surface-200 text-surface-900" : "text-surface-700 hover:bg-surface-100"
         )}
       >
-        {expanded ? (
-          <ChevronDown className="w-3.5 h-3.5 text-surface-400 shrink-0" />
-        ) : (
-          <ChevronRight className="w-3.5 h-3.5 text-surface-400 shrink-0" />
-        )}
-        <Folder className="w-4 h-4 text-surface-400 shrink-0" fill="currentColor" fillOpacity={0.2} />
-        <span className="truncate font-medium">{name}</span>
-      </button>
+        <button
+          onClick={() => {
+            setExpanded(!expanded)
+            setSelectedFolder(folderId)
+          }}
+          className="flex-1 flex items-center gap-1.5 min-w-0"
+        >
+          {expanded ? (
+            <ChevronDown className="w-3.5 h-3.5 text-surface-400 shrink-0" />
+          ) : (
+            <ChevronRight className="w-3.5 h-3.5 text-surface-400 shrink-0" />
+          )}
+          <Folder className="w-4 h-4 text-surface-400 shrink-0" fill="currentColor" fillOpacity={0.2} />
+          <span className="truncate font-medium">{name}</span>
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            openUploadModal(folderId)
+          }}
+          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-300 rounded text-surface-500 transition-all right-2 bg-surface-100/80 backdrop-blur-sm"
+          title="Upload to folder"
+        >
+          <UploadCloud className="w-3.5 h-3.5" />
+        </button>
+      </div>
       
       {expanded && (
         <div className="flex flex-col pl-6">

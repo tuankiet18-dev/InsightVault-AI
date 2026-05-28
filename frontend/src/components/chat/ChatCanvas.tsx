@@ -1,11 +1,13 @@
 import { useEffect, useRef } from 'react'
 import { useChatStore } from '@/stores/chatStore'
+import { useChatMessages, useSendMessage } from '@/hooks/useChat'
 import { ChatMessage } from './ChatMessage'
 import { ChatInput } from './ChatInput'
 
 export function ChatCanvas() {
-  const { getActiveMessages, isLoading } = useChatStore()
-  const messages = getActiveMessages()
+  const { activeSessionId } = useChatStore()
+  const { data: messages = [] } = useChatMessages(activeSessionId)
+  const isLoading = useSendMessage(activeSessionId || '').isPending
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {

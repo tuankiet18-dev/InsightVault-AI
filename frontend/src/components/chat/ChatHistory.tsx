@@ -1,9 +1,13 @@
 import { MessageSquare, Plus } from 'lucide-react'
 import { useChatStore } from '@/stores/chatStore'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { useChatSessions } from '@/hooks/useChat'
 import { cn, formatRelativeTime } from '@/lib/utils'
 
 export function ChatHistory() {
-  const { sessions, activeSessionId, setActiveSession } = useChatStore()
+  const { activeSessionId, setActiveSession } = useChatStore()
+  const { activeWorkspaceId } = useWorkspaceStore()
+  const { data: sessions = [] } = useChatSessions(activeWorkspaceId)
 
   return (
     <aside className="w-64 border-r border-border bg-surface-0 flex flex-col h-full shrink-0">

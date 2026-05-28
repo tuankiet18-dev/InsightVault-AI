@@ -2,26 +2,37 @@ import { useState } from 'react'
 import { GitCompare, Sparkles, FileText } from 'lucide-react'
 import { DocumentSelector } from './DocumentSelector'
 import { CompareResult } from './CompareResult'
-import { mockCompareResult } from '@/data/mockCompare'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { useDocuments } from '@/hooks/useDocuments'
+import { useCompareDocuments } from '@/hooks/useReports'
+import type { CompareResponse } from '@/types/api'
 
 export function ComparePanel() {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [result, setResult] = useState<typeof mockCompareResult | null>(null)
-  const { documents } = useWorkspaceStore()
+  const [result, setResult] = useState<CompareResponse | null>(null)
+  const { activeWorkspaceId } = useWorkspaceStore()
+  const { data: documents = [] } = useDocuments(activeWorkspaceId)
+  const compareMutation = useCompareDocuments()
 
   const handleCompare = () => {
-    if (selectedIds.length < 2) return
+    if (selectedIds.length < 2 || !activeWorkspaceId) return
     
     setIsAnalyzing(true)
     setResult(null)
     
-    // Simulate AI processing delay
-    setTimeout(() => {
-      setResult(mockCompareResult)
-      setIsAnalyzing(false)
-    }, 2000)
+    compareMutation.mutate(
+      { workspaceId: activeWorkspaceId, data: { documentIds: selectedIds } },
+      {
+        onSuccess: (res) => {
+          setResult(res)
+          setIsAnalyzing(false)
+        },
+        onError: () => {
+          setIsAnalyzing(false)
+        }
+      }
+    )
   }
 
   const selectedDocs = documents.filter(d => selectedIds.includes(d.id))

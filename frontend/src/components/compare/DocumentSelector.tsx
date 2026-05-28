@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { File, Search, CheckCircle2 } from 'lucide-react'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { useDocuments } from '@/hooks/useDocuments'
 import { cn, getFileTypeColor } from '@/lib/utils'
 
 export function DocumentSelector({ 
@@ -10,7 +11,8 @@ export function DocumentSelector({
   selectedIds: string[], 
   onChange: (ids: string[]) => void 
 }) {
-  const { documents } = useWorkspaceStore()
+  const { activeWorkspaceId } = useWorkspaceStore()
+  const { data: documents = [] } = useDocuments(activeWorkspaceId)
   const [search, setSearch] = useState('')
   
   const completedDocs = documents.filter(d => d.status === 'completed')

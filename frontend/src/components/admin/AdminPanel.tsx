@@ -1,12 +1,20 @@
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { useAiJobs } from '@/hooks/useAiJobs'
 import { Clock, CheckCircle2, AlertCircle, HardDrive, Users, FileText, Database } from 'lucide-react'
-import { mockAdminStats } from '@/data/mockAdmin'
 import { formatRelativeTime } from '@/lib/utils'
+import { useQuery } from '@tanstack/react-query'
+import { adminApi } from '@/api/adminApi'
 
 export function AdminPanel() {
-  const { jobs } = useWorkspaceStore()
+  const { activeWorkspaceId } = useWorkspaceStore()
+  const { data: jobs = [] } = useAiJobs(activeWorkspaceId)
   const processingJobs = jobs.filter(j => j.status === 'processing')
   const failedJobs = jobs.filter(j => j.status === 'failed')
+
+  const { data: dashboard } = useQuery({
+    queryKey: ['admin', 'dashboard'],
+    queryFn: () => adminApi.getDashboard(),
+  })
 
   return (
     <div className="flex flex-col h-full bg-surface-50 overflow-y-auto p-6 lg:p-8">
@@ -18,26 +26,27 @@ export function AdminPanel() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <MetricCard 
               title="Active Workspaces" 
-              value={mockAdminStats.totalWorkspaces.toString()} 
+              value={dashboard?.workspaceCount?.toString() || '0'} 
               icon={<Database className="w-5 h-5 text-primary-500" />}
-              trend="+2 this week"
+              trend="Current active"
             />
             <MetricCard 
               title="Total Documents" 
-              value={mockAdminStats.totalDocuments.toString()} 
+              value={dashboard?.documentCount?.toString() || '0'} 
               icon={<FileText className="w-5 h-5 text-ai-500" />}
-              trend="+15 today"
+              trend="All workspaces"
             />
             <MetricCard 
-              title="Storage Used" 
-              value={mockAdminStats.storageUsedGb} 
+              title="Total Reports" 
+              value={dashboard?.reportCount?.toString() || '0'} 
               icon={<HardDrive className="w-5 h-5 text-surface-500" />}
-              trend={`${mockAdminStats.storageQuotaGb} limit`}
+              trend="Generated"
             />
             <MetricCard 
-              title="Active Users" 
-              value={mockAdminStats.activeUsers.toString()} 
+              title="Completed Docs" 
+              value={dashboard?.completedDocumentCount?.toString() || '0'} 
               icon={<Users className="w-5 h-5 text-success-500" />}
+              trend="Ready for RAG"
             />
           </div>
         </section>

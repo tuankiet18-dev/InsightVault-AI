@@ -1,10 +1,11 @@
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { useAiJobs } from '@/hooks/useAiJobs'
 import { Activity, AlertCircle, Clock } from 'lucide-react'
 
 export function ProcessingQueue() {
-  const { getProcessingJobs, getFailedJobs } = useWorkspaceStore()
-  const processingJobs = getProcessingJobs()
-  const failedJobs = getFailedJobs()
+  const { activeWorkspaceId } = useWorkspaceStore()
+  const { data: processingJobs = [] } = useAiJobs(activeWorkspaceId, 'processing')
+  const { data: failedJobs = [] } = useAiJobs(activeWorkspaceId, 'failed')
   
   if (processingJobs.length === 0 && failedJobs.length === 0) {
     return null

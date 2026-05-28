@@ -1,21 +1,26 @@
 import { SendHorizontal, Sparkles } from 'lucide-react'
 import { useChatStore } from '@/stores/chatStore'
+import { useSendMessage } from '@/hooks/useChat'
 
 export function ChatInput() {
-  const { inputValue, setInputValue, sendMessage, isLoading } = useChatStore()
+  const { inputValue, setInputValue, activeSessionId } = useChatStore()
+  const sendMessageMutation = useSendMessage(activeSessionId || '')
+  const isLoading = sendMessageMutation.isPending
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      if (inputValue.trim() && !isLoading) {
-        sendMessage(inputValue)
+      if (inputValue.trim() && !isLoading && activeSessionId) {
+        sendMessageMutation.mutate({ content: inputValue })
+        setInputValue('')
       }
     }
   }
 
   const handleSend = () => {
-    if (inputValue.trim() && !isLoading) {
-      sendMessage(inputValue)
+    if (inputValue.trim() && !isLoading && activeSessionId) {
+      sendMessageMutation.mutate({ content: inputValue })
+      setInputValue('')
     }
   }
 

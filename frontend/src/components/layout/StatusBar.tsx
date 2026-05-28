@@ -1,8 +1,11 @@
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { useWorkspace } from '@/hooks/useWorkspaces'
+import { useAiJobs } from '@/hooks/useAiJobs'
 
 export function StatusBar() {
-  const { getActiveWorkspace, jobs } = useWorkspaceStore()
-  const activeWs = getActiveWorkspace()
+  const { activeWorkspaceId } = useWorkspaceStore()
+  const { data: activeWs } = useWorkspace(activeWorkspaceId)
+  const { data: jobs = [] } = useAiJobs(activeWorkspaceId)
   
   const processingCount = jobs.filter(j => j.status === 'processing').length
   const failedCount = jobs.filter(j => j.status === 'failed').length
