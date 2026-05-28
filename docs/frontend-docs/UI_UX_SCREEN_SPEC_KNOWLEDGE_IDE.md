@@ -1,10 +1,6 @@
 # InsightVault AI - Đặc Tả Màn Hình UI/UX Theo Phong Cách Knowledge IDE
 
-Trạng thái: đặc tả màn hình sẵn sàng để dựng prototype trên Figma. Phong cách mục tiêu là Knowledge IDE, ưu tiên MVP desktop trước, responsive web sau, Flutter mobile nếu còn thời gian.
-
-File Figma đã tạo: https://www.figma.com/design/74Gf5frwipsHnebOxNQoeF
-
-Ghi chú: Figma MCP đã chạm giới hạn tool call của gói Starter trước khi kịp dựng canvas. Tài liệu này là brief chính thức để tiếp tục dựng prototype trong lần Figma tiếp theo.
+Trạng thái: đặc tả màn hình sẵn sàng để dựng prototype/frontend. Phong cách mục tiêu là Knowledge IDE, ưu tiên MVP desktop trước, responsive web sau, Flutter mobile nếu còn thời gian.
 
 ## Định Hướng Thiết Kế
 
@@ -12,7 +8,7 @@ Ghi chú: Figma MCP đã chạm giới hạn tool call của gói Starter trư�
 - Phong cách: Knowledge IDE, không phải landing page.
 - Cảm giác: nhiều thông tin nhưng gọn, tập trung, kỹ thuật, bình tĩnh, chuyên nghiệp.
 - Mẫu layout: thanh điều hướng trái + explorer workspace + vùng làm việc tài liệu ở giữa + AI inspector bên phải.
-- Typography: Plus Jakarta Sans trong app; Inter có thể dùng trong Figma nếu thiếu font.
+- Typography: Plus Jakarta Sans trong app; Inter có thể dùng làm fallback nếu thiếu font.
 - Bảng màu: nền slate trung tính, xanh dương làm màu chính, cyan/violet cho AI, xanh lá/cam/đỏ cho trạng thái.
 - Tránh: hero marketing, card quá lớn, gradient trang trí, icon emoji, trạng thái chỉ phân biệt bằng màu.
 
@@ -258,7 +254,7 @@ Mobile < 768px:
 - AI panel nằm dưới document được chọn.
 - Compare/report chuyển thành flow từng bước.
 
-## Các Frame Cần Dựng Trong Figma
+## Các Màn Hình Cần Dựng
 
 ```text
 00 Design Notes / Screen Inventory
@@ -270,14 +266,14 @@ Mobile < 768px:
 06 Mobile / Responsive Knowledge IDE
 ```
 
-## Layout Figma Đề Xuất
+## Layout Đề Xuất
 
 - Canvas background: `#F8FAFC`.
 - Desktop frames: `1440 x 960`.
 - Secondary desktop frames: `1040 x 720` hoặc `1080 x 760`.
 - Mobile frame: `390 x 844`.
 - Corner radius: app shell 16-18, cards 8-12, buttons 8.
-- Dùng Auto Layout cho list và panel lặp lại.
+- Dùng layout nhất quán cho list và panel lặp lại.
 
 ## Ghi Chú Handoff Cho FE
 
