@@ -14,6 +14,10 @@ public interface IFolderRepository : IRepository<Folder>
         Guid? parentFolderId = null,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<Folder>> ListActiveByWorkspaceAsync(
+        Guid workspaceId,
+        CancellationToken cancellationToken = default);
+
     Task<bool> ExistsInWorkspaceAsync(
         Guid folderId,
         Guid workspaceId,

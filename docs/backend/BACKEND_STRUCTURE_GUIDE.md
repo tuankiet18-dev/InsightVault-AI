@@ -153,8 +153,13 @@ public sealed class DocumentsController(IDocumentService documentService) : Cont
 
 ```csharp
 builder.Services.AddControllers();
+builder.Services.AddApplicationServices();
+builder.Services.AddInfrastructureServices();
+app.UseMiddleware<ApiExceptionMiddleware>();
 app.MapControllers();
 ```
+
+Controllers should not wrap every action in `try/catch`. Throw `ApiException` from services for expected business errors and let `ApiExceptionMiddleware` format the API error response.
 
 ## DTO Convention
 
@@ -183,7 +188,7 @@ Application/Services/Documents/DocumentService.cs
 Services should:
 
 - Validate business rules.
-- Check permissions through auth/permission helpers when available.
+- Check permissions through `IWorkspacePermissionService`.
 - Coordinate repositories.
 - Call MinIO storage services or AI service clients.
 - Call `SaveChangesAsync` once after related repository operations.
@@ -193,11 +198,43 @@ Recommended flow:
 ```text
 Controller
   -> IDocumentService
+    -> ICurrentUserService / IWorkspacePermissionService
     -> IDocumentRepository
     -> IAiJobRepository
     -> storage/AI infrastructure abstractions
     -> DbContext.SaveChangesAsync
 ```
+
+## Auth And Permission Convention
+
+Feature services should get the current user through `ICurrentUserService` and check workspace access through `IWorkspacePermissionService` before reading or mutating workspace-scoped data.
+
+```text
+List/read APIs:
+  IWorkspacePermissionService.EnsureCanViewWorkspaceAsync(...)
+
+Create/update/delete APIs:
+  IWorkspacePermissionService.EnsureCanManageFoldersAsync(...)
+```
+
+Until JWT authentication is implemented, development requests can pass `X-User-Id: <user-guid>` so backend APIs can still test permission checks against `workspaces.owner_id` and `workspace_members`.
+
+## Folder Rules
+
+Deleting a folder is a soft delete. When a parent folder is deleted, all active child folders under that parent are soft-deleted in the same operation.
+
+## Error Handling Convention
+
+Use `ApiException` for expected application errors:
+
+```csharp
+throw new ApiException(
+    StatusCodes.Status409Conflict,
+    "folder.name_conflict",
+    "A folder with the same name already exists in this location.");
+```
+
+`ApiExceptionMiddleware` converts these exceptions into the shared `ApiErrorDto` response. This keeps controllers focused on HTTP routing and services focused on business rules.
 
 ## Repository Convention
 
