@@ -16,7 +16,13 @@ from services.report_store import insert_report
 logger = logging.getLogger(__name__)
 
 ReportType = Literal[
-    "summary_report", "comparison_report", "gap_analysis_report", "section_report"
+    "summary_report",
+    "comparison_report",
+    "gap_analysis_report",
+    "gap_conflict_report",
+    "folder_report",
+    "section_report",
+    "custom_report",
 ]
 
 _REPORT_PROMPTS: dict[str, str] = {
@@ -74,6 +80,10 @@ Dựa trên nội dung các tài liệu sau{custom_prompt_note}, hãy tạo báo
 
 Đảm bảo báo cáo có cấu trúc rõ ràng với headings và bullet points.""",
 }
+
+_REPORT_PROMPTS["gap_conflict_report"] = _REPORT_PROMPTS["gap_analysis_report"]
+_REPORT_PROMPTS["folder_report"] = _REPORT_PROMPTS["summary_report"]
+_REPORT_PROMPTS["custom_report"] = _REPORT_PROMPTS["section_report"]
 
 
 def _fetch_documents_content(
@@ -151,7 +161,7 @@ def generate_report(
 
     prompt_template = _REPORT_PROMPTS.get(report_type, _REPORT_PROMPTS["summary_report"])
 
-    if report_type == "section_report":
+    if report_type in {"section_report", "custom_report"}:
         prompt = prompt_template.format(
             documents_section=documents_section,
             custom_prompt_note=f" theo yêu cầu: {custom_prompt}" if custom_prompt else "",

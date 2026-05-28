@@ -1,0 +1,13 @@
+using InsightVault.API.DTOs.Common;
+
+namespace InsightVault.API.DTOs.Chat;
+
+public sealed record CreateChatSessionRequest(
+    string? Title,
+    ApiChatScopeType ScopeType,
+    Guid? ScopeWorkspaceId,
+    Guid? ScopeFolderId,
+    IReadOnlyList<Guid>? ScopeDocumentIds,
+    bool? IncludeSubfolders,
+    bool? WebSearchEnabled,
+    ApiWebSearchProvider? WebSearchProvider);

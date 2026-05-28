@@ -29,11 +29,23 @@ type SystemRole = "user" | "admin";
 type WorkspaceRole = "owner" | "editor" | "viewer";
 type MemberStatus = "invited" | "active" | "removed";
 type DocumentStatus = "pending_upload" | "uploaded" | "processing" | "completed" | "failed";
-type AiJobType = "process_document" | "generate_report" | "compare_documents";
-type AiJobStatus = "queued" | "processing" | "completed" | "failed";
+type AiJobType =
+  | "process_document"
+  | "generate_summary"
+  | "rag_chat"
+  | "generate_report"
+  | "compare_documents";
+type AiJobStatus = "queued" | "processing" | "completed" | "failed" | "cancelled";
 type ChatScopeType = "workspace" | "folder" | "document";
 type ChatMessageRole = "user" | "assistant";
-type ReportType = "summary_report" | "comparison_report" | "gap_analysis_report" | "section_report";
+type ReportType =
+  | "summary_report"
+  | "comparison_report"
+  | "gap_analysis_report"
+  | "gap_conflict_report"
+  | "folder_report"
+  | "section_report"
+  | "custom_report";
 ```
 
 ## Core DTOs

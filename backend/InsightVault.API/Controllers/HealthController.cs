@@ -1,4 +1,5 @@
 using InsightVault.API.Data;
+using InsightVault.API.DTOs.Common;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,5 +30,3 @@ public sealed class HealthController : ControllerBase
         return Ok(new HealthResponse("ok", "Database connection is healthy"));
     }
 }
-
-public sealed record HealthResponse(string Status, string Message);
