@@ -1,24 +1,19 @@
-import FolderList from "../components/folder/FolderList";
+import FolderSection from "../components/folder/FolderSection";
 import DocumentList from "../components/document/DocumentList";
-import UploadModal from "../components/upload/UploadModal";
+import UploadPanel from "../components/upload/UploadPanel";
 
-import {
-  mockFolders,
-  mockDocuments,
-} from "../mock/documentsMock";
+import { mockFolders } from "../mock/documentsMock";
 
 function DocumentsPage() {
   return (
     <div style={{ padding: "20px" }}>
       <h1>Documents</h1>
 
-      <FolderList folders={mockFolders} />
+      <FolderSection folders={mockFolders} />
 
       <br />
 
-      <DocumentList documents={mockDocuments} />
-
-      <UploadModal />
+      <UploadPanel />
     </div>
   );
 }
