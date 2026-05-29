@@ -13,7 +13,7 @@ export function WorkspaceList() {
     <section className="px-3 py-4">
       <div className="mb-2 px-2 flex items-center justify-between">
         <span className="text-xs font-semibold text-surface-500 uppercase tracking-wider">
-          Vaults
+          Workspaces
         </span>
         <button
           onClick={() => setCreateWorkspaceModalOpen(true)}
@@ -30,7 +30,7 @@ export function WorkspaceList() {
             onClick={() => setCreateWorkspaceModalOpen(true)}
             className="w-full py-1.5 px-3 rounded-md border border-dashed border-border text-xs font-medium text-surface-500 hover:text-primary-600 hover:border-primary-300 hover:bg-primary-50 transition-colors"
           >
-            Create your first vault
+            Create your first workspace
           </button>
         </div>
       ) : (

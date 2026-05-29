@@ -260,10 +260,9 @@ body {
 .ide-layout {
   display: grid;
   grid-template-columns: 48px auto 1fr auto;
-  grid-template-rows: 48px 36px 1fr 24px;
+  grid-template-rows: 48px 1fr 24px;
   grid-template-areas:
     "rail topbar topbar topbar"
-    "rail tabs   tabs   tabs"
     "rail explorer main inspector"
     "rail statusbar statusbar statusbar";
   height: 100vh;
@@ -329,9 +328,9 @@ body {
 @media (max-width: 1199px) {
   .ide-layout {
     grid-template-columns: 48px 1fr auto;
+    grid-template-rows: 48px 1fr 24px;
     grid-template-areas:
       "rail topbar topbar"
-      "rail tabs   tabs"
       "rail main   inspector"
       "rail statusbar statusbar";
   }

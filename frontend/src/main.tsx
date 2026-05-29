@@ -10,7 +10,7 @@ async function enableMocking() {
   }
   const { worker } = await import('./mocks/browser')
   return worker.start({
-    onUnhandledRequest: 'bypass',
+    onUnhandledRequest: 'bypass', // Passes unhandled requests (like /api/auth) to the real backend
   })
 }
 

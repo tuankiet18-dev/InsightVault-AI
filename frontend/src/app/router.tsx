@@ -3,19 +3,25 @@ import { WorkspacePage } from '@/pages/WorkspacePage'
 import { ChatPage } from '@/pages/ChatPage'
 import { ComparePage } from '@/pages/ComparePage'
 import { AdminPage } from '@/pages/AdminPage'
+import { LoginPage } from '@/pages/LoginPage'
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 
 const router = createBrowserRouter([
   {
+    path: '/login',
+    element: <LoginPage />,
+  },
+  {
     path: '/',
-    element: <WorkspacePage />,
+    element: <ProtectedRoute><WorkspacePage /></ProtectedRoute>,
   },
   {
     path: '/chat',
-    element: <ChatPage />,
+    element: <ProtectedRoute><ChatPage /></ProtectedRoute>,
   },
   {
     path: '/compare',
-    element: <ComparePage />,
+    element: <ProtectedRoute><ComparePage /></ProtectedRoute>,
   },
   {
     path: '/reports',
@@ -23,7 +29,7 @@ const router = createBrowserRouter([
   },
   {
     path: '/admin',
-    element: <AdminPage />,
+    element: <ProtectedRoute><AdminPage /></ProtectedRoute>,
   },
   {
     path: '*',

@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { documentApi, type GetDocumentsParams } from '../api/documentApi';
 import type { PresignUploadRequest, ConfirmUploadRequest } from '../types/api';
 
@@ -35,13 +36,20 @@ export const useDeleteDocument = (workspaceId: string) => {
     onSuccess: (_, deletedId) => {
       queryClient.invalidateQueries({ queryKey: documentKeys.lists(workspaceId) });
       queryClient.removeQueries({ queryKey: documentKeys.detail(deletedId) });
+      toast.success('Document deleted successfully');
     },
+    onError: () => {
+      toast.error('Failed to delete document');
+    }
   });
 };
 
 export const useRequestPresignedUploadUrl = (workspaceId: string) => {
   return useMutation({
     mutationFn: (data: PresignUploadRequest) => documentApi.requestPresignedUploadUrl(workspaceId, data),
+    onError: () => {
+      toast.error('Failed to initiate upload');
+    }
   });
 };
 
@@ -54,6 +62,9 @@ export const useConfirmUpload = (workspaceId: string) => {
       queryClient.invalidateQueries({ queryKey: documentKeys.lists(workspaceId) });
       queryClient.invalidateQueries({ queryKey: ['folders'] });
     },
+    onError: () => {
+      toast.error('Failed to confirm upload');
+    }
   });
 };
 
@@ -65,6 +76,10 @@ export const useRetryProcessing = (workspaceId: string) => {
       queryClient.invalidateQueries({ queryKey: documentKeys.detail(documentId) });
       queryClient.invalidateQueries({ queryKey: documentKeys.lists(workspaceId) });
       queryClient.invalidateQueries({ queryKey: ['ai-jobs'] });
+      toast.success('Document processing retried');
     },
+    onError: () => {
+      toast.error('Failed to retry processing');
+    }
   });
 };

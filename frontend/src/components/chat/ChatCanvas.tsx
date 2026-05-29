@@ -16,6 +16,20 @@ export function ChatCanvas() {
     }
   }, [messages, isLoading])
 
+  if (!activeSessionId) {
+    return (
+      <div className="flex-1 flex flex-col h-full bg-surface-50 border-r border-border items-center justify-center text-surface-400">
+        <div className="flex flex-col items-center max-w-sm text-center">
+          <div className="w-12 h-12 rounded-full bg-surface-200 flex items-center justify-center mb-4">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg>
+          </div>
+          <h3 className="text-lg font-semibold text-surface-900 mb-2">No Chat Session Selected</h3>
+          <p className="text-sm text-surface-500">Select an existing chat from the sidebar or start a new one to begin.</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex-1 flex flex-col h-full bg-surface-50 border-r border-border min-w-0">
       <div 
