@@ -21,11 +21,13 @@ export const mockDocuments = [
     fileName: 'RAG evaluation.pdf',
     type: 'PDF',
     status: 'completed',
+    summary: 'Research document about RAG evaluation.',
   },
   {
     id: '2',
     fileName: 'Meeting notes.docx',
     type: 'DOCX',
     status: 'processing',
+    summary: 'Weekly sprint meeting notes.',
   },
 ]
