@@ -8,7 +8,7 @@ export function DocumentViewer() {
   const { getActiveTab } = useTabStore()
   
   const activeTab = getActiveTab()
-  const documentId = activeTab?.type === 'document' ? activeTab.documentId : null
+  const documentId = (activeTab?.type === 'document' ? activeTab.documentId : null) || null
   const { data: document } = useDocument(documentId)
   
   if (!activeTab || activeTab.type !== 'document') {
