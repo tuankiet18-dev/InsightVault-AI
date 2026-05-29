@@ -1,7 +1,5 @@
 import './App.css'
-import FolderSection from './components/folder/FolderSection'
-import UploadPanel from './components/upload/UploadPanel'
-import { mockFolders } from './mock/documentsMock'
+
 const activityNav = [
   { label: 'Explorer', icon: 'M3 5h18M3 12h18M3 19h18', active: true },
   { label: 'Search', icon: 'm21 21-4.3-4.3M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z' },
