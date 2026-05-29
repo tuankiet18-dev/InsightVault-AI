@@ -135,11 +135,11 @@ export const handlers = [
     const newDoc = {
       id: params.documentId as string,
       workspaceId: '1', // Hardcode or mock logic
-      folderId: data._folderId || null,
-      originalFileName: data._fileName || 'Uploaded Document.pdf',
-      fileName: data._fileName || 'Uploaded Document.pdf',
-      fileType: data.contentType || 'application/pdf',
-      fileSizeBytes: data.fileSizeBytes || 1024,
+      folderId: (data._folderId as string) || null,
+      originalFileName: (data._fileName as string) || 'Uploaded Document.pdf',
+      fileName: (data._fileName as string) || 'Uploaded Document.pdf',
+      fileType: (data.contentType as string) || 'application/pdf',
+      fileSizeBytes: (data.fileSizeBytes as number) || 1024,
       status: 'processing',
       keyPoints: [],
       keywords: [],
