@@ -14,3 +14,18 @@ export const mockFolders: FolderItem[] = [
     ],
   },
 ]
+
+export const mockDocuments = [
+  {
+    id: '1',
+    fileName: 'RAG evaluation.pdf',
+    type: 'PDF',
+    status: 'completed',
+  },
+  {
+    id: '2',
+    fileName: 'Meeting notes.docx',
+    type: 'DOCX',
+    status: 'processing',
+  },
+]
