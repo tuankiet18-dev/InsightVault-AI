@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { workspaceApi, type CreateWorkspaceData, type UpdateWorkspaceData } from '../api/workspaceApi';
 
 export const workspaceKeys = {
@@ -39,7 +40,11 @@ export const useCreateWorkspace = () => {
     mutationFn: (data: CreateWorkspaceData) => workspaceApi.createWorkspace(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: workspaceKeys.lists() });
+      toast.success('Workspace created successfully');
     },
+    onError: () => {
+      toast.error('Failed to create workspace');
+    }
   });
 };
 
@@ -50,7 +55,11 @@ export const useUpdateWorkspace = (workspaceId: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: workspaceKeys.detail(workspaceId) });
       queryClient.invalidateQueries({ queryKey: workspaceKeys.lists() });
+      toast.success('Workspace updated successfully');
     },
+    onError: () => {
+      toast.error('Failed to update workspace');
+    }
   });
 };
 
@@ -61,6 +70,10 @@ export const useDeleteWorkspace = () => {
     onSuccess: (_, deletedId) => {
       queryClient.invalidateQueries({ queryKey: workspaceKeys.lists() });
       queryClient.removeQueries({ queryKey: workspaceKeys.detail(deletedId) });
+      toast.success('Workspace deleted successfully');
     },
+    onError: () => {
+      toast.error('Failed to delete workspace');
+    }
   });
 };

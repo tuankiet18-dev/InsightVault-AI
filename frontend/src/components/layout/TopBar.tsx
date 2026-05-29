@@ -1,16 +1,25 @@
-import { Search, UserPlus, ChevronDown, Plus } from 'lucide-react'
+import { Search, UserPlus, ChevronDown, Plus, LogOut, Settings as SettingsIcon, Edit2, Trash2 } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
-import { useWorkspace, useWorkspaces } from '@/hooks/useWorkspaces'
+import { useWorkspace, useWorkspaces, useDeleteWorkspace } from '@/hooks/useWorkspaces'
 import { useUiStore } from '@/stores/uiStore'
+import { useAuthStore } from '@/stores/authStore'
+import { DropdownMenu, DropdownMenuItem } from '../ui/DropdownMenu'
+import { SettingsModal } from '../settings/SettingsModal'
+import { ConfirmModal } from '../ui/ConfirmModal'
+import { toast } from 'sonner'
 
 export function TopBar() {
   const { activeWorkspaceId, setActiveWorkspace } = useWorkspaceStore()
   const { data: activeWs } = useWorkspace(activeWorkspaceId)
   const { data: workspaces } = useWorkspaces()
   const { setCommandPaletteOpen, setCreateWorkspaceModalOpen } = useUiStore()
+  const { user, logout } = useAuthStore()
+  const deleteWorkspaceMutation = useDeleteWorkspace()
   
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [isDeleteWsModalOpen, setIsDeleteWsModalOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -23,16 +32,39 @@ export function TopBar() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  const handleDeleteWorkspace = () => {
+    if (!activeWorkspaceId) return
+    deleteWorkspaceMutation.mutate(activeWorkspaceId, {
+      onSuccess: () => {
+        setIsDeleteWsModalOpen(false)
+        setActiveWorkspace(null)
+      }
+    })
+  }
+
   return (
     <header className="ide-topbar flex items-center justify-between px-4 h-12 bg-surface-50 border-b border-border z-10">
       <div className="flex items-center gap-2 relative" ref={dropdownRef}>
-        <button 
-          onClick={() => setDropdownOpen(!dropdownOpen)}
-          className="flex items-center gap-1.5 px-2 py-1 -ml-2 rounded-md hover:bg-surface-100 text-sm font-medium transition-colors"
-        >
-          <span>{activeWs?.name || 'Select Workspace'}</span>
-          <ChevronDown className="w-4 h-4 text-surface-400" />
-        </button>
+        <div className="flex items-center">
+          <button 
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            className="flex items-center gap-1.5 px-2 py-1 -ml-2 rounded-md hover:bg-surface-100 text-sm font-medium transition-colors"
+          >
+            <span>{activeWs?.name || 'Select Workspace'}</span>
+            <ChevronDown className="w-4 h-4 text-surface-400" />
+          </button>
+          
+          {activeWs && (
+            <DropdownMenu align="left">
+              <DropdownMenuItem onClick={() => toast.info('Rename workspace coming soon')} icon={<Edit2 className="w-4 h-4" />}>
+                Rename Workspace
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsDeleteWsModalOpen(true)} icon={<Trash2 className="w-4 h-4" />} destructive>
+                Delete Workspace
+              </DropdownMenuItem>
+            </DropdownMenu>
+          )}
+        </div>
         
         {dropdownOpen && (
           <div className="absolute top-full left-0 mt-1 w-64 bg-surface-0 border border-border rounded-lg shadow-lg py-1 z-50">
@@ -91,10 +123,41 @@ export function TopBar() {
           <UserPlus className="w-4 h-4" />
           <span>Invite</span>
         </button>
-        <div className="w-8 h-8 rounded-full bg-ai-500 flex items-center justify-center text-white font-medium ml-2 shadow-sm">
-          M
-        </div>
+        <DropdownMenu
+          trigger={
+            <button className="w-8 h-8 rounded-full bg-ai-500 hover:bg-ai-600 transition-colors flex items-center justify-center text-white font-medium ml-2 shadow-sm overflow-hidden">
+              {user?.avatarUrl ? (
+                <img src={user.avatarUrl} alt={user.fullName || 'User'} className="w-full h-full object-cover" />
+              ) : (
+                <span>{user?.fullName?.charAt(0) || 'U'}</span>
+              )}
+            </button>
+          }
+        >
+          <div className="px-4 py-2 border-b border-border">
+            <p className="text-sm font-medium text-surface-900">{user?.fullName}</p>
+            <p className="text-xs text-surface-500 truncate">{user?.email}</p>
+          </div>
+          <DropdownMenuItem onClick={() => setIsSettingsOpen(true)} icon={<SettingsIcon className="w-4 h-4" />}>
+            Profile Settings
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => logout()} icon={<LogOut className="w-4 h-4" />} destructive>
+            Log out
+          </DropdownMenuItem>
+        </DropdownMenu>
       </div>
+
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      
+      <ConfirmModal
+        isOpen={isDeleteWsModalOpen}
+        onClose={() => setIsDeleteWsModalOpen(false)}
+        onConfirm={handleDeleteWorkspace}
+        isLoading={deleteWorkspaceMutation.isPending}
+        title="Delete Workspace?"
+        description={`Are you sure you want to delete workspace "${activeWs?.name}"? All folders, documents, and reports inside this workspace will be permanently removed.`}
+        confirmText="Delete Workspace"
+      />
     </header>
   )
 }

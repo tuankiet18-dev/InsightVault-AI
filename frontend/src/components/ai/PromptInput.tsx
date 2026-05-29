@@ -1,15 +1,70 @@
 import { useAiStore } from '@/stores/aiStore'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { Sparkles, CornerDownLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useCompareDocuments, useGenerateReport } from '@/hooks/useReports'
 
 export function PromptInput() {
-  const { prompt, setPrompt, runAnalysis, isLoading, mode } = useAiStore()
+  const { prompt, setPrompt, mode, setAnswer, setCitations, setSuggestions, isLoading, setIsLoading } = useAiStore()
+  const { activeWorkspaceId, selectedDocumentId, selectedFolderId } = useWorkspaceStore()
+  
+  const compareMutation = useCompareDocuments()
+  const generateReportMutation = useGenerateReport(activeWorkspaceId || '')
+  
+  const handleRun = () => {
+    if (!prompt.trim() || isLoading || !activeWorkspaceId) return
+    
+    setIsLoading(true)
+    setAnswer(null)
+    setCitations([])
+    setSuggestions([])
+
+    const documentIds = selectedDocumentId ? [selectedDocumentId] : []
+    const folderId = selectedFolderId
+
+    if (mode === 'Compare') {
+      compareMutation.mutate(
+        { 
+          workspaceId: activeWorkspaceId, 
+          data: { documentIds, folderId: folderId || undefined, title: prompt }
+        },
+        {
+          onSuccess: (res) => {
+            setAnswer(res.rawMarkdown || 'Comparison complete.')
+            setSuggestions(res.recommendations || [])
+            setIsLoading(false)
+            setPrompt('')
+          },
+          onError: () => setIsLoading(false)
+        }
+      )
+    } else {
+      generateReportMutation.mutate(
+        { 
+          documentIds, 
+          folderId: folderId || undefined, 
+          reportType: 'custom_report', 
+          customPrompt: prompt 
+        },
+        {
+          onSuccess: (res) => {
+            // Because our MSW generateReport doesn't return the exact same shape as compare,
+            // we handle it here loosely. The mock just returns a report object.
+            setAnswer((res as import('@/types/api').ReportDto)?.markdownContent || 'Report generated.')
+            setIsLoading(false)
+            setPrompt('')
+          },
+          onError: () => setIsLoading(false)
+        }
+      )
+    }
+  }
   
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       if (prompt.trim()) {
-        runAnalysis()
+        handleRun()
       }
     }
   }
@@ -35,7 +90,7 @@ export function PromptInput() {
       </div>
 
       <button
-        onClick={runAnalysis}
+        onClick={handleRun}
         disabled={isLoading || !prompt.trim()}
         className={cn(
           "flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-sm font-medium transition-all shadow-sm",

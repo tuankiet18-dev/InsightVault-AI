@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { folderApi, type CreateFolderData, type UpdateFolderData } from '../api/folderApi';
 
 export const folderKeys = {
@@ -33,7 +34,11 @@ export const useCreateFolder = (workspaceId: string) => {
     mutationFn: (data: CreateFolderData) => folderApi.createFolder(workspaceId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: folderKeys.lists(workspaceId) });
+      toast.success('Folder created successfully');
     },
+    onError: () => {
+      toast.error('Failed to create folder');
+    }
   });
 };
 
@@ -45,7 +50,11 @@ export const useUpdateFolder = () => {
     onSuccess: (updatedFolder) => {
       queryClient.invalidateQueries({ queryKey: folderKeys.detail(updatedFolder.id) });
       queryClient.invalidateQueries({ queryKey: folderKeys.lists(updatedFolder.workspaceId) });
+      toast.success('Folder updated successfully');
     },
+    onError: () => {
+      toast.error('Failed to update folder');
+    }
   });
 };
 
@@ -56,6 +65,10 @@ export const useDeleteFolder = (workspaceId: string) => {
     onSuccess: (_, deletedId) => {
       queryClient.invalidateQueries({ queryKey: folderKeys.lists(workspaceId) });
       queryClient.removeQueries({ queryKey: folderKeys.detail(deletedId) });
+      toast.success('Folder deleted successfully');
     },
+    onError: () => {
+      toast.error('Failed to delete folder');
+    }
   });
 };

@@ -1,19 +1,40 @@
 import { MessageSquare, Plus } from 'lucide-react'
 import { useChatStore } from '@/stores/chatStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
-import { useChatSessions } from '@/hooks/useChat'
+import { useChatSessions, useCreateChatSession } from '@/hooks/useChat'
 import { cn, formatRelativeTime } from '@/lib/utils'
 
 export function ChatHistory() {
   const { activeSessionId, setActiveSession } = useChatStore()
   const { activeWorkspaceId } = useWorkspaceStore()
   const { data: sessions = [] } = useChatSessions(activeWorkspaceId)
+  const createSessionMutation = useCreateChatSession(activeWorkspaceId || '')
+
+  const handleNewChat = () => {
+    if (!activeWorkspaceId) return
+    createSessionMutation.mutate(
+      { title: 'New Chat' },
+      {
+        onSuccess: (newSession) => {
+          setActiveSession(newSession.id)
+        }
+      }
+    )
+  }
 
   return (
     <aside className="w-64 border-r border-border bg-surface-0 flex flex-col h-full shrink-0">
       <div className="p-3 border-b border-border">
-        <button className="flex items-center justify-center gap-2 w-full py-2 bg-primary-50 text-primary-700 hover:bg-primary-100 rounded-lg text-sm font-medium transition-colors">
-          <Plus className="w-4 h-4" />
+        <button 
+          onClick={handleNewChat}
+          disabled={createSessionMutation.isPending || !activeWorkspaceId}
+          className="flex items-center justify-center gap-2 w-full py-2 bg-primary-50 text-primary-700 hover:bg-primary-100 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+        >
+          {createSessionMutation.isPending ? (
+            <div className="w-4 h-4 border-2 border-primary-500/20 border-t-primary-500 rounded-full animate-spin" />
+          ) : (
+            <Plus className="w-4 h-4" />
+          )}
           New Chat
         </button>
       </div>

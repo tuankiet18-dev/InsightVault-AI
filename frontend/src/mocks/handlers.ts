@@ -7,7 +7,7 @@ import { mockChatSessions, mockChatMessages } from '../data/mockChat'
 import { mockAdminStats } from '../data/mockAdmin'
 import type { ChatMessageDto, WorkspaceDto, FolderDto, DocumentDto } from '@/types/api'
 
-const API_BASE = 'http://localhost:5000/api'
+const API_BASE = 'http://localhost:5126/api'
 
 export const handlers = [
   // Workspaces
@@ -36,6 +36,25 @@ export const handlers = [
     mockWorkspaces.push(newWs)
     return HttpResponse.json(newWs)
   }),
+  http.patch(`${API_BASE}/workspaces/:workspaceId`, async ({ params, request }) => {
+    await delay(500)
+    const data = await request.json() as Record<string, unknown>
+    const index = mockWorkspaces.findIndex(w => w.id === params.workspaceId)
+    if (index !== -1) {
+      mockWorkspaces[index] = { ...mockWorkspaces[index], ...data }
+      return HttpResponse.json(mockWorkspaces[index])
+    }
+    return new HttpResponse(null, { status: 404 })
+  }),
+  http.delete(`${API_BASE}/workspaces/:workspaceId`, async ({ params }) => {
+    await delay(500)
+    const index = mockWorkspaces.findIndex(w => w.id === params.workspaceId)
+    if (index !== -1) {
+      mockWorkspaces.splice(index, 1)
+      return new HttpResponse(null, { status: 204 })
+    }
+    return new HttpResponse(null, { status: 404 })
+  }),
 
   // Folders
   http.get(`${API_BASE}/workspaces/:workspaceId/folders`, async () => {
@@ -58,8 +77,27 @@ export const handlers = [
   }),
   http.get(`${API_BASE}/folders/:folderId`, async ({ params }) => {
     await delay(300)
-    const doc = mockDocuments.find(d => d.id === params.documentId)
-    return doc ? HttpResponse.json(doc) : new HttpResponse(null, { status: 404 })
+    const folder = mockFolders.find(f => f.id === params.folderId)
+    return folder ? HttpResponse.json(folder) : new HttpResponse(null, { status: 404 })
+  }),
+  http.patch(`${API_BASE}/folders/:folderId`, async ({ params, request }) => {
+    await delay(500)
+    const data = await request.json() as Record<string, unknown>
+    const index = mockFolders.findIndex(f => f.id === params.folderId)
+    if (index !== -1) {
+      mockFolders[index] = { ...mockFolders[index], ...data }
+      return HttpResponse.json(mockFolders[index])
+    }
+    return new HttpResponse(null, { status: 404 })
+  }),
+  http.delete(`${API_BASE}/folders/:folderId`, async ({ params }) => {
+    await delay(500)
+    const index = mockFolders.findIndex(f => f.id === params.folderId)
+    if (index !== -1) {
+      mockFolders.splice(index, 1)
+      return new HttpResponse(null, { status: 204 })
+    }
+    return new HttpResponse(null, { status: 404 })
   }),
 
   // Documents
@@ -115,6 +153,15 @@ export const handlers = [
     await delay(300)
     const doc = mockDocuments.find(d => d.id === params.documentId)
     return doc ? HttpResponse.json(doc) : new HttpResponse(null, { status: 404 })
+  }),
+  http.delete(`${API_BASE}/documents/:documentId`, async ({ params }) => {
+    await delay(500)
+    const index = mockDocuments.findIndex(d => d.id === params.documentId)
+    if (index !== -1) {
+      mockDocuments.splice(index, 1)
+      return new HttpResponse(null, { status: 204 })
+    }
+    return new HttpResponse(null, { status: 404 })
   }),
 
   // Ai Jobs
