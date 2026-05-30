@@ -17,6 +17,7 @@ env/
 pip-log.txt
 pip-delete-this-directory.txt
 .pytest_cache/
+pytest-cache-files-*/
 .coverage
 htmlcov/
 
@@ -34,6 +35,11 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 
+# Browser/UI test artifacts
+playwright-report/
+test-results/
+test-artifacts/
+
 # OS
 .DS_Store
 Thumbs.db
@@ -47,5 +53,10 @@ Thumbs.db
 
 # Project specific
 coverage/
+.vite/
 .next/
 out/
+
+# Infra
+docker-compose.yml
+docker-compose.dev.yml

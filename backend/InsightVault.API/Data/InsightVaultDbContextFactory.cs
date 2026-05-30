@@ -12,8 +12,8 @@ public sealed class InsightVaultDbContextFactory : IDesignTimeDbContextFactory<I
         var optionsBuilder = new DbContextOptionsBuilder<InsightVaultDbContext>();
         var configuration = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("backend/InsightVault.API/appsettings.json", optional: true)
-            .AddJsonFile("backend/InsightVault.API/appsettings.Development.json", optional: true)
+            .AddJsonFile("appsettings.json", optional: true)
+            .AddJsonFile("appsettings.Development.json", optional: true)
             .AddEnvironmentVariables()
             .Build();
 
