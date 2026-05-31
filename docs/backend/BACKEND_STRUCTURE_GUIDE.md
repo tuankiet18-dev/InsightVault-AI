@@ -154,7 +154,7 @@ public sealed class DocumentsController(IDocumentService documentService) : Cont
 ```csharp
 builder.Services.AddControllers();
 builder.Services.AddApplicationServices();
-builder.Services.AddInfrastructureServices();
+builder.Services.AddInfrastructureServices(builder.Configuration);
 app.UseMiddleware<ApiExceptionMiddleware>();
 app.MapControllers();
 ```
@@ -222,6 +222,39 @@ Until JWT authentication is implemented, development requests can pass `X-User-I
 ## Folder Rules
 
 Deleting a folder is a soft delete. When a parent folder is deleted, all active child folders under that parent are soft-deleted in the same operation.
+
+Folder names are unique only among active folders in the same location. The database uses filtered unique indexes with `deleted_at IS NULL`, so a user can create a new folder with the same name after the old folder is soft-deleted.
+
+Workspace member email/user uniqueness is also scoped to active membership rows with `removed_at IS NULL`, so removed members can be invited again later.
+
+## Document Upload Rules
+
+Document upload uses a presigned-upload flow:
+
+```text
+FE -> BE: request presigned upload
+BE -> DB: create document with pending_upload
+FE -> object storage: upload file
+FE -> BE: confirm upload
+BE -> DB: mark uploaded and create process_document ai_job
+```
+
+Backend owns workspace permission checks, object key generation, document metadata, and AI job creation. Frontend must not choose the bucket or object key.
+
+Storage code is behind `IObjectStorageService`. The MinIO SDK implementation lives in `Infrastructure/Storage`, so `DocumentsController` and `DocumentService` stay independent from MinIO-specific APIs.
+
+Document processing uses RabbitMQ plus `ai_jobs`:
+
+```text
+DocumentService
+  -> create ai_job queued
+  -> IMessagePublisher publishes { jobId } to RabbitMQ
+  -> DocumentProcessingWorker consumes { jobId }
+  -> IAiServiceClient calls Python AI service /process-document
+  -> worker updates ai_jobs and documents status
+```
+
+`ai_jobs` is the source of truth for FE/admin status. RabbitMQ is only the delivery mechanism that wakes the worker quickly.
 
 ## Error Handling Convention
 
