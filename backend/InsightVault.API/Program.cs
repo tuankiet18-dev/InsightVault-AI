@@ -14,7 +14,7 @@ builder.Services.AddDbContext<InsightVaultDbContext>(options =>
     options
         .UseNpgsql(builder.Configuration.GetConnectionString("Postgres"), npgsql => npgsql.UseVector())
         .UseSnakeCaseNamingConvention());
-builder.Services.AddInfrastructureServices();
+builder.Services.AddInfrastructureServices(builder.Configuration);
 
 var app = builder.Build();
 
