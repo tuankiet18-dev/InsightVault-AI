@@ -1,6 +1,9 @@
 using InsightVault.API.Application.Abstractions.Auth;
 using InsightVault.API.Application.Abstractions.Repositories;
+<<<<<<< HEAD
 using InsightVault.API.Application.Abstractions.Services.Auth;
+=======
+>>>>>>> f07e3099f33f1c4031dd5f119fd1f7345fb5b495
 using InsightVault.API.Application.Abstractions.Services.Folders;
 using InsightVault.API.Common.Errors;
 using InsightVault.API.Data;
@@ -20,7 +23,11 @@ public sealed class FolderService(
         Guid? parentFolderId = null,
         CancellationToken cancellationToken = default)
     {
+<<<<<<< HEAD
         var userId = GetRequiredUserId();
+=======
+        var userId = currentUserService.GetRequiredUserId();
+>>>>>>> f07e3099f33f1c4031dd5f119fd1f7345fb5b495
         await workspacePermissionService.EnsureCanViewWorkspaceAsync(workspaceId, userId, cancellationToken);
 
         if (parentFolderId.HasValue)
@@ -41,7 +48,11 @@ public sealed class FolderService(
         CancellationToken cancellationToken = default)
     {
         var folder = await GetActiveFolderAsync(folderId, cancellationToken);
+<<<<<<< HEAD
         var userId = GetRequiredUserId();
+=======
+        var userId = currentUserService.GetRequiredUserId();
+>>>>>>> f07e3099f33f1c4031dd5f119fd1f7345fb5b495
         await workspacePermissionService.EnsureCanViewWorkspaceAsync(folder.WorkspaceId, userId, cancellationToken);
 
         return ToDto(folder);
@@ -52,7 +63,11 @@ public sealed class FolderService(
         CreateFolderRequest request,
         CancellationToken cancellationToken = default)
     {
+<<<<<<< HEAD
         var userId = GetRequiredUserId();
+=======
+        var userId = currentUserService.GetRequiredUserId();
+>>>>>>> f07e3099f33f1c4031dd5f119fd1f7345fb5b495
         await workspacePermissionService.EnsureCanManageFoldersAsync(workspaceId, userId, cancellationToken);
 
         var name = NormalizeName(request.Name);
@@ -92,7 +107,11 @@ public sealed class FolderService(
         CancellationToken cancellationToken = default)
     {
         var folder = await GetActiveFolderAsync(folderId, cancellationToken);
+<<<<<<< HEAD
         var userId = GetRequiredUserId();
+=======
+        var userId = currentUserService.GetRequiredUserId();
+>>>>>>> f07e3099f33f1c4031dd5f119fd1f7345fb5b495
         await workspacePermissionService.EnsureCanManageFoldersAsync(folder.WorkspaceId, userId, cancellationToken);
 
         var nextName = request.Name is null ? folder.Name : NormalizeName(request.Name);
@@ -134,7 +153,11 @@ public sealed class FolderService(
         CancellationToken cancellationToken = default)
     {
         var folder = await GetActiveFolderAsync(folderId, cancellationToken);
+<<<<<<< HEAD
         var userId = GetRequiredUserId();
+=======
+        var userId = currentUserService.GetRequiredUserId();
+>>>>>>> f07e3099f33f1c4031dd5f119fd1f7345fb5b495
         await workspacePermissionService.EnsureCanManageFoldersAsync(folder.WorkspaceId, userId, cancellationToken);
 
         var folders = await folderRepository.ListActiveByWorkspaceAsync(
@@ -191,6 +214,7 @@ public sealed class FolderService(
         return result;
     }
 
+<<<<<<< HEAD
     private Guid GetRequiredUserId()
     {
         return currentUserService.UserId
@@ -200,6 +224,8 @@ public sealed class FolderService(
                 "A valid authenticated user is required.");
     }
 
+=======
+>>>>>>> f07e3099f33f1c4031dd5f119fd1f7345fb5b495
     private async Task EnsureFolderCanMoveAsync(
         Folder folder,
         Guid? nextParentFolderId,

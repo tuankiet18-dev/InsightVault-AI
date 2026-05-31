@@ -27,6 +27,37 @@ public sealed class WorkspacePermissionService(InsightVaultDbContext db) : IWork
         Guid userId,
         CancellationToken cancellationToken = default)
     {
+<<<<<<< HEAD
+=======
+        await EnsureHasOwnerOrEditorRoleAsync(
+            workspaceId,
+            userId,
+            "workspace.insufficient_role",
+            "Only workspace owners and editors can manage folders.",
+            cancellationToken);
+    }
+
+    public async Task EnsureCanManageDocumentsAsync(
+        Guid workspaceId,
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsureHasOwnerOrEditorRoleAsync(
+            workspaceId,
+            userId,
+            "workspace.insufficient_role",
+            "Only workspace owners and editors can manage documents.",
+            cancellationToken);
+    }
+
+    private async Task EnsureHasOwnerOrEditorRoleAsync(
+        Guid workspaceId,
+        Guid userId,
+        string errorCode,
+        string message,
+        CancellationToken cancellationToken)
+    {
+>>>>>>> f07e3099f33f1c4031dd5f119fd1f7345fb5b495
         if (!await HasRoleAsync(
                 workspaceId,
                 userId,
@@ -35,8 +66,13 @@ public sealed class WorkspacePermissionService(InsightVaultDbContext db) : IWork
         {
             throw new ApiException(
                 StatusCodes.Status403Forbidden,
+<<<<<<< HEAD
                 "workspace.insufficient_role",
                 "Only workspace owners and editors can manage folders.");
+=======
+                errorCode,
+                message);
+>>>>>>> f07e3099f33f1c4031dd5f119fd1f7345fb5b495
         }
     }
 
