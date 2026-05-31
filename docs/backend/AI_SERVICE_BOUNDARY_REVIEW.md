@@ -1,84 +1,60 @@
 # AI Service Boundary Review
 
-This note reviews the current RAG implementation after the AI service merge and the recommended boundary with the ASP.NET Core backend.
+This review records the current AI-service implementation and the target boundary agreed by the team.
+
+Detailed endpoint contracts are in [BE_AI_BOUNDARY_CONTRACT.md](BE_AI_BOUNDARY_CONTRACT.md).
 
 ## Current Implementation
 
-The Python AI service currently exposes:
+The Python AI service exposes:
 
 - `POST /process-document`
 - `POST /rag/query`
 - `POST /compare`
 - `POST /generate-report`
 
-It also directly accesses:
+It currently accesses:
 
-- MinIO, to read uploaded files.
-- PostgreSQL, to update `documents`.
-- PostgreSQL/pgvector, to insert/search `document_chunks`.
-- PostgreSQL, to insert `reports`.
+- MinIO to read uploaded files.
+- PostgreSQL to update `documents`.
+- PostgreSQL/pgvector to insert/search `document_chunks`.
+- PostgreSQL to read document metadata and chunk content.
+- PostgreSQL to insert `reports`, but only when explicitly enabled.
 
-This is workable for MVP speed, but it gives the AI service a wide data-access boundary.
+## Boundary Decision
 
-## What Is Good
+Backend is the system-of-record owner.
 
-- Chunking, embedding, retrieval, prompting, and Gemini calls are in the AI service. That is a reasonable separation because these are AI-specific responsibilities.
-- Backend does not need to know how chunks, embeddings, vector search, or prompts are implemented.
-- The `/process-document` contract is clear enough for backend orchestration after upload.
+Backend owns authentication, authorization, business rules, and persistence of business state. AI service owns AI computation: extraction, chunking, embedding, retrieval, prompting, and Gemini calls.
 
-## Main Risks
+Frontend must call backend only. AI service is an internal service.
 
-| Risk | Why It Matters |
-|---|---|
-| Permission bypass | AI service endpoints accept workspace/document ids. If exposed publicly, callers could query/process documents without backend permission checks. |
-| Tight database coupling | AI service depends on exact PostgreSQL table/column names. Backend migrations can break AI service. |
-| Too much write access | AI service can update `documents` and insert `reports`, so business state changes can happen outside backend rules. |
-| Harder job tracking | Backend creates `ai_jobs`, but AI service currently updates documents/reports directly and does not consistently own job status transitions. |
+## Risk Review
 
-## Recommended Boundary For System Design
+| Risk | Current State | Direction |
+|---|---|---|
+| Permission bypass | AI endpoints accept ids and do not know user permissions. | Backend must validate permissions before every AI call. |
+| Tight DB coupling | AI service depends on database table/column names. | Keep for MVP, reduce over time by returning structured results to backend. |
+| Wide write access | AI can still update documents and chunks. | Move document/job/report writes to backend; keep vector writes in AI only as MVP compromise. |
+| Report persistence outside backend | Previously defaulted to `store_report=true`. | Default is now `false`; `AI_ALLOW_REPORT_PERSISTENCE=false` blocks accidental AI report writes. |
+| Folder subtree scope | AI folder scope currently filters by one `folder_id`. | Backend should resolve subfolders and pass explicit `document_ids` for include-subfolders queries. |
 
-Use backend as the system-of-record owner:
+## Current Safe Defaults
 
-```text
-Frontend
-  -> Backend API
-    -> permission checks
-    -> MinIO upload
-    -> documents/ai_jobs/chat/reports metadata
-    -> internal call/queue to AI service
-      -> extraction/chunking/embedding/RAG/Gemini
-    <- structured result
-  <- response to frontend
+```env
+AI_ALLOW_REPORT_PERSISTENCE=false
 ```
 
-AI service should own AI computation, not user permissions.
+With this setting:
 
-## Practical MVP Compromise
+- `/generate-report` returns Markdown content but does not insert `reports`.
+- `/compare` returns comparison content but does not insert `reports`.
+- Backend can persist returned content after permission checks and job-state updates.
 
-For this semester project, the team can keep the current AI service database access if time is tight, but apply these rules:
+## Recommended Next Refactors
 
-1. Do not let frontend call AI service directly.
-2. Backend must validate workspace membership and document access before calling AI service.
-3. Backend should pass only allowed document ids/object keys to AI service.
-4. AI service should be private in Docker/deploy networking.
-5. Later, restrict the AI service database user to only the tables it truly needs.
-
-## Cleaner Target Design
-
-Best target design:
-
-- Backend uploads file to MinIO and creates `documents` + `ai_jobs`.
-- Backend worker calls `POST /process-document`.
-- AI service returns summary, key points, keywords, chunks, and embeddings or stores only chunks if agreed.
-- Backend updates `documents`, `ai_jobs`, `reports`, and chat persistence.
-
-The only exception that can be acceptable: AI service may write `document_chunks` directly because vector persistence is tightly related to embedding. If doing this, document it as an intentional boundary decision.
-
-## Recommendation
-
-For now:
-
-- Keep chunking/embedding in AI service.
-- Keep RAG query logic in AI service.
-- Move ownership of `documents`, `ai_jobs`, `chat_messages`, `chat_message_sources`, and `reports` toward backend over time.
-- Treat direct AI service writes to PostgreSQL as an MVP shortcut, not the final architecture.
+1. Backend document worker calls AI and owns `documents.status`, `documents.summary`, `documents.key_points`, `documents.keywords`, and `ai_jobs`.
+2. AI `/process-document` returns chunks/embeddings/summary instead of updating `documents` directly.
+3. Decide whether `document_chunks` remains AI-owned for MVP or moves fully to backend.
+4. Backend resolves folder subtree document ids before calling `/rag/query`.
+5. If AI keeps DB access, create a restricted DB user for AI with minimal permissions.

@@ -77,7 +77,7 @@ def compare_documents(
     created_by_id: str | None = None,
     ai_job_id: str | None = None,
     title: str | None = None,
-    store_report: bool = True,
+    store_report: bool = False,
 ) -> dict:
     """
     Compare multiple documents and detect gaps/conflicts.
