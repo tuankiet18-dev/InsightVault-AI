@@ -16,7 +16,7 @@ class CompareRequest(BaseModel):
     document_ids: list[str] = Field(..., min_length=2, description="At least 2 document UUIDs")
     document_names: list[str] = Field(..., description="Display names matching document_ids")
     title: str | None = Field(None, description="Report title when persisted")
-    store_report: bool = Field(True, description="Persist comparison result into reports table")
+    store_report: bool = Field(False, description="Persist comparison result into reports table")
     web_search_options: WebSearchOptions | None = Field(
         None,
         description="Reserved for later web search phase. Current AI service ignores it.",

@@ -26,7 +26,7 @@ class GenerateReportRequest(BaseModel):
     ] = Field("summary_report")
     title: str | None = Field(None, description="Report title when persisted")
     custom_prompt: str | None = Field(None, description="Additional instruction for section_report/custom_report")
-    store_report: bool = Field(True, description="Persist generated Markdown into reports table")
+    store_report: bool = Field(False, description="Persist generated Markdown into reports table")
     web_search_options: WebSearchOptions | None = Field(
         None,
         description="Reserved for later web search phase. Current AI service ignores it.",
