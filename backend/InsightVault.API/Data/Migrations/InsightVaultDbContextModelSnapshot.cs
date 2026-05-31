@@ -629,12 +629,12 @@ namespace InsightVault.API.Data.Migrations
                     b.HasIndex("WorkspaceId", "Name")
                         .IsUnique()
                         .HasDatabaseName("ix_folders_workspace_id_name")
-                        .HasFilter("parent_folder_id IS NULL AND deleted_at IS NULL");
+                        .HasFilter("parent_folder_id IS NULL");
 
                     b.HasIndex("WorkspaceId", "ParentFolderId", "Name")
                         .IsUnique()
                         .HasDatabaseName("ix_folders_workspace_id_parent_folder_id_name")
-                        .HasFilter("parent_folder_id IS NOT NULL AND deleted_at IS NULL");
+                        .HasFilter("parent_folder_id IS NOT NULL");
 
                     b.ToTable("folders", (string)null);
                 });
@@ -956,9 +956,6 @@ namespace InsightVault.API.Data.Migrations
                     b.HasIndex("InvitedById")
                         .HasDatabaseName("ix_workspace_members_invited_by_id");
 
-                    b.HasIndex("RemovedAt")
-                        .HasDatabaseName("ix_workspace_members_removed_at");
-
                     b.HasIndex("Status")
                         .HasDatabaseName("ix_workspace_members_status");
 
@@ -967,13 +964,11 @@ namespace InsightVault.API.Data.Migrations
 
                     b.HasIndex("WorkspaceId", "Email")
                         .IsUnique()
-                        .HasDatabaseName("ix_workspace_members_workspace_id_email")
-                        .HasFilter("removed_at IS NULL");
+                        .HasDatabaseName("ix_workspace_members_workspace_id_email");
 
                     b.HasIndex("WorkspaceId", "UserId")
                         .IsUnique()
-                        .HasDatabaseName("ix_workspace_members_workspace_id_user_id")
-                        .HasFilter("removed_at IS NULL AND user_id IS NOT NULL");
+                        .HasDatabaseName("ix_workspace_members_workspace_id_user_id");
 
                     b.ToTable("workspace_members", (string)null);
                 });

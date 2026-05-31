@@ -30,17 +30,11 @@ services:
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB:-insightvault};Username=${POSTGRES_USER:-admin};Password=${POSTGRES_PASSWORD:-password123}
       MinIO__Endpoint: minio:9000
-      MinIO__PublicEndpoint: localhost:9000
-      MinIO__BucketName: insightvault-documents
-      MinIO__PresignedUploadMinutes: 10
-      MinIO__UseSsl: false
       MinIO__AccessKey: ${MINIO_ROOT_USER:-admin}
       MinIO__SecretKey: ${MINIO_ROOT_PASSWORD:-password123}
       RabbitMQ__Host: rabbitmq
-      RabbitMQ__Port: 5672
       RabbitMQ__Username: ${RABBITMQ_DEFAULT_USER:-admin}
       RabbitMQ__Password: ${RABBITMQ_DEFAULT_PASS:-password123}
-      RabbitMQ__DocumentProcessingQueue: document-processing
       AIService__BaseUrl: http://ai-service:8000
     ports:
       - "5126:8080"

@@ -63,7 +63,6 @@ builder.Services
     });
 builder.Services.AddAuthorization();
 builder.Services.AddInfrastructureServices();
-builder.Services.AddInfrastructureServices(builder.Configuration);
 
 var app = builder.Build();
 
