@@ -36,6 +36,16 @@ public sealed class FolderRepository(InsightVaultDbContext db)
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Folder>> ListActiveByWorkspaceAsync(
+        Guid workspaceId,
+        CancellationToken cancellationToken = default)
+    {
+        return await Db.Folders
+            .Where(folder => folder.WorkspaceId == workspaceId
+                && folder.DeletedAt == null)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<bool> ExistsInWorkspaceAsync(
         Guid folderId,
         Guid workspaceId,

@@ -1,3 +1,5 @@
+using InsightVault.API.Application;
+using InsightVault.API.Common.Errors;
 using InsightVault.API.Data;
 using InsightVault.API.Infrastructure;
 using InsightVault.API.Infrastructure.Auth;
@@ -17,6 +19,7 @@ builder.Logging.AddDebug();
 
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
+builder.Services.AddApplicationServices();
 builder.Services.AddHttpContextAccessor();
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
 builder.Services.Configure<GoogleAuthOptions>(builder.Configuration.GetSection("GoogleAuth"));
@@ -69,6 +72,7 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
+app.UseMiddleware<ApiExceptionMiddleware>();
 app.UseHttpsRedirection();
 app.UseCors(CorsPolicyName);
 app.UseAuthentication();
