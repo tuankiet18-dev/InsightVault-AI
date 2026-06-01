@@ -1,5 +1,6 @@
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import { WorkspacePage } from '@/pages/WorkspacePage'
+import { LandingPage } from '@/pages/LandingPage'
 import { ChatPage } from '@/pages/ChatPage'
 import { ComparePage } from '@/pages/ComparePage'
 import { AdminPage } from '@/pages/AdminPage'
@@ -13,6 +14,10 @@ const router = createBrowserRouter([
   },
   {
     path: '/',
+    element: <LandingPage />,
+  },
+  {
+    path: '/workspace',
     element: <ProtectedRoute><WorkspacePage /></ProtectedRoute>,
   },
   {

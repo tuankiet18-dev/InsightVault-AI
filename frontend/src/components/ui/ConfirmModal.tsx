@@ -39,33 +39,33 @@ export function ConfirmModal({
     <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-surface-900/40 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
         onClick={!isLoading ? onClose : undefined}
       />
       
       {/* Modal */}
-      <div className="relative bg-surface-0 rounded-xl shadow-xl w-full max-w-md overflow-hidden transform transition-all border border-border">
+      <div className="relative bg-card rounded-xl shadow-xl w-full max-w-md overflow-hidden transform transition-all border border-border">
         <div className="px-6 py-5">
           <div className="flex items-start gap-4">
             <div className={`shrink-0 p-2 rounded-full ${isDestructive ? 'bg-danger-50 text-danger-600' : 'bg-warning-50 text-warning-600'}`}>
               <AlertTriangle className="w-6 h-6" />
             </div>
             <div className="flex-1 mt-0.5">
-              <h3 className="text-lg font-semibold text-surface-900 leading-tight">
+              <h3 className="text-lg font-semibold text-card-foreground leading-tight">
                 {title}
               </h3>
-              <p className="mt-2 text-sm text-surface-500 leading-relaxed">
+              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
                 {description}
               </p>
             </div>
           </div>
         </div>
         
-        <div className="px-6 py-4 bg-surface-50 border-t border-border flex items-center justify-end gap-3">
+        <div className="px-6 py-4 bg-muted/50 border-t border-border flex items-center justify-end gap-3">
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="px-4 py-2 text-sm font-medium text-surface-700 bg-surface-0 border border-border rounded-lg hover:bg-surface-50 transition-colors disabled:opacity-50 shadow-sm"
+            className="px-4 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-lg hover:bg-muted/50 transition-colors disabled:opacity-50 shadow-sm"
           >
             {cancelText}
           </button>
@@ -75,7 +75,7 @@ export function ConfirmModal({
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors disabled:opacity-50 shadow-sm ${
               isDestructive 
                 ? 'bg-danger-600 hover:bg-danger-700' 
-                : 'bg-primary-600 hover:bg-primary-700'
+                : 'bg-primary hover:bg-primary'
             }`}
           >
             {isLoading && (
@@ -88,7 +88,7 @@ export function ConfirmModal({
         <button 
           onClick={onClose}
           disabled={isLoading}
-          className="absolute top-4 right-4 p-1.5 text-surface-400 hover:text-surface-600 hover:bg-surface-100 rounded-md transition-colors disabled:opacity-50"
+          className="absolute top-4 right-4 p-1.5 text-muted-foreground hover:text-muted-foreground hover:bg-accent rounded-md transition-colors disabled:opacity-50"
         >
           <X className="w-4 h-4" />
         </button>

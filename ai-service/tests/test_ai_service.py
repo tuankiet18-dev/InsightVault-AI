@@ -93,6 +93,7 @@ class AiServiceUnitTests(unittest.TestCase):
                 document_ids=["d1"],
                 report_type="summary_report",
                 created_by_id="u1",
+                store_report=True,
             )
 
         self.assertEqual(result["report_id"], "report-1")
@@ -120,6 +121,7 @@ class AiServiceUnitTests(unittest.TestCase):
                 workspace_id="w1",
                 document_ids=["d1", "d2"],
                 document_names=["one.md", "two.md"],
+                store_report=True,
             )
 
         self.assertEqual(result["report_id"], "report-2")
