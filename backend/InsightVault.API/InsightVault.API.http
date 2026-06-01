@@ -1,4 +1,4 @@
-@InsightVault.API_HostAddress = http://localhost:5126
+@InsightVault.API_HostAddress = http://localhost:5000
 
 GET {{InsightVault.API_HostAddress}}/api/health
 Accept: application/json

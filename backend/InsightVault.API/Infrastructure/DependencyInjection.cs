@@ -28,7 +28,7 @@ public static class DependencyInjection
         services.AddScoped<IJwtTokenService, JwtTokenService>();
 
         // Workspace services
-        services.AddScoped<IWorkspacePermissionService, WorkspacePermissionService>();
+        services.AddScoped<IWorkspacePermissionService, InsightVault.API.Application.Services.Workspaces.WorkspacePermissionService>();
         services.AddScoped<IWorkspaceService, WorkspaceService>();
 
         return services;

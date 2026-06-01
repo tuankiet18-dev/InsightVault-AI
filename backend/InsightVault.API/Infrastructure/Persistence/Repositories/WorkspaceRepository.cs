@@ -115,7 +115,7 @@ public sealed class WorkspaceRepository(InsightVaultDbContext db)
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<int> CountOwnerMembersAsync(
+    public async Task<int> CountActiveOwnerMembersAsync(
         Guid workspaceId,
         CancellationToken cancellationToken = default)
     {
@@ -123,7 +123,7 @@ public sealed class WorkspaceRepository(InsightVaultDbContext db)
             .CountAsync(
                 m => m.WorkspaceId == workspaceId
                     && m.Role == WorkspaceRole.Owner
-                    && m.Status != MemberStatus.Removed,
+                    && m.Status == MemberStatus.Active,
                 cancellationToken);
     }
 }

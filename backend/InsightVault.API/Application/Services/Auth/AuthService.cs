@@ -43,6 +43,7 @@ public sealed class AuthService(
             };
 
             await userRepository.AddAsync(user, cancellationToken);
+            await db.SaveChangesAsync(cancellationToken);
         }
         else
         {

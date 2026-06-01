@@ -205,18 +205,33 @@ public sealed class WorkspaceService(
 
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
 
-        // Check for duplicate
         var existing = await workspaceRepository.GetMemberByEmailAsync(workspaceId, normalizedEmail, cancellationToken);
-        if (existing is not null)
-        {
-            throw new InvalidOperationException("A member with this email already exists in the workspace.");
-        }
-
         var now = DateTimeOffset.UtcNow;
         var targetRole = WorkspaceMapper.ToDomainRole(request.Role);
 
-        // Check if user already exists in the system
         var existingUser = await userRepository.GetByEmailAsync(normalizedEmail, cancellationToken);
+
+        if (existing is not null)
+        {
+            if (existing.Status != MemberStatus.Removed)
+            {
+                throw new InvalidOperationException("A member with this email already exists in the workspace.");
+            }
+
+            existing.UserId = existingUser?.Id;
+            existing.Role = targetRole;
+            existing.Status = existingUser is not null ? MemberStatus.Active : MemberStatus.Invited;
+            existing.InvitedById = userId;
+            existing.InvitedAt = now;
+            existing.JoinedAt = existingUser is not null ? now : null;
+            existing.RemovedAt = null;
+            existing.UpdatedAt = now;
+
+            db.WorkspaceMembers.Update(existing);
+            await db.SaveChangesAsync(cancellationToken);
+
+            return WorkspaceMapper.ToMemberDto(existing);
+        }
 
         var member = new WorkspaceMember
         {
@@ -256,7 +271,7 @@ public sealed class WorkspaceService(
             var newRole = WorkspaceMapper.ToDomainRole(request.Role.Value);
             if (newRole != WorkspaceRole.Owner)
             {
-                var ownerCount = await workspaceRepository.CountOwnerMembersAsync(workspaceId, cancellationToken);
+                var ownerCount = await workspaceRepository.CountActiveOwnerMembersAsync(workspaceId, cancellationToken);
                 if (ownerCount <= 1)
                 {
                     throw new InvalidOperationException("Cannot change the role of the last owner.");
@@ -273,13 +288,15 @@ public sealed class WorkspaceService(
         {
             var newStatus = WorkspaceMapper.ToDomainStatus(request.Status.Value);
 
-            // Prevent removing the last owner
-            if (newStatus == MemberStatus.Removed && member.Role == WorkspaceRole.Owner)
+            // Prevent making the last active owner inactive.
+            if (newStatus != MemberStatus.Active
+                && member.Role == WorkspaceRole.Owner
+                && member.Status == MemberStatus.Active)
             {
-                var ownerCount = await workspaceRepository.CountOwnerMembersAsync(workspaceId, cancellationToken);
+                var ownerCount = await workspaceRepository.CountActiveOwnerMembersAsync(workspaceId, cancellationToken);
                 if (ownerCount <= 1)
                 {
-                    throw new InvalidOperationException("Cannot remove the last owner.");
+                    throw new InvalidOperationException("Cannot deactivate the last active owner.");
                 }
             }
 
@@ -320,10 +337,10 @@ public sealed class WorkspaceService(
         var member = await workspaceRepository.GetMemberByIdAsync(workspaceId, memberId, cancellationToken)
             ?? throw new KeyNotFoundException("Workspace member not found.");
 
-        // Prevent removing the last owner
-        if (member.Role == WorkspaceRole.Owner)
+        // Prevent removing the last active owner.
+        if (member.Role == WorkspaceRole.Owner && member.Status == MemberStatus.Active)
         {
-            var ownerCount = await workspaceRepository.CountOwnerMembersAsync(workspaceId, cancellationToken);
+            var ownerCount = await workspaceRepository.CountActiveOwnerMembersAsync(workspaceId, cancellationToken);
             if (ownerCount <= 1)
             {
                 throw new InvalidOperationException("Cannot remove the last owner from the workspace.");

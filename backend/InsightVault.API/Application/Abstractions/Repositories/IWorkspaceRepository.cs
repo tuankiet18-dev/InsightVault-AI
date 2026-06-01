@@ -41,7 +41,7 @@ public interface IWorkspaceRepository : IRepository<Workspace>
         Guid workspaceId,
         CancellationToken cancellationToken = default);
 
-    Task<int> CountOwnerMembersAsync(
+    Task<int> CountActiveOwnerMembersAsync(
         Guid workspaceId,
         CancellationToken cancellationToken = default);
 }
