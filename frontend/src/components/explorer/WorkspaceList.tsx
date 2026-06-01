@@ -3,11 +3,18 @@ import { useWorkspaces } from '@/hooks/useWorkspaces'
 import { useUiStore } from '@/stores/uiStore'
 import { cn } from '@/lib/utils'
 import { Plus } from 'lucide-react'
+import { useEffect } from 'react'
 
 export function WorkspaceList() {
   const { activeWorkspaceId, setActiveWorkspace } = useWorkspaceStore()
   const { data: workspaces = [] } = useWorkspaces()
   const { setCreateWorkspaceModalOpen } = useUiStore()
+
+  useEffect(() => {
+    if (!activeWorkspaceId && workspaces.length > 0) {
+      setActiveWorkspace(workspaces[0].id)
+    }
+  }, [activeWorkspaceId, setActiveWorkspace, workspaces])
 
   return (
     <section className="px-3 py-4">

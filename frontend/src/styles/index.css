@@ -1,5 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
@@ -62,7 +61,28 @@
   --color-surface-900: #0F172A;
   --color-surface-950: #020617;
 
+  /* ---- Status chip colors (Lovable-compatible) ---- */
+  --status-uploaded: #EFF6FF;
+  --status-uploaded-foreground: #475569;
+  --status-processing: #FFFBEB;
+  --status-processing-foreground: #D97706;
+  --status-completed: #F0FDF4;
+  --status-completed-foreground: #059669;
+  --status-failed: #FEF2F2;
+  --status-failed-foreground: #DC2626;
+
   /* ---- Shadcn Aliases ---- */
+  --color-primary: #2563EB;
+  --color-primary-foreground: #FFFFFF;
+  --color-secondary: #F1F5F9;
+  --color-secondary-foreground: #334155;
+  --color-destructive: #DC2626;
+  --color-destructive-foreground: #FFFFFF;
+  --color-rail: #1E293B;
+  --color-rail-foreground: #CBD5E1;
+  --color-rail-active: #60A5FA;
+  --color-ai: #8B5CF6;
+  --color-ai-foreground: #FFFFFF;
   --color-border: var(--color-surface-200);
   --color-input: var(--color-surface-200);
   --color-ring: var(--color-primary-500);
@@ -86,7 +106,7 @@
   --radius-shell: 18px;
 
   /* ---- Font families ---- */
-  --font-sans: 'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
 }
 
@@ -102,15 +122,32 @@ html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
   margin: 0;
   font-family: var(--font-sans);
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
+  font-weight: 400;
+  letter-spacing: 0;
+  font-feature-settings: "cv02", "cv03", "cv04", "kern";
   color: var(--color-surface-900);
   background: var(--color-surface-50);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+html,
+body,
+#root {
+  height: 100%;
 }
 
 /* ============================================
@@ -151,9 +188,16 @@ body {
 
   --color-primary-50: rgba(59, 130, 246, 0.15);
   --color-primary-100: rgba(59, 130, 246, 0.25);
+  --color-primary: #3B82F6;
+  --color-primary-foreground: #FFFFFF;
   
   --color-ai-50: rgba(139, 92, 246, 0.15);
   --color-ai-100: rgba(139, 92, 246, 0.25);
+  --color-ai: #A78BFA;
+  --color-ai-foreground: #0F172A;
+  --color-rail: #020617;
+  --color-rail-foreground: #CBD5E1;
+  --color-rail-active: #60A5FA;
 
   /* Shadcn Aliases in Dark Mode */
   --color-border: var(--color-surface-200);
@@ -251,6 +295,14 @@ body {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 /* ============================================

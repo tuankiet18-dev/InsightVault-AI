@@ -1,13 +1,14 @@
 import { cn } from '@/lib/utils'
 import { NAV_ITEMS } from '@/lib/constants'
 import { useUiStore } from '@/stores/uiStore'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { 
   FolderTree, 
   Search, 
-  MessageSquare, 
-  FileText, 
-  Settings,
-  ShieldAlert
+  Sparkles,
+  FileText,
+  ShieldCheck,
+  Settings
 } from 'lucide-react'
 
 export function ActivityRail() {
@@ -15,44 +16,50 @@ export function ActivityRail() {
 
   const getIcon = (id: string) => {
     switch (id) {
-      case 'explorer': return <FolderTree className="w-6 h-6" />
-      case 'search': return <Search className="w-6 h-6" />
-      case 'chat': return <MessageSquare className="w-6 h-6" />
-      case 'reports': return <FileText className="w-6 h-6" />
-      case 'admin': return <ShieldAlert className="w-6 h-6" />
-      default: return <Settings className="w-6 h-6" />
+      case 'explorer': return <FolderTree className="h-5 w-5" />
+      case 'search': return <Search className="h-5 w-5" />
+      case 'chat': return <Sparkles className="h-5 w-5" />
+      case 'reports': return <FileText className="h-5 w-5" />
+      case 'admin': return <ShieldCheck className="h-5 w-5" />
+      default: return <Settings className="h-5 w-5" />
     }
   }
 
   return (
-    <aside className="ide-rail flex flex-col items-center py-3 bg-surface-100 border-r border-border shrink-0 z-20">
+    <TooltipProvider delayDuration={150}>
+    <aside className="hidden h-full w-14 shrink-0 flex-col items-center gap-1 border-r border-border bg-rail py-3 text-rail-foreground md:flex">
       <div 
-        className="w-10 h-10 mb-4 flex items-center justify-center rounded-lg bg-primary-500 text-white font-bold text-lg shadow-sm"
+        className="mb-2 flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground font-mono text-sm font-bold shadow-sm"
         title="InsightVault AI"
       >
         IV
       </div>
       
-      <nav aria-label="Primary navigation" className="flex flex-col gap-2 w-full px-2">
+      <nav aria-label="Primary navigation" className="flex w-full flex-col items-center gap-1">
         {NAV_ITEMS.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setActiveNavItem(item.id)}
-            className={cn(
-              "relative flex items-center justify-center w-10 h-10 rounded-lg transition-colors group",
-              activeNavItem === item.id 
-                ? "bg-surface-200 text-primary-600" 
-                : "text-surface-500 hover:bg-surface-200 hover:text-surface-900"
-            )}
-            title={item.label}
-          >
-            {activeNavItem === item.id && (
-              <div className="absolute left-[-8px] top-1/2 -translate-y-1/2 w-1 h-5 bg-primary-500 rounded-r-full" />
-            )}
-            {getIcon(item.id)}
-          </button>
+          <Tooltip key={item.id}>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => setActiveNavItem(item.id)}
+                className={cn(
+                  "relative flex h-10 w-10 items-center justify-center rounded-md transition-colors",
+                  "hover:bg-white/10 hover:text-white",
+                  activeNavItem === item.id && "bg-white/10 text-white"
+                )}
+                aria-label={item.label}
+                aria-current={activeNavItem === item.id ? 'page' : undefined}
+              >
+                {activeNavItem === item.id && (
+                  <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r bg-rail-active" />
+                )}
+                {getIcon(item.id)}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">{item.label}</TooltipContent>
+          </Tooltip>
         ))}
       </nav>
     </aside>
+    </TooltipProvider>
   )
 }

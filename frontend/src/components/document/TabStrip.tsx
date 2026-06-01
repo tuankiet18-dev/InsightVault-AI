@@ -9,8 +9,8 @@ export function TabStrip() {
   if (tabs.length === 0) return null
 
   return (
-    <nav className="ide-tabs flex items-end px-2 h-9 bg-surface-100 border-b border-border overflow-x-auto overflow-y-hidden no-scrollbar select-none z-10">
-      <div className="flex items-center gap-1">
+    <nav className="flex h-9 items-center gap-px overflow-x-auto overflow-y-hidden border-b border-border bg-card select-none">
+      <div className="flex items-center">
         {tabs.map(tab => (
           <Tab 
             key={tab.id} 
@@ -43,10 +43,10 @@ function Tab({
     <button
       onClick={onSelect}
       className={cn(
-        "group relative flex items-center h-8 min-w-[120px] max-w-[200px] px-3 rounded-t-lg text-[13px] transition-colors border border-b-0",
+        "group relative flex h-9 min-w-[120px] max-w-[220px] items-center border-r border-border px-3 text-xs transition-colors",
         isActive 
-          ? "bg-surface-0 text-primary-600 border-border z-10 shadow-sm" 
-          : "bg-surface-100/50 text-surface-500 border-transparent hover:bg-surface-200"
+          ? "bg-background text-foreground"
+          : "text-muted-foreground hover:bg-accent"
       )}
     >
       <span className="truncate mr-4">{tab.label}</span>
@@ -55,8 +55,8 @@ function Tab({
         <div 
           onClick={onClose}
           className={cn(
-            "absolute right-1.5 p-1 rounded hover:bg-surface-200 transition-colors cursor-default",
-            isActive ? "text-surface-400 hover:text-surface-900" : "text-surface-400 opacity-0 group-hover:opacity-100"
+            "absolute right-1.5 rounded p-0.5 transition-colors cursor-default hover:bg-muted",
+            isActive ? "text-muted-foreground hover:text-foreground" : "text-muted-foreground opacity-0 group-hover:opacity-100"
           )}
           role="button"
           aria-label="Close tab"
@@ -65,10 +65,6 @@ function Tab({
         </div>
       )}
       
-      {/* Active tab bottom cover to hide border-b of parent */}
-      {isActive && (
-        <div className="absolute -bottom-px left-0 right-0 h-px bg-surface-0" />
-      )}
     </button>
   )
 }

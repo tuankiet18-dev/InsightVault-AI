@@ -1,6 +1,5 @@
 import { DocumentHeader } from './DocumentHeader'
 import { DocumentSummary } from './DocumentSummary'
-import { DocumentOutline } from './DocumentOutline'
 import { useTabStore } from '@/stores/tabStore'
 import { useDocument } from '@/hooks/useDocuments'
 
@@ -24,16 +23,14 @@ export function DocumentViewer() {
   }
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 bg-surface-50">
+    <div className="flex flex-col flex-1 min-h-0 bg-background">
       <DocumentHeader document={document} />
       
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-5xl mx-auto px-6 py-8 flex items-start gap-12">
-          <div className="flex-1 min-w-0 bg-surface-0 p-8 rounded-2xl shadow-sm border border-border">
+        <div className="mx-auto flex max-w-5xl items-start gap-12 px-8 py-8">
+          <div className="min-w-0 flex-1">
             <DocumentSummary document={document} />
           </div>
-          
-          <DocumentOutline document={document} />
         </div>
       </div>
     </div>

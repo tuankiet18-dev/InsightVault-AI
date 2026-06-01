@@ -1,54 +1,37 @@
-import { SplitSquareHorizontal, GitCompare, Sparkles } from 'lucide-react'
+import { FileBarChart2, GitCompare, FileText } from 'lucide-react'
 import type { DocumentDto } from '@/types/api-contract'
 import { StatusChip } from './StatusChip'
-import { cn } from '@/lib/utils'
 
 export function DocumentHeader({ document }: { document: DocumentDto }) {
   return (
-    <header className="px-6 py-4 border-b border-border bg-surface-0 shrink-0">
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="text-[11px] font-medium text-surface-400 uppercase tracking-wider mb-1">
-            Project Documents / uploaded by user / ready for workspace AI
+    <header className="shrink-0 border-b border-border bg-card px-4 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <div className="min-w-0">
+            <h1 className="text-sm font-semibold leading-5 tracking-tight text-foreground">{document.originalFileName}</h1>
           </div>
-          <h1 className="text-xl font-bold text-surface-900 mb-3">{document.originalFileName}</h1>
-          
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex flex-wrap items-center gap-2">
             <StatusChip status={document.status} />
-            {document.status === 'completed' && (
-              <>
-                <StatusChip label="RAG ready" variant="info" />
-                <StatusChip label="Summary generated" variant="ai" />
-              </>
-            )}
+            <span className="hidden text-[11px] text-muted-foreground md:inline">Updated 2026-05-20</span>
           </div>
         </div>
         
-        <div className="flex items-center gap-2">
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-surface-600 border border-border hover:bg-surface-100 transition-colors shadow-sm">
-            <SplitSquareHorizontal className="w-4 h-4" />
-            Open split
-          </button>
-          
+        <div className="hidden shrink-0 items-center gap-1 sm:flex">
           <button 
             disabled={document.status !== 'completed'}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-surface-600 border border-border hover:bg-surface-100 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
           >
             <GitCompare className="w-4 h-4" />
             Compare
           </button>
           
-          <button 
+          <button
             disabled={document.status !== 'completed'}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium shadow-sm transition-colors",
-              document.status === 'completed' 
-                ? "bg-ai-500 text-white hover:bg-ai-600" 
-                : "bg-surface-100 text-surface-400 cursor-not-allowed"
-            )}
+            className="flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Sparkles className="w-4 h-4" />
-            Ask AI
+            <FileBarChart2 className="w-4 h-4" />
+            Report
           </button>
         </div>
       </div>

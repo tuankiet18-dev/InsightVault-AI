@@ -1,7 +1,7 @@
 import { GoogleLogin } from '@react-oauth/google'
 import { useAuthStore } from '@/stores/authStore'
 import { useNavigate, useLocation, Navigate } from 'react-router-dom'
-import { ShieldCheck } from 'lucide-react'
+import { ShieldCheck, Sparkles } from 'lucide-react'
 
 export function LoginPage() {
   const { loginWithGoogle, isAuthenticated } = useAuthStore()
@@ -9,7 +9,7 @@ export function LoginPage() {
   const location = useLocation()
 
   // Where to redirect after login (or if already authenticated)
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/'
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard'
 
   if (isAuthenticated) {
     return <Navigate to={from} replace />
@@ -27,40 +27,47 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-surface-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-surface-0 rounded-3xl shadow-xl border border-border p-8 text-center animate-in fade-in zoom-in-95 duration-500">
-        <div className="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm border border-primary-100">
-          <div className="text-2xl font-black text-primary-600 tracking-tighter">
-            IV
-          </div>
-        </div>
-        
-        <h1 className="text-3xl font-bold text-surface-900 mb-2 tracking-tight">
-          Welcome to InsightVault
-        </h1>
-        <p className="text-surface-500 mb-8 text-sm">
-          Sign in to access your secure AI knowledge workspace and project documents.
-        </p>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--color-background)] p-4 text-[var(--color-foreground)]">
+      {/* Background gradients */}
+      <div className="absolute left-1/2 top-1/2 -z-10 -translate-x-1/2 -translate-y-1/2">
+        <div className="h-[400px] w-[600px] rounded-full bg-[var(--color-primary)]/20 blur-[100px] sm:h-[500px] sm:w-[800px]" />
+      </div>
 
-        <div className="flex flex-col items-center justify-center gap-4">
-          <GoogleLogin
-            onSuccess={handleSuccess}
-            onError={() => {
-              console.log('Login Failed')
-            }}
-            theme="outline"
-            size="large"
-            shape="rectangular"
-            width="100%"
-          />
-        </div>
-
-        <div className="mt-10 pt-6 border-t border-border/50 text-xs text-surface-400 flex flex-col items-center gap-2">
-          <div className="flex items-center gap-1.5 justify-center">
-            <ShieldCheck className="w-4 h-4 text-success-500" />
-            <span>Enterprise-grade security & encryption</span>
+      <div className="relative z-10 w-full max-w-md animate-in fade-in zoom-in-95 duration-500">
+        <div className="overflow-hidden rounded-3xl border border-[var(--color-border)] bg-[var(--color-card)]/70 p-8 shadow-2xl backdrop-blur-xl">
+          <div className="mb-8 flex flex-col items-center text-center">
+            <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br from-[var(--color-primary)] to-blue-400 shadow-lg">
+              <span className="font-mono text-2xl font-bold tracking-tighter text-white">IV</span>
+            </div>
+            <h1 className="mb-2 text-3xl font-bold tracking-tight">InsightVault</h1>
+            <p className="text-sm text-[var(--color-muted-foreground)]">
+              Log in to your secure AI knowledge workspace. Ask, compare, and report in seconds.
+            </p>
           </div>
-          <p>InsightVault API Connection Active</p>
+
+          <div className="mb-6 flex flex-col items-center justify-center gap-4">
+            <GoogleLogin
+              onSuccess={handleSuccess}
+              onError={() => {
+                console.error('Login Failed')
+              }}
+              theme="outline"
+              size="large"
+              shape="rectangular"
+              width="100%"
+            />
+          </div>
+
+          <div className="mt-8 flex flex-col items-center gap-3 border-t border-[var(--color-border)] pt-6 text-xs text-[var(--color-muted-foreground)]">
+            <div className="flex items-center gap-1.5 font-medium text-[var(--status-completed-foreground)]">
+              <ShieldCheck className="h-4 w-4" />
+              <span>Enterprise-grade security & encryption</span>
+            </div>
+            <div className="flex items-center gap-1.5 font-medium">
+              <Sparkles className="h-4 w-4 text-[var(--color-ai)]" />
+              <span>Powered by advanced RAG & LLMs</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

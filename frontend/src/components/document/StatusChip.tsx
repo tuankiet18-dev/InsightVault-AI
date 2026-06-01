@@ -8,7 +8,7 @@ type StatusChipProps = {
 
 export function StatusChip({ status, label, variant }: StatusChipProps) {
   let finalVariant = variant || 'default'
-  const finalLabel = label || status || 'Unknown'
+  const finalLabel = label || (status === 'completed' ? 'Ready' : status) || 'Unknown'
 
   if (!variant && status) {
     switch (status) {
@@ -20,7 +20,7 @@ export function StatusChip({ status, label, variant }: StatusChipProps) {
     }
   }
 
-  const baseClasses = "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border"
+  const baseClasses = "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase border"
   
   const variants = {
     default: "bg-surface-100 text-surface-600 border-surface-200",

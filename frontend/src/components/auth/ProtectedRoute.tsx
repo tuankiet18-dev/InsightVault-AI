@@ -2,8 +2,14 @@ import { Navigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { Loader2 } from 'lucide-react'
 
-export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuthStore()
+export function ProtectedRoute({
+  children,
+  requireAdmin = false,
+}: {
+  children: React.ReactNode
+  requireAdmin?: boolean
+}) {
+  const { isAuthenticated, isLoading, user } = useAuthStore()
   const location = useLocation()
 
   if (isLoading) {
@@ -17,6 +23,10 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (!isAuthenticated) {
     // Redirect to login page and save the current location they were trying to go to
     return <Navigate to="/login" state={{ from: location }} replace />
+  }
+
+  if (requireAdmin && user?.systemRole !== 'admin') {
+    return <Navigate to="/dashboard" replace />
   }
 
   return <>{children}</>
