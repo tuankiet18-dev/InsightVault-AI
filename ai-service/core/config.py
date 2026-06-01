@@ -13,6 +13,7 @@ class Settings:
 
     # PostgreSQL / pgvector
     DATABASE_URL: str = os.getenv("DATABASE_URL", "")
+    AI_ALLOW_REPORT_PERSISTENCE: bool = os.getenv("AI_ALLOW_REPORT_PERSISTENCE", "false").lower() == "true"
 
     # MinIO
     MINIO_ENDPOINT: str = os.getenv("MINIO_ENDPOINT", "localhost:9000")
