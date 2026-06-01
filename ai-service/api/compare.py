@@ -4,6 +4,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException
 
+from core.config import settings
 from models.compare import CompareRequest, CompareResponse
 from services.compare_service import compare_documents
 
@@ -29,7 +30,7 @@ async def compare(req: CompareRequest) -> CompareResponse:
             document_ids=req.document_ids,
             document_names=req.document_names,
             title=req.title,
-            store_report=req.store_report,
+            store_report=req.store_report and settings.AI_ALLOW_REPORT_PERSISTENCE,
         )
     except RuntimeError as exc:
         logger.error("Compare failed: %s", exc)

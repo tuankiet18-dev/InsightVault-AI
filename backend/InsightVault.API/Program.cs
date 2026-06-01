@@ -1,3 +1,5 @@
+using InsightVault.API.Application;
+using InsightVault.API.Common.Errors;
 using InsightVault.API.Data;
 using InsightVault.API.Infrastructure;
 using InsightVault.API.Infrastructure.Auth;
@@ -6,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Pgvector.EntityFrameworkCore;
 using System.Text;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 const string CorsPolicyName = "Frontend";
@@ -16,6 +19,7 @@ builder.Logging.AddDebug();
 
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
+builder.Services.AddApplicationServices();
 builder.Services.AddHttpContextAccessor();
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
 builder.Services.Configure<GoogleAuthOptions>(builder.Configuration.GetSection("GoogleAuth"));
@@ -65,8 +69,10 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.MapScalarApiReference();
 }
 
+app.UseMiddleware<ApiExceptionMiddleware>();
 app.UseHttpsRedirection();
 app.UseCors(CorsPolicyName);
 app.UseAuthentication();

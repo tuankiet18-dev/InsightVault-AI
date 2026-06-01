@@ -27,16 +27,16 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-surface-900/40 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
       
       {/* Modal */}
-      <div className="relative bg-surface-0 rounded-2xl shadow-2xl w-full max-w-4xl h-[600px] flex overflow-hidden transform transition-all border border-border">
+      <div className="relative bg-card rounded-2xl shadow-2xl w-full max-w-4xl h-[600px] flex overflow-hidden transform transition-all border border-border">
         
         {/* Sidebar */}
-        <div className="w-64 bg-surface-50 border-r border-border p-4 flex flex-col">
-          <h2 className="text-sm font-semibold text-surface-500 uppercase tracking-wider mb-4 px-3">
+        <div className="w-64 bg-muted/50 border-r border-border p-4 flex flex-col">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4 px-3">
             Settings
           </h2>
           <nav className="flex-1 space-y-1">
@@ -75,7 +75,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         <div className="flex-1 overflow-y-auto p-8 relative">
           <button 
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 text-surface-400 hover:text-surface-600 hover:bg-surface-100 rounded-md transition-colors"
+            className="absolute top-4 right-4 p-2 text-muted-foreground hover:text-muted-foreground hover:bg-accent rounded-md transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -85,7 +85,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
                 <div className="flex items-center gap-6 pb-6 border-b border-border">
                   <div className="relative">
-                    <div className="w-20 h-20 rounded-full bg-ai-100 flex items-center justify-center border-2 border-surface-0 shadow-sm overflow-hidden">
+                    <div className="w-20 h-20 rounded-full bg-ai-100 flex items-center justify-center border-2 border-border shadow-sm overflow-hidden">
                       {user?.avatarUrl ? (
                         <img src={user.avatarUrl} alt={user.fullName || 'User'} className="w-full h-full object-cover" />
                       ) : (
@@ -94,49 +94,49 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     </div>
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-surface-900 mb-1">{user?.fullName}</h3>
-                    <p className="text-sm text-surface-500">Manage your profile details and preferences.</p>
+                    <h3 className="text-xl font-bold text-card-foreground mb-1">{user?.fullName}</h3>
+                    <p className="text-sm text-muted-foreground">Manage your profile details and preferences.</p>
                   </div>
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-surface-900">First Name</label>
+                    <label className="text-sm font-medium text-card-foreground">First Name</label>
                     <input 
                       type="text" 
                       defaultValue={user?.fullName?.split(' ')[0] || ''}
-                      className="w-full h-10 px-3 rounded-lg border border-border bg-surface-50 focus:bg-surface-0 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all text-sm"
+                      className="w-full h-10 px-3 rounded-lg border border-border bg-muted/50 focus:bg-card focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-all text-sm"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-surface-900">Last Name</label>
+                    <label className="text-sm font-medium text-card-foreground">Last Name</label>
                     <input 
                       type="text" 
                       defaultValue={user?.fullName?.split(' ').slice(1).join(' ') || ''}
-                      className="w-full h-10 px-3 rounded-lg border border-border bg-surface-50 focus:bg-surface-0 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all text-sm"
+                      className="w-full h-10 px-3 rounded-lg border border-border bg-muted/50 focus:bg-card focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-all text-sm"
                     />
                   </div>
                   <div className="space-y-2 md:col-span-2">
-                    <label className="text-sm font-medium text-surface-900">Email Address</label>
+                    <label className="text-sm font-medium text-card-foreground">Email Address</label>
                     <input 
                       type="email" 
                       defaultValue={user?.email}
-                      className="w-full h-10 px-3 rounded-lg border border-border bg-surface-50 focus:bg-surface-0 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all text-sm text-surface-500 cursor-not-allowed"
+                      className="w-full h-10 px-3 rounded-lg border border-border bg-muted/50 focus:bg-card focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-all text-sm text-muted-foreground cursor-not-allowed"
                       disabled
                     />
-                    <p className="text-xs text-surface-400 mt-1">Managed by Google Authentication</p>
+                    <p className="text-xs text-muted-foreground mt-1">Managed by Google Authentication</p>
                   </div>
                   <div className="col-span-2 space-y-2">
-                    <label className="text-sm font-medium text-surface-700">Role</label>
-                    <div className="w-full px-3 py-2 bg-surface-100 border border-border rounded-lg text-surface-700 flex items-center gap-2">
-                      <Shield className="w-4 h-4 text-primary-500" />
+                    <label className="text-sm font-medium text-foreground">Role</label>
+                    <div className="w-full px-3 py-2 bg-accent border border-border rounded-lg text-foreground flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-primary" />
                       Workspace Owner
                     </div>
                   </div>
                 </div>
 
                 <div className="pt-6 border-t border-border flex justify-end">
-                  <button className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
+                  <button className="px-6 py-2 bg-primary hover:bg-primary text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
                     Save Changes
                   </button>
                 </div>
@@ -146,30 +146,30 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             {activeTab === 'appearance' && (
               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
                 <div>
-                  <h3 className="text-2xl font-bold text-surface-900 mb-1">Appearance</h3>
-                  <p className="text-surface-500">Customize the look and feel of your workspace.</p>
+                  <h3 className="text-2xl font-bold text-card-foreground mb-1">Appearance</h3>
+                  <p className="text-muted-foreground">Customize the look and feel of your workspace.</p>
                 </div>
                 
                 <div className="space-y-4">
-                  <h4 className="text-sm font-medium text-surface-900">Theme Preference</h4>
+                  <h4 className="text-sm font-medium text-card-foreground">Theme Preference</h4>
                   <div className="grid grid-cols-3 gap-4">
-                    <ThemeOption 
-                      title="Light" 
-                      description="Clean and bright" 
-                      icon={<Sun className="w-5 h-5 text-surface-500" />} 
-                      value="light" 
+                    <ThemeOption
+                      title="Light"
+                      description="Clean and bright"
+                      icon={<Sun className="w-5 h-5 text-muted-foreground" />}
+                      value="light"
                     />
-                    <ThemeOption 
-                      title="Dark" 
-                      description="Easy on the eyes" 
-                      icon={<Moon className="w-5 h-5 text-surface-500" />} 
-                      value="dark" 
+                    <ThemeOption
+                      title="Dark"
+                      description="Easy on the eyes"
+                      icon={<Moon className="w-5 h-5 text-muted-foreground" />}
+                      value="dark"
                     />
-                    <ThemeOption 
-                      title="System" 
-                      description="Syncs with OS" 
-                      icon={<Monitor className="w-5 h-5 text-surface-500" />} 
-                      value="system" 
+                    <ThemeOption
+                      title="System"
+                      description="Syncs with OS"
+                      icon={<Monitor className="w-5 h-5 text-muted-foreground" />}
+                      value="system"
                     />
                   </div>
                 </div>
@@ -178,7 +178,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
             {/* Other tabs placeholder */}
             {activeTab !== 'profile' && activeTab !== 'appearance' && (
-              <div className="flex flex-col items-center justify-center h-[400px] text-surface-500 animate-in fade-in duration-300">
+              <div className="flex flex-col items-center justify-center h-[400px] text-muted-foreground animate-in fade-in duration-300">
                 <Settings className="w-12 h-12 mb-4 opacity-20" />
                 <p>This settings page is under construction.</p>
               </div>
@@ -196,9 +196,9 @@ function TabButton({ active, onClick, icon, children }: { active: boolean, onCli
     <button
       onClick={onClick}
       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-        active 
-          ? 'bg-surface-200 text-surface-900' 
-          : 'text-surface-600 hover:bg-surface-100 hover:text-surface-900'
+        active
+          ? 'bg-muted text-card-foreground'
+          : 'text-muted-foreground hover:bg-accent hover:text-card-foreground'
       }`}
     >
       {icon}
@@ -207,16 +207,16 @@ function TabButton({ active, onClick, icon, children }: { active: boolean, onCli
   )
 }
 
-function ThemeOption({ 
-  title, 
-  description, 
-  icon, 
-  value 
-}: { 
-  title: string, 
-  description: string, 
-  icon: React.ReactNode, 
-  value: 'light' | 'dark' | 'system' 
+function ThemeOption({
+  title,
+  description,
+  icon,
+  value
+}: {
+  title: string,
+  description: string,
+  icon: React.ReactNode,
+  value: 'light' | 'dark' | 'system'
 }) {
   const { theme, setTheme } = useThemeStore()
   const active = theme === value
@@ -225,21 +225,21 @@ function ThemeOption({
     <button
       onClick={() => setTheme(value)}
       className={`relative flex flex-col p-4 border rounded-xl text-left transition-all ${
-        active 
-          ? 'border-primary-500 bg-primary-50/50 shadow-sm ring-1 ring-primary-500' 
-          : 'border-border bg-surface-50 hover:bg-surface-100 hover:border-surface-300'
+        active
+          ? 'border-primary bg-primary/10 shadow-sm ring-1 ring-primary-500'
+          : 'border-border bg-muted/50 hover:bg-accent hover:border-border'
       }`}
     >
       <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${
-        active ? 'bg-primary-100 text-primary-600' : 'bg-surface-200 text-surface-600'
+        active ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'
       }`}>
         {icon}
       </div>
-      <span className="font-semibold text-surface-900 text-sm mb-1">{title}</span>
-      <span className="text-xs text-surface-500">{description}</span>
+      <span className="font-semibold text-card-foreground text-sm mb-1">{title}</span>
+      <span className="text-xs text-muted-foreground">{description}</span>
       
       {active && (
-        <div className="absolute top-4 right-4 w-5 h-5 bg-primary-500 rounded-full flex items-center justify-center">
+        <div className="absolute top-4 right-4 w-5 h-5 bg-primary/100 rounded-full flex items-center justify-center">
           <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
           </svg>

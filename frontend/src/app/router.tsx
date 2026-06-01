@@ -3,7 +3,6 @@ import { LandingPage } from '@/pages/LandingPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AdminPage } from '@/pages/AdminPage'
-
 import { WorkspacePage } from '@/pages/WorkspacePage'
 import { UserDashboardPage } from '@/pages/UserDashboardPage'
 
@@ -42,7 +41,6 @@ const AdminJobsPage = () => (
 )
 
 const router = createBrowserRouter([
-  // Public Routes
   {
     path: '/',
     element: <LandingPage />,
@@ -51,18 +49,18 @@ const router = createBrowserRouter([
     path: '/login',
     element: <LoginPage />,
   },
-
-  // User Protected Routes
   {
     path: '/dashboard',
     element: <ProtectedRoute><UserDashboardPage /></ProtectedRoute>,
   },
   {
+    path: '/workspace',
+    element: <Navigate to="/dashboard" replace />,
+  },
+  {
     path: '/workspaces/:workspaceId',
     element: <ProtectedRoute><WorkspacePage /></ProtectedRoute>,
   },
-
-  // Admin Protected Routes
   {
     path: '/admin',
     element: <ProtectedRoute requireAdmin><AdminLayout /></ProtectedRoute>,
@@ -78,15 +76,13 @@ const router = createBrowserRouter([
       {
         path: 'jobs',
         element: <AdminJobsPage />,
-      }
-    ]
+      },
+    ],
   },
-
-  // Fallback Route
   {
     path: '*',
     element: <Navigate to="/dashboard" replace />,
-  }
+  },
 ])
 
 export function AppRouter() {

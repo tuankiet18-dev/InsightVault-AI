@@ -4,6 +4,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException
 
+from core.config import settings
 from models.report import GenerateReportRequest, GenerateReportResponse
 from services.report_service import generate_report
 
@@ -24,7 +25,7 @@ async def report(req: GenerateReportRequest) -> GenerateReportResponse:
             report_type=req.report_type,
             title=req.title,
             custom_prompt=req.custom_prompt,
-            store_report=req.store_report,
+            store_report=req.store_report and settings.AI_ALLOW_REPORT_PERSISTENCE,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))

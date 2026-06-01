@@ -56,7 +56,8 @@ export function TopBar() {
     <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-card px-3">
       <Button
         variant="ghost"
-        size="icon-sm"
+        size="icon"
+        className="h-8 w-8"
         onClick={toggleExplorer}
         aria-label="Toggle explorer"
       >
@@ -68,7 +69,7 @@ export function TopBar() {
         onValueChange={setActiveWorkspace}
         disabled={!workspaces?.length}
       >
-        <SelectTrigger size="sm" className="w-[170px] bg-background text-sm sm:w-[210px]">
+        <SelectTrigger className="h-8 w-[170px] bg-background text-sm sm:w-[210px]">
           <SelectValue placeholder={activeWs?.name || 'Select workspace'} />
         </SelectTrigger>
         <SelectContent align="start">
@@ -112,7 +113,8 @@ export function TopBar() {
       )}
       <Button
         variant="ghost"
-        size="icon-sm"
+        size="icon"
+        className="h-8 w-8"
         onClick={toggleInspector}
         aria-label="Toggle AI inspector"
       >
