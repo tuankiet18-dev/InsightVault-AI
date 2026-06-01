@@ -1,34 +1,35 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
-import { workspaceApi } from '@/api/workspaceApi'
 import { adminApi } from '@/api/adminApi'
-import type { WorkspaceDto, UserDashboardDto } from '@/types/api'
+import type { UserDashboardDto } from '@/types/api'
 import { Folder, FileText, Settings, LogOut, Plus, ChevronRight, Activity } from 'lucide-react'
+import { useUiStore } from '@/stores/uiStore'
+import { CreateWorkspaceModal } from '@/components/workspace/CreateWorkspaceModal'
+import { useWorkspaces } from '@/hooks/useWorkspaces'
 
 export function UserDashboardPage() {
   const { user, logout } = useAuthStore()
-  const [workspaces, setWorkspaces] = useState<WorkspaceDto[]>([])
+  const { data: workspaces = [], isLoading: isWorkspacesLoading } = useWorkspaces()
   const [stats, setStats] = useState<UserDashboardDto | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isStatsLoading, setIsStatsLoading] = useState(true)
+  const { setCreateWorkspaceModalOpen } = useUiStore()
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchStats = async () => {
       try {
-        const [wsData, statsData] = await Promise.all([
-          workspaceApi.getWorkspaces(),
-          adminApi.getDashboard()
-        ])
-        setWorkspaces(wsData)
+        const statsData = await adminApi.getDashboard()
         setStats(statsData)
       } catch (error) {
         console.error('Failed to fetch dashboard data', error)
       } finally {
-        setIsLoading(false)
+        setIsStatsLoading(false)
       }
     }
-    fetchData()
+    fetchStats()
   }, [])
+
+  const isLoading = isWorkspacesLoading || isStatsLoading
 
   return (
     <div className="min-h-screen bg-[var(--color-background)] text-[var(--color-foreground)]">
@@ -94,7 +95,10 @@ export function UserDashboardPage() {
         <section>
           <div className="mb-6 flex items-center justify-between">
             <h2 className="text-xl font-bold">Your Workspaces</h2>
-            <button className="flex items-center gap-2 rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[var(--color-primary)]/90">
+            <button 
+              onClick={() => setCreateWorkspaceModalOpen(true)}
+              className="flex items-center gap-2 rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[var(--color-primary)]/90"
+            >
               <Plus className="h-4 w-4" />
               New Workspace
             </button>
@@ -134,6 +138,7 @@ export function UserDashboardPage() {
           </div>
         </section>
       </main>
+      <CreateWorkspaceModal />
     </div>
   )
 }

@@ -1,146 +1,15 @@
 import { http, HttpResponse, delay } from 'msw'
-import { mockWorkspaces, mockFolders } from '../data/mockWorkspaces'
+
 import { mockDocuments, mockJobs } from '../data/mockDocuments'
 import { mockReports } from '../data/mockReports'
 import { mockCompareResult } from '../data/mockCompare'
 import { mockChatSessions, mockChatMessages } from '../data/mockChat'
 import { mockAdminStats } from '../data/mockAdmin'
-import type { ChatMessageDto, WorkspaceDto, FolderDto, DocumentDto } from '@/types/api'
+import type { ChatMessageDto, DocumentDto } from '@/types/api'
 
 const API_BASE = 'http://localhost:5126/api'
 
 export const handlers = [
-  // Workspaces
-  http.get(`${API_BASE}/workspaces`, async () => {
-    await delay(500)
-    return HttpResponse.json(mockWorkspaces)
-  }),
-  http.get(`${API_BASE}/workspaces/:workspaceId`, async ({ params }) => {
-    await delay(300)
-    const ws = mockWorkspaces.find(w => w.id === params.workspaceId)
-    return ws ? HttpResponse.json(ws) : new HttpResponse(null, { status: 404 })
-  }),
-  http.post(`${API_BASE}/workspaces`, async ({ request }) => {
-    await delay(1000)
-    const data = await request.json() as Record<string, unknown>
-    const newWs: WorkspaceDto = {
-      id: `ws-${Date.now()}`,
-      ownerId: 'mock-user-1',
-      name: data.name as string,
-      description: (data.description as string) || '',
-      isArchived: false,
-      currentUserRole: 'owner',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-    mockWorkspaces.push(newWs)
-    return HttpResponse.json(newWs)
-  }),
-  http.patch(`${API_BASE}/workspaces/:workspaceId`, async ({ params, request }) => {
-    await delay(500)
-    const data = await request.json() as Record<string, unknown>
-    const index = mockWorkspaces.findIndex(w => w.id === params.workspaceId)
-    if (index !== -1) {
-      mockWorkspaces[index] = { ...mockWorkspaces[index], ...data }
-      return HttpResponse.json(mockWorkspaces[index])
-    }
-    return new HttpResponse(null, { status: 404 })
-  }),
-  http.delete(`${API_BASE}/workspaces/:workspaceId`, async ({ params }) => {
-    await delay(500)
-    const index = mockWorkspaces.findIndex(w => w.id === params.workspaceId)
-    if (index !== -1) {
-      mockWorkspaces.splice(index, 1)
-      return new HttpResponse(null, { status: 204 })
-    }
-    return new HttpResponse(null, { status: 404 })
-  }),
-
-  // Workspace Members
-  http.get(`${API_BASE}/workspaces/:workspaceId/members`, async () => {
-    await delay(300)
-    return HttpResponse.json([{
-      id: 'member-1',
-      workspaceId: 'ws-1',
-      userId: 'mock-user-1',
-      email: 'anh.nguyen@insightvault.local',
-      role: 'owner',
-      status: 'active',
-      invitedAt: new Date().toISOString()
-    }])
-  }),
-  http.post(`${API_BASE}/workspaces/:workspaceId/members`, async ({ request }) => {
-    await delay(500)
-    const data = await request.json() as Record<string, unknown>
-    return HttpResponse.json({
-      id: `member-${Date.now()}`,
-      workspaceId: 'ws-1',
-      email: data.email as string,
-      role: data.role as string,
-      status: 'invited',
-      invitedAt: new Date().toISOString()
-    })
-  }),
-  http.patch(`${API_BASE}/workspaces/:workspaceId/members/:memberId`, async ({ request }) => {
-    await delay(500)
-    const data = await request.json() as Record<string, unknown>
-    return HttpResponse.json({
-      id: 'member-1',
-      workspaceId: 'ws-1',
-      email: 'anh.nguyen@insightvault.local',
-      role: data.role as string || 'owner',
-      status: data.status as string || 'active',
-      invitedAt: new Date().toISOString()
-    })
-  }),
-  http.delete(`${API_BASE}/workspaces/:workspaceId/members/:memberId`, async () => {
-    await delay(500)
-    return new HttpResponse(null, { status: 204 })
-  }),
-
-  // Folders
-  http.get(`${API_BASE}/workspaces/:workspaceId/folders`, async () => {
-    await delay(300)
-    return HttpResponse.json(mockFolders)
-  }),
-  http.post(`${API_BASE}/workspaces/:workspaceId/folders`, async ({ request, params }) => {
-    await delay(600)
-    const data = await request.json() as Record<string, unknown>
-    const newFolder = {
-      id: `fld-${Date.now()}`,
-      workspaceId: params.workspaceId as string,
-      name: data.name,
-      description: data.description || '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-    mockFolders.push(newFolder as FolderDto)
-    return HttpResponse.json(newFolder)
-  }),
-  http.get(`${API_BASE}/folders/:folderId`, async ({ params }) => {
-    await delay(300)
-    const folder = mockFolders.find(f => f.id === params.folderId)
-    return folder ? HttpResponse.json(folder) : new HttpResponse(null, { status: 404 })
-  }),
-  http.patch(`${API_BASE}/folders/:folderId`, async ({ params, request }) => {
-    await delay(500)
-    const data = await request.json() as Record<string, unknown>
-    const index = mockFolders.findIndex(f => f.id === params.folderId)
-    if (index !== -1) {
-      mockFolders[index] = { ...mockFolders[index], ...data }
-      return HttpResponse.json(mockFolders[index])
-    }
-    return new HttpResponse(null, { status: 404 })
-  }),
-  http.delete(`${API_BASE}/folders/:folderId`, async ({ params }) => {
-    await delay(500)
-    const index = mockFolders.findIndex(f => f.id === params.folderId)
-    if (index !== -1) {
-      mockFolders.splice(index, 1)
-      return new HttpResponse(null, { status: 204 })
-    }
-    return new HttpResponse(null, { status: 404 })
-  }),
 
   // Documents
   http.get(`${API_BASE}/workspaces/:workspaceId/documents`, async ({ params, request }) => {

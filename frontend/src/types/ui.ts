@@ -7,14 +7,31 @@ export type NavItem = {
   icon?: string
 }
 
-export type TabItem = {
+export type BaseTabItem = {
   id: string
   label: string
-  type: 'document' | 'compare' | 'report' | 'chat'
-  documentId?: string
-  reportId?: string
   closable?: boolean
 }
+
+export type DocumentTabItem = BaseTabItem & {
+  type: 'document'
+  documentId: string
+}
+
+export type ReportTabItem = BaseTabItem & {
+  type: 'report'
+  reportId: string
+}
+
+export type CompareTabItem = BaseTabItem & {
+  type: 'compare'
+}
+
+export type ChatTabItem = BaseTabItem & {
+  type: 'chat'
+}
+
+export type TabItem = DocumentTabItem | ReportTabItem | CompareTabItem | ChatTabItem
 
 export type FolderTreeNode = {
   id: string

@@ -32,6 +32,7 @@ export function TopBar() {
     toggleInspector,
     openUploadModal,
     setCommandPaletteOpen,
+    setInviteModalOpen,
   } = useUiStore()
   const { user, logout } = useAuthStore()
   const deleteWorkspaceMutation = useDeleteWorkspace()
@@ -100,7 +101,7 @@ export function TopBar() {
         </span>
       )}
       {isOwner && (
-        <Button variant="ghost" size="sm" className="hidden sm:inline-flex">
+        <Button variant="ghost" size="sm" className="hidden sm:inline-flex" onClick={() => setInviteModalOpen(true)}>
           <UserPlus className="h-4 w-4" />
           Invite
         </Button>
