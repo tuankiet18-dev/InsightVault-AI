@@ -56,6 +56,48 @@ export const handlers = [
     return new HttpResponse(null, { status: 404 })
   }),
 
+  // Workspace Members
+  http.get(`${API_BASE}/workspaces/:workspaceId/members`, async () => {
+    await delay(300)
+    return HttpResponse.json([{
+      id: 'member-1',
+      workspaceId: 'ws-1',
+      userId: 'mock-user-1',
+      email: 'anh.nguyen@insightvault.local',
+      role: 'owner',
+      status: 'active',
+      invitedAt: new Date().toISOString()
+    }])
+  }),
+  http.post(`${API_BASE}/workspaces/:workspaceId/members`, async ({ request }) => {
+    await delay(500)
+    const data = await request.json() as Record<string, unknown>
+    return HttpResponse.json({
+      id: `member-${Date.now()}`,
+      workspaceId: 'ws-1',
+      email: data.email as string,
+      role: data.role as string,
+      status: 'invited',
+      invitedAt: new Date().toISOString()
+    })
+  }),
+  http.patch(`${API_BASE}/workspaces/:workspaceId/members/:memberId`, async ({ request }) => {
+    await delay(500)
+    const data = await request.json() as Record<string, unknown>
+    return HttpResponse.json({
+      id: 'member-1',
+      workspaceId: 'ws-1',
+      email: 'anh.nguyen@insightvault.local',
+      role: data.role as string || 'owner',
+      status: data.status as string || 'active',
+      invitedAt: new Date().toISOString()
+    })
+  }),
+  http.delete(`${API_BASE}/workspaces/:workspaceId/members/:memberId`, async () => {
+    await delay(500)
+    return new HttpResponse(null, { status: 204 })
+  }),
+
   // Folders
   http.get(`${API_BASE}/workspaces/:workspaceId/folders`, async () => {
     await delay(300)
@@ -186,21 +228,21 @@ export const handlers = [
     const report = mockReports.find(r => r.id === params.reportId) || mockReports[0]
     return HttpResponse.json(report)
   }),
-  http.post(`${API_BASE}/workspaces/:workspaceId/reports/compare`, async () => {
+  http.post(`${API_BASE}/workspaces/:workspaceId/compare`, async () => {
     await delay(1500)
     return HttpResponse.json(mockCompareResult)
   }),
 
   // Chat
-  http.get(`${API_BASE}/workspaces/:workspaceId/chat/sessions`, async () => {
+  http.get(`${API_BASE}/workspaces/:workspaceId/chat-sessions`, async () => {
     await delay(300)
     return HttpResponse.json(mockChatSessions)
   }),
-  http.get(`${API_BASE}/chat/sessions/:sessionId/messages`, async () => {
+  http.get(`${API_BASE}/chat-sessions/:sessionId/messages`, async () => {
     await delay(300)
     return HttpResponse.json(mockChatMessages)
   }),
-  http.post(`${API_BASE}/chat/sessions/:sessionId/messages`, async ({ request, params }) => {
+  http.post(`${API_BASE}/chat-sessions/:sessionId/messages`, async ({ request, params }) => {
     await delay(1000)
     const data = await request.json() as Record<string, unknown>
     const newMsg: ChatMessageDto = {
@@ -218,7 +260,7 @@ export const handlers = [
   }),
 
   // Admin
-  http.get(`${API_BASE}/admin/dashboard`, async () => {
+  http.get(`${API_BASE}/dashboard/me`, async () => {
     await delay(500)
     return HttpResponse.json({
       workspaceCount: mockAdminStats.totalWorkspaces,

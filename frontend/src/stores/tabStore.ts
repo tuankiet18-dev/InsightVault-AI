@@ -12,10 +12,7 @@ type TabState = {
 
 export const useTabStore = create<TabState>((set, get) => ({
   tabs: [
-    { id: 'tab-doc-001', label: 'Requirement.docx', type: 'document', documentId: 'doc-001', closable: true },
-    { id: 'tab-doc-002', label: 'Proposal v2.md', type: 'document', documentId: 'doc-002', closable: true },
-    { id: 'tab-compare-001', label: 'Compare: Proposal vs Requirement', type: 'compare', closable: true },
-    { id: 'tab-report-001', label: 'Report: MVP Summary', type: 'report', closable: true },
+    { id: 'tab-doc-001', label: 'Project Proposal v3.pdf', type: 'document', documentId: 'doc-001', closable: true },
   ],
   activeTabId: 'tab-doc-001',
 

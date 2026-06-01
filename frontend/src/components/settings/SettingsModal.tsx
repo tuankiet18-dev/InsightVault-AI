@@ -153,23 +153,23 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 <div className="space-y-4">
                   <h4 className="text-sm font-medium text-card-foreground">Theme Preference</h4>
                   <div className="grid grid-cols-3 gap-4">
-                    <ThemeOption 
-                      title="Light" 
-                      description="Clean and bright" 
-                      icon={<Sun className="w-5 h-5 text-muted-foreground" />} 
-                      value="light" 
+                    <ThemeOption
+                      title="Light"
+                      description="Clean and bright"
+                      icon={<Sun className="w-5 h-5 text-muted-foreground" />}
+                      value="light"
                     />
-                    <ThemeOption 
-                      title="Dark" 
-                      description="Easy on the eyes" 
-                      icon={<Moon className="w-5 h-5 text-muted-foreground" />} 
-                      value="dark" 
+                    <ThemeOption
+                      title="Dark"
+                      description="Easy on the eyes"
+                      icon={<Moon className="w-5 h-5 text-muted-foreground" />}
+                      value="dark"
                     />
-                    <ThemeOption 
-                      title="System" 
-                      description="Syncs with OS" 
-                      icon={<Monitor className="w-5 h-5 text-muted-foreground" />} 
-                      value="system" 
+                    <ThemeOption
+                      title="System"
+                      description="Syncs with OS"
+                      icon={<Monitor className="w-5 h-5 text-muted-foreground" />}
+                      value="system"
                     />
                   </div>
                 </div>
@@ -196,8 +196,8 @@ function TabButton({ active, onClick, icon, children }: { active: boolean, onCli
     <button
       onClick={onClick}
       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-        active 
-          ? 'bg-muted text-card-foreground' 
+        active
+          ? 'bg-muted text-card-foreground'
           : 'text-muted-foreground hover:bg-accent hover:text-card-foreground'
       }`}
     >
@@ -207,16 +207,16 @@ function TabButton({ active, onClick, icon, children }: { active: boolean, onCli
   )
 }
 
-function ThemeOption({ 
-  title, 
-  description, 
-  icon, 
-  value 
-}: { 
-  title: string, 
-  description: string, 
-  icon: React.ReactNode, 
-  value: 'light' | 'dark' | 'system' 
+function ThemeOption({
+  title,
+  description,
+  icon,
+  value
+}: {
+  title: string,
+  description: string,
+  icon: React.ReactNode,
+  value: 'light' | 'dark' | 'system'
 }) {
   const { theme, setTheme } = useThemeStore()
   const active = theme === value
@@ -225,8 +225,8 @@ function ThemeOption({
     <button
       onClick={() => setTheme(value)}
       className={`relative flex flex-col p-4 border rounded-xl text-left transition-all ${
-        active 
-          ? 'border-primary bg-primary/10 shadow-sm ring-1 ring-primary-500' 
+        active
+          ? 'border-primary bg-primary/10 shadow-sm ring-1 ring-primary-500'
           : 'border-border bg-muted/50 hover:bg-accent hover:border-border'
       }`}
     >

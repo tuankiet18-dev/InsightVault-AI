@@ -14,31 +14,44 @@ export function AppShell({ children, rightPanel }: { children: ReactNode; rightP
   const { explorerOpen, inspectorOpen } = useUiStore()
 
   return (
-    <div 
-      className={cn(
-        "ide-layout bg-surface-50 text-surface-900 h-screen w-screen overflow-hidden",
-        !explorerOpen && "explorer-collapsed",
-        !inspectorOpen && "inspector-collapsed"
-      )}
-    >
-      <ActivityRail />
-      <TopBar />
-      
-      {explorerOpen && <ExplorerPanel />}
-      
-      {/* Main Content Area */}
-      <main className="ide-main flex flex-col min-w-0 min-h-0 bg-surface-0 border-r border-border">
-        {children}
-      </main>
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
+      <div className="flex min-h-0 flex-1">
+        <ActivityRail />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <TopBar />
 
-      {/* Optional Right Panel (e.g. AI Inspector) */}
-      {inspectorOpen && rightPanel && (
-        <aside className="ide-inspector w-[340px] shrink-0 border-l border-border bg-surface-50 flex flex-col min-w-0 min-h-0">
-          {rightPanel}
-        </aside>
-      )}
+          <div className="flex min-h-0 flex-1">
+            <div
+              className={cn(
+                "hidden shrink-0 overflow-hidden transition-[width] duration-200 ease-out lg:block",
+                explorerOpen ? "lg:w-[280px]" : "lg:w-0"
+              )}
+            >
+              <ExplorerPanel />
+            </div>
 
-      <StatusBar />
+            <main className="flex min-w-0 flex-1 flex-col bg-background">
+              {children}
+            </main>
+
+            {rightPanel && (
+              <div
+                className={cn(
+                  "hidden shrink-0 overflow-hidden transition-[width] duration-200 ease-out xl:block",
+                  inspectorOpen ? "xl:w-[380px]" : "xl:w-0"
+                )}
+              >
+                <aside className="flex h-full w-full min-w-0 flex-col border-l border-border bg-card">
+                  {rightPanel}
+                </aside>
+              </div>
+            )}
+          </div>
+
+          <StatusBar />
+        </div>
+      </div>
+
       <UploadModal />
       <CreateWorkspaceModal />
       <CreateFolderModal />

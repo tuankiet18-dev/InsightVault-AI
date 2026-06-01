@@ -1,6 +1,8 @@
 import { useTabStore } from '@/stores/tabStore'
 import { FileText, Download, Share2 } from 'lucide-react'
 import { useReport } from '@/hooks/useReports'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 export function ReportViewer() {
   const { getActiveTab } = useTabStore()
@@ -51,27 +53,7 @@ export function ReportViewer() {
       <div className="flex-1 overflow-y-auto p-6 lg:p-8">
         <div className="max-w-4xl mx-auto bg-surface-0 p-8 md:p-12 rounded-2xl shadow-sm border border-border">
           <article className="prose prose-sm md:prose-base prose-slate dark:prose-invert max-w-none">
-            {/* Extremely simple markdown renderer simulation */}
-            {report.markdownContent.split('\n\n').map((paragraph: string, i: number) => {
-              if (paragraph.startsWith('# ')) {
-                return <h1 key={i}>{paragraph.replace('# ', '')}</h1>
-              }
-              if (paragraph.startsWith('## ')) {
-                return <h2 key={i}>{paragraph.replace('## ', '')}</h2>
-              }
-              if (paragraph.startsWith('### ')) {
-                return <h3 key={i}>{paragraph.replace('### ', '')}</h3>
-              }
-              if (paragraph.startsWith('- ')) {
-                const items = paragraph.split('\n').map((item: string) => item.replace('- ', ''))
-                return (
-                  <ul key={i}>
-                    {items.map((item: string, j: number) => <li key={j}>{item}</li>)}
-                  </ul>
-                )
-              }
-              return <p key={i}>{paragraph}</p>
-            })}
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{report.markdownContent}</ReactMarkdown>
           </article>
         </div>
       </div>

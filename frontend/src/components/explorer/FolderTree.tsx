@@ -1,40 +1,33 @@
-import { ChevronRight, ChevronDown, Folder, File, FileText, Image as ImageIcon, Plus, UploadCloud } from 'lucide-react'
+import { ChevronRight, ChevronDown, Folder, File, FileText, Image as ImageIcon, UploadCloud } from 'lucide-react'
 import { useState } from 'react'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useTabStore } from '@/stores/tabStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useFolders } from '@/hooks/useFolders'
 import { useDocuments } from '@/hooks/useDocuments'
-import { getFileTypeColor, getStatusColor, cn } from '@/lib/utils'
+import { useWorkspace } from '@/hooks/useWorkspaces'
+import { getFileTypeColor, cn } from '@/lib/utils'
 import type { DocumentDto } from '@/types/api'
 
 export function FolderTree() {
   const { activeWorkspaceId } = useWorkspaceStore()
   const { data: folders = [] } = useFolders(activeWorkspaceId)
-  const { setCreateFolderModalOpen } = useUiStore()
+  const { data: activeWorkspace } = useWorkspace(activeWorkspaceId)
+  const canEdit = activeWorkspace?.currentUserRole === 'owner' || activeWorkspace?.currentUserRole === 'editor'
   
   if (!activeWorkspaceId) return null
   
   return (
-    <section className="px-3 py-4 border-t border-border">
-      <div className="mb-2 px-2 flex items-center justify-between">
-        <span className="text-xs font-semibold text-surface-500 uppercase tracking-wider">
-          Documents
-        </span>
-        <div className="flex items-center gap-0.5">
-         
-          <button
-            onClick={() => setCreateFolderModalOpen(true)}
-            className="p-1.5 rounded hover:bg-surface-200 text-surface-500 transition-colors"
-            title="New folder"
-          >
-            <Plus className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
-      <div className="flex flex-col">
+    <section>
+      <div className="flex flex-col border-l border-border pl-3">
         {folders.map(folder => (
-          <FolderRow key={folder.id} folderId={folder.id} name={folder.name} workspaceId={activeWorkspaceId} />
+          <FolderRow
+            key={folder.id}
+            folderId={folder.id}
+            name={folder.name}
+            workspaceId={activeWorkspaceId}
+            canEdit={canEdit}
+          />
         ))}
       </div>
     </section>
@@ -47,7 +40,17 @@ import { ConfirmModal } from '../ui/ConfirmModal'
 import { useDeleteFolder } from '@/hooks/useFolders'
 import { useDeleteDocument } from '@/hooks/useDocuments'
 
-function FolderRow({ folderId, name, workspaceId }: { folderId: string; name: string; workspaceId: string }) {
+function FolderRow({
+  folderId,
+  name,
+  workspaceId,
+  canEdit,
+}: {
+  folderId: string
+  name: string
+  workspaceId: string
+  canEdit: boolean
+}) {
   const [expanded, setExpanded] = useState(true)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const { selectedFolderId, setSelectedFolder } = useWorkspaceStore()
@@ -85,39 +88,44 @@ function FolderRow({ folderId, name, workspaceId }: { folderId: string; name: st
           )}
           <Folder className="w-4 h-4 text-surface-400 shrink-0" fill="currentColor" fillOpacity={0.2} />
           <span className="truncate font-medium">{name}</span>
+          <span className="ml-auto text-[10px] text-muted-foreground">{documents.length}</span>
         </button>
-        <div className="opacity-0 group-hover:opacity-100 flex items-center bg-surface-100/80 backdrop-blur-sm rounded transition-all">
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              openUploadModal(folderId)
-            }}
-            className="p-1 hover:bg-surface-300 rounded text-surface-500 transition-colors"
-            title="Upload to folder"
-          >
-            <UploadCloud className="w-3.5 h-3.5" />
-          </button>
-          <DropdownMenu align="right">
-            <DropdownMenuItem onClick={() => {}} icon={<Edit2 className="w-4 h-4" />}>
-              Rename
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              destructive 
-              onClick={() => setIsDeleteModalOpen(true)}
-              icon={<Trash2 className="w-4 h-4" />}
+        {canEdit && (
+          <div className="flex items-center rounded bg-surface-100/80 opacity-0 backdrop-blur-sm transition-all group-hover:opacity-100">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                openUploadModal(folderId)
+              }}
+              className="rounded p-1 text-surface-500 transition-colors hover:bg-surface-300"
+              title="Upload to folder"
             >
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenu>
-        </div>
+              <UploadCloud className="h-3.5 w-3.5" />
+            </button>
+            <DropdownMenu align="right">
+              <DropdownMenuItem onClick={() => {}} icon={<Edit2 className="h-4 w-4" />}>
+                Rename
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                destructive
+                onClick={() => setIsDeleteModalOpen(true)}
+                icon={<Trash2 className="h-4 w-4" />}
+              >
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenu>
+          </div>
+        )}
       </div>
       
       {expanded && (
         <div className="flex flex-col pl-6">
           {documents.length === 0 ? (
-            <div className="px-2 py-1 text-xs text-surface-400 italic">Empty</div>
+            <div className="px-2 py-1 text-xs text-muted-foreground italic">Empty</div>
           ) : (
-            documents.map(doc => <DocumentRow key={doc.id} document={doc} workspaceId={workspaceId} />)
+            documents.map(doc => (
+              <DocumentRow key={doc.id} document={doc} workspaceId={workspaceId} canEdit={canEdit} />
+            ))
           )}
         </div>
       )}
@@ -135,14 +143,21 @@ function FolderRow({ folderId, name, workspaceId }: { folderId: string; name: st
   )
 }
 
-function DocumentRow({ document, workspaceId }: { document: DocumentDto, workspaceId: string }) {
+function DocumentRow({
+  document,
+  workspaceId,
+  canEdit,
+}: {
+  document: DocumentDto
+  workspaceId: string
+  canEdit: boolean
+}) {
   const { selectedDocumentId, setSelectedDocument } = useWorkspaceStore()
   const { openTab } = useTabStore()
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const deleteMutation = useDeleteDocument(workspaceId)
   
   const isSelected = selectedDocumentId === document.id
-  const statusColor = getStatusColor(document.status)
   
   const handleOpen = () => {
     setSelectedDocument(document.id)
@@ -176,26 +191,23 @@ function DocumentRow({ document, workspaceId }: { document: DocumentDto, workspa
         </div>
         
         <div className="flex items-center gap-1 shrink-0">
-          {document.status !== 'completed' && (
-            <div 
-              className={cn("w-1.5 h-1.5 rounded-full", statusColor.dot)} 
-              title={`Status: ${document.status}`}
-            />
+          <MiniStatus status={document.status} />
+          {canEdit && (
+            <div className="flex items-center rounded bg-surface-100/80 opacity-0 backdrop-blur-sm transition-all group-hover:opacity-100">
+              <DropdownMenu align="right">
+                <DropdownMenuItem onClick={() => {}} icon={<Edit2 className="h-4 w-4" />}>
+                  Rename
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  destructive
+                  onClick={() => setIsDeleteModalOpen(true)}
+                  icon={<Trash2 className="h-4 w-4" />}
+                >
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenu>
+            </div>
           )}
-          <div className="opacity-0 group-hover:opacity-100 flex items-center bg-surface-100/80 backdrop-blur-sm rounded transition-all">
-            <DropdownMenu align="right">
-              <DropdownMenuItem onClick={() => {}} icon={<Edit2 className="w-4 h-4" />}>
-                Rename
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                destructive 
-                onClick={() => setIsDeleteModalOpen(true)}
-                icon={<Trash2 className="w-4 h-4" />}
-              >
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenu>
-          </div>
         </div>
       </div>
 
@@ -209,6 +221,24 @@ function DocumentRow({ document, workspaceId }: { document: DocumentDto, workspa
         confirmText="Delete Document"
       />
     </>
+  )
+}
+
+function MiniStatus({ status }: { status: string }) {
+  const label = status === 'completed' ? 'Ready' : status.replace('_', ' ')
+  const classes =
+    status === 'completed'
+      ? 'bg-success-50 text-success-600'
+      : status === 'processing'
+        ? 'bg-warning-50 text-warning-700'
+        : status === 'failed'
+          ? 'bg-danger-50 text-danger-700'
+          : 'bg-surface-100 text-surface-600'
+
+  return (
+    <span className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase', classes)}>
+      {label}
+    </span>
   )
 }
 
