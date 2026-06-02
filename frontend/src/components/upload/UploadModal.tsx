@@ -70,7 +70,11 @@ export function UploadModal() {
   }
 
   const handleUpload = async () => {
-    if (!file || !activeWorkspaceId) return
+    if (!file) return;
+    if (!activeWorkspaceId) {
+      setError('Workspace is not selected. Please refresh the page and try again.');
+      return;
+    }
     
     setStatus('uploading')
     
@@ -78,7 +82,7 @@ export function UploadModal() {
       // 1. Request presigned URL
       const presignResponse = await requestUrlMutation.mutateAsync({
         fileName: file.name,
-        contentType: file.type,
+        contentType: file.type || 'application/octet-stream',
         fileSizeBytes: file.size,
         folderId: uploadTargetFolderId || undefined
       })
@@ -235,6 +239,12 @@ export function UploadModal() {
                     </button>
                   </div>
 
+                  {error && (
+                    <div className="px-3 py-1.5 bg-danger-100 text-danger-700 text-sm font-medium rounded-md">
+                      {error}
+                    </div>
+                  )}
+
                   {status === 'uploading' && (
                     <div className="flex flex-col gap-2">
                       <div className="flex justify-between text-xs font-medium">
@@ -243,7 +253,7 @@ export function UploadModal() {
                       </div>
                       <div className="h-2 bg-surface-100 rounded-full overflow-hidden">
                         <div 
-                          className="h-full bg-primary-500 transition-all duration-300 ease-out rounded-full"
+                          className="h-full bg-blue-500 transition-all duration-300 ease-out rounded-full"
                           style={{ width: `${progress}%` }}
                         />
                       </div>
@@ -261,7 +271,7 @@ export function UploadModal() {
                     <button 
                       onClick={handleUpload}
                       disabled={status === 'uploading'}
-                      className="px-6 py-2 rounded-lg text-sm font-medium bg-primary-500 text-white hover:bg-primary-600 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      className="px-6 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >
                       {status === 'uploading' && (
                         <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />

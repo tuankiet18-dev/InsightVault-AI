@@ -11,69 +11,24 @@ const API_BASE = 'http://localhost:5126/api'
 
 export const handlers = [
 
-  // Documents
+  // Documents (Commented out to use Real Backend)
+  /*
   http.get(`${API_BASE}/workspaces/:workspaceId/documents`, async ({ params, request }) => {
-    await delay(500)
-    const url = new URL(request.url)
-    const folderId = url.searchParams.get('folderId')
-    
-    let filtered = mockDocuments.filter(d => d.workspaceId === params.workspaceId)
-    
-    // Explicit null check is tricky via search params, so we convention 'root' or empty
-    if (folderId) {
-      filtered = filtered.filter(d => d.folderId === folderId)
-    } else {
-      // return only root docs if folderId is empty or not provided
-      filtered = filtered.filter(d => !d.folderId)
-    }
-    
-    return HttpResponse.json(filtered)
+    // ...
   }),
   http.post(`${API_BASE}/workspaces/:workspaceId/documents/presign-upload`, async ({ request }) => {
-    await delay(300)
-    const data = await request.json() as Record<string, unknown>
-    return HttpResponse.json({
-      uploadUrl: `https://mock-s3-bucket.amazonaws.com/upload-${Date.now()}`,
-      documentId: `doc-${Date.now()}`,
-      objectKey: `uploads/${Date.now()}-${data.fileName}`,
-      expiresAt: new Date(Date.now() + 3600000).toISOString(),
-      requiredHeaders: {},
-    })
+    // ...
   }),
   http.post(`${API_BASE}/documents/:documentId/confirm-upload`, async ({ params, request }) => {
-    await delay(600)
-    const data = await request.json() as Record<string, unknown>
-    const newDoc = {
-      id: params.documentId as string,
-      workspaceId: '1', // Hardcode or mock logic
-      folderId: (data._folderId as string) || null,
-      originalFileName: (data._fileName as string) || 'Uploaded Document.pdf',
-      fileName: (data._fileName as string) || 'Uploaded Document.pdf',
-      fileType: (data.contentType as string) || 'application/pdf',
-      fileSizeBytes: (data.fileSizeBytes as number) || 1024,
-      status: 'processing',
-      keyPoints: [],
-      keywords: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-    mockDocuments.push(newDoc as DocumentDto)
-    return HttpResponse.json({ document: newDoc, aiJob: { id: 'job-1', status: 'processing', jobType: 'process_document' } })
+    // ...
   }),
   http.get(`${API_BASE}/documents/:documentId`, async ({ params }) => {
-    await delay(300)
-    const doc = mockDocuments.find(d => d.id === params.documentId)
-    return doc ? HttpResponse.json(doc) : new HttpResponse(null, { status: 404 })
+    // ...
   }),
   http.delete(`${API_BASE}/documents/:documentId`, async ({ params }) => {
-    await delay(500)
-    const index = mockDocuments.findIndex(d => d.id === params.documentId)
-    if (index !== -1) {
-      mockDocuments.splice(index, 1)
-      return new HttpResponse(null, { status: 204 })
-    }
-    return new HttpResponse(null, { status: 404 })
+    // ...
   }),
+  */
 
   // Ai Jobs
   http.get(`${API_BASE}/workspaces/:workspaceId/ai-jobs`, async ({ request }) => {
