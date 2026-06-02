@@ -60,3 +60,8 @@ out/
 # Infra
 docker-compose.yml
 docker-compose.dev.yml
+<<<<<<< Updated upstream
+=======
+#backend
+launchSettings.json
+>>>>>>> Stashed changes

@@ -76,35 +76,55 @@ export function UploadModal() {
     
     try {
       // 1. Request presigned URL
-      const { documentId } = await requestUrlMutation.mutateAsync({
+      const presignResponse = await requestUrlMutation.mutateAsync({
         fileName: file.name,
         contentType: file.type,
         fileSizeBytes: file.size,
         folderId: uploadTargetFolderId || undefined
       })
 
-      // 2. Simulate S3 upload progress (in a real app, use axios/fetch to uploadUrl)
-      await new Promise<void>((resolve) => {
-        let p = 0
-        const interval = setInterval(() => {
-          p += 20
-          setProgress(p)
-          if (p >= 100) {
-            clearInterval(interval)
-            resolve()
+      // 2. Real upload progress using XMLHttpRequest
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const percentComplete = Math.round((event.loaded / event.total) * 100)
+            setProgress(percentComplete)
           }
-        }, 200)
+        }
+        
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve()
+          } else {
+            reject(new Error(`Upload failed with status: ${xhr.status}`))
+          }
+        }
+        
+        xhr.onerror = () => {
+          reject(new Error('Network error during upload'))
+        }
+        
+        xhr.open('PUT', presignResponse.uploadUrl, true)
+        
+        if (presignResponse.requiredHeaders) {
+          Object.entries(presignResponse.requiredHeaders).forEach(([key, value]) => {
+            xhr.setRequestHeader(key, value as string)
+          })
+        } else {
+          xhr.setRequestHeader('Content-Type', file.type)
+        }
+        
+        xhr.send(file)
       })
 
       // 3. Confirm upload
       await confirmUploadMutation.mutateAsync({
-        documentId,
+        documentId: presignResponse.documentId,
         data: {
           fileSizeBytes: file.size,
-          contentType: file.type,
-          // Sending extra metadata for mock backend to use
-          _folderId: uploadTargetFolderId || undefined,
-          _fileName: file.name
+          contentType: file.type
         } as ConfirmUploadRequest
       })
 
