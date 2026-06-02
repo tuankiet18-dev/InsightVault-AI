@@ -31,6 +31,6 @@ public sealed class Document
     public User? UploadedBy { get; set; }
     public List<DocumentChunk> Chunks { get; set; } = [];
     public List<AiJob> AiJobs { get; set; } = [];
-    public List<ChatSession> ChatSessions { get; set; } = [];
+    public List<ChatMessageContext> ChatMessageContexts { get; set; } = [];
     public List<ChatMessageSource> ChatMessageSources { get; set; } = [];
 }

@@ -250,6 +250,7 @@ export const handlers = [
       chatSessionId: params.sessionId as string,
       role: 'user',
       content: (data.content as string) || '',
+      contexts: (data.contexts as ChatMessageDto['contexts']) || [],
       sources: [],
       createdAt: new Date().toISOString()
     }

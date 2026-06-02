@@ -10,7 +10,6 @@ export type AiJobType =
   | "generate_report"
   | "compare_documents";
 export type AiJobStatus = "queued" | "processing" | "completed" | "failed" | "cancelled";
-export type ChatScopeType = "workspace" | "folder" | "document";
 export type ChatMessageRole = "user" | "assistant";
 export type ReportType =
   | "summary_report"
@@ -134,11 +133,6 @@ export interface ConfirmUploadResponse {
 // Chat
 export interface CreateChatSessionRequest {
   title?: string | null;
-  scopeType: ChatScopeType;
-  scopeWorkspaceId?: string | null;
-  scopeFolderId?: string | null;
-  scopeDocumentIds?: string[];
-  includeSubfolders?: boolean;
   webSearchEnabled?: boolean;
   webSearchProvider?: "duckduckgo" | "searxng" | "brave" | null;
 }
@@ -147,15 +141,26 @@ export interface ChatSessionDto {
   id: string;
   workspaceId: string;
   title?: string | null;
-  scopeType: ChatScopeType;
-  scopeWorkspaceId?: string | null;
-  scopeFolderId?: string | null;
-  scopeDocumentIds?: string[];
-  includeSubfolders: boolean;
   webSearchEnabled?: boolean;
   webSearchProvider?: "duckduckgo" | "searxng" | "brave" | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export type ChatContextType = "folder" | "document";
+
+export interface ChatMessageContextRequest {
+  contextType: ChatContextType;
+  folderId?: string | null;
+  documentId?: string | null;
+  includeSubfolders?: boolean;
+}
+
+export interface ChatMessageContextDto {
+  contextType: ChatContextType;
+  folderId?: string | null;
+  documentId?: string | null;
+  includeSubfolders: boolean;
 }
 
 export interface ChatSourceDto {
@@ -179,6 +184,7 @@ export interface ChatMessageDto {
   role: ChatMessageRole;
   content: string;
   modelName?: string | null;
+  contexts: ChatMessageContextDto[];
   sources: ChatSourceDto[];
   webSources?: WebSourceDto[];
   createdAt: string;

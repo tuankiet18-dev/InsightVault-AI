@@ -1,8 +1,7 @@
 namespace InsightVault.API.Domain.Enums;
 
-public enum ChatScopeType
+public enum ChatContextType
 {
-    Workspace,
     Folder,
     Document
 }

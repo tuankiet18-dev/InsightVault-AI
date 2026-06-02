@@ -17,6 +17,6 @@ public sealed class Folder
     public User? CreatedBy { get; set; }
     public List<Folder> ChildFolders { get; set; } = [];
     public List<Document> Documents { get; set; } = [];
-    public List<ChatSession> ChatSessions { get; set; } = [];
+    public List<ChatMessageContext> ChatMessageContexts { get; set; } = [];
     public List<Report> Reports { get; set; } = [];
 }

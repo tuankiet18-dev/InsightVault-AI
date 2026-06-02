@@ -17,4 +17,5 @@ public sealed class ChatMessage
 
     public ChatSession ChatSession { get; set; } = null!;
     public List<ChatMessageSource> Sources { get; set; } = [];
+    public List<ChatMessageContext> Contexts { get; set; } = [];
 }
