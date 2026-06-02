@@ -12,6 +12,9 @@ from main import app  # noqa: E402
 from services.chunker import chunk_text  # noqa: E402
 from services.extractor import extract  # noqa: E402
 from services import compare_service, rag_service, report_service  # noqa: E402
+from services.text_normalizer import normalize_for_sparse_search  # noqa: E402
+from services.vector_store import _reciprocal_rank_fusion  # noqa: E402
+from core.chat_provider import GroqChatProvider  # noqa: E402
 
 
 class TextPipelineTests(unittest.TestCase):
@@ -71,21 +74,100 @@ class ApiValidationTests(unittest.TestCase):
 
 
 class AiServiceUnitTests(unittest.TestCase):
+    def test_groq_provider_uses_openai_compatible_chat_completion(self) -> None:
+        fake_response = type(
+            "FakeResponse",
+            (),
+            {
+                "raise_for_status": lambda self: None,
+                "json": lambda self: {
+                    "choices": [{"message": {"content": " Answer from Groq "}}]
+                },
+            },
+        )()
+
+        with (
+            patch("core.chat_provider.settings.GROQ_API_KEY", "test-key"),
+            patch("core.chat_provider.httpx.post", return_value=fake_response) as post,
+        ):
+            result = GroqChatProvider("llama-test").generate_text("hello")
+
+        self.assertEqual(result, "Answer from Groq")
+        post.assert_called_once()
+        request = post.call_args.kwargs
+        self.assertEqual(request["json"]["model"], "llama-test")
+        self.assertEqual(request["json"]["messages"][0]["content"], "hello")
+
     def test_rag_returns_no_source_answer_when_retrieval_empty(self) -> None:
         with (
             patch.object(rag_service, "embed_query", return_value=[0.1, 0.2]),
-            patch.object(rag_service, "similarity_search", return_value=[]),
+            patch.object(rag_service, "hybrid_search", return_value=[]),
         ):
             result = rag_service.query(question="Unknown?", workspace_id="w1")
 
         self.assertEqual(result["sources"], [])
         self.assertIn("khong", _strip_vietnamese_accents_for_assert(result["answer"]))
 
+    def test_normalize_for_sparse_search_preserves_technical_tokens(self) -> None:
+        normalized = normalize_for_sparse_search(
+            "Tài liệu nói về JWT, ERR-401 và AI_ALLOW_REPORT_PERSISTENCE=false."
+        )
+
+        self.assertIn("tai lieu", normalized)
+        self.assertIn("jwt", normalized)
+        self.assertIn("err-401", normalized)
+        self.assertIn("ai_allow_report_persistence", normalized)
+
+    def test_rrf_deduplicates_and_keeps_debug_scores(self) -> None:
+        dense = [
+            {
+                "chunk_id": "c1",
+                "document_id": "d1",
+                "file_name": "a.md",
+                "chunk_index": 0,
+                "content": "Alpha",
+                "similarity": 0.9,
+                "dense_score": 0.9,
+                "metadata": {},
+            },
+            {
+                "chunk_id": "c2",
+                "document_id": "d1",
+                "file_name": "a.md",
+                "chunk_index": 1,
+                "content": "Beta",
+                "similarity": 0.8,
+                "dense_score": 0.8,
+                "metadata": {},
+            },
+        ]
+        sparse = [
+            {
+                "chunk_id": "c2",
+                "document_id": "d1",
+                "file_name": "a.md",
+                "chunk_index": 1,
+                "content": "Beta",
+                "similarity": None,
+                "sparse_original_score": 1.5,
+                "metadata": {},
+            }
+        ]
+
+        fused = _reciprocal_rank_fusion(
+            [("dense", dense), ("sparse_original", sparse)]
+        )
+
+        self.assertEqual(fused[0]["chunk_id"], "c2")
+        self.assertEqual(len(fused), 2)
+        self.assertEqual(fused[0]["retrieval_debug"]["dense_rank"], 2)
+        self.assertEqual(fused[0]["retrieval_debug"]["sparse_original_rank"], 1)
+        self.assertEqual(fused[0]["retrieval_debug"]["sparse_original_score"], 1.5)
+
     def test_report_generation_persists_report_when_enabled(self) -> None:
-        fake_response = type("FakeResponse", (), {"text": "# Summary\n\nContent"})()
         with (
             patch.object(report_service, "_fetch_documents_content", return_value=[("a.md", "Alpha")]),
-            patch.object(report_service.gemini_chat_model, "generate_content", return_value=fake_response),
+            patch.object(report_service.chat_model, "generate_text", return_value="# Summary\n\nContent"),
             patch.object(report_service, "insert_report", return_value="report-1") as insert_report,
         ):
             result = report_service.generate_report(
@@ -111,10 +193,9 @@ class AiServiceUnitTests(unittest.TestCase):
             "recommendations": ["Update source docs"],
             "raw_markdown": "# Compare",
         }
-        fake_response = type("FakeResponse", (), {"text": json.dumps(payload)})()
         with (
             patch.object(compare_service, "_get_document_content_for_compare", return_value="Doc content"),
-            patch.object(compare_service.gemini_chat_model, "generate_content", return_value=fake_response),
+            patch.object(compare_service.chat_model, "generate_text", return_value=json.dumps(payload)),
             patch.object(compare_service, "insert_report", return_value="report-2") as insert_report,
         ):
             result = compare_service.compare_documents(

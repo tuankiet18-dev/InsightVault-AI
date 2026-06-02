@@ -7,9 +7,9 @@ import logging
 import time
 
 from core.config import settings
-from core.gemini import gemini_chat_model
+from core.chat_provider import chat_model
 from services.embedder import embed_query
-from services.vector_store import similarity_search
+from services.vector_store import hybrid_search
 
 logger = logging.getLogger(__name__)
 
@@ -89,8 +89,9 @@ def query(
     # Step 1: Embed the question
     query_vector = embed_query(question)
 
-    # Step 2: Retrieve relevant chunks from pgvector
-    chunks = similarity_search(
+    # Step 2: Retrieve relevant chunks with hybrid dense + sparse search
+    chunks = hybrid_search(
+        query_text=question,
         query_vector=query_vector,
         workspace_id=workspace_id,
         folder_id=folder_id if scope == "folder" else None,
@@ -124,8 +125,7 @@ def query(
 
     for attempt in range(1, settings.GEMINI_MAX_RETRIES + 1):
         try:
-            response = gemini_chat_model.generate_content(prompt)
-            answer = response.text.strip()
+            answer = chat_model.generate_text(prompt)
             break
         except Exception as exc:
             last_error = exc
@@ -146,6 +146,7 @@ def query(
             "file_name": chunk["file_name"],
             "snippet": chunk["content"][:300] + ("..." if len(chunk["content"]) > 300 else ""),
             "similarity": chunk["similarity"],
+            "retrieval_debug": chunk.get("retrieval_debug", {}),
         }
         for chunk in chunks
     ]

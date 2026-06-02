@@ -209,6 +209,7 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
         {
             entity.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.Property(x => x.Content).IsRequired();
+            entity.Property(x => x.NormalizedContent).IsRequired().HasDefaultValue("");
             entity.Property(x => x.Embedding).HasColumnType("vector(768)").IsRequired();
             entity.Property(x => x.EmbeddingModel).HasMaxLength(255).IsRequired();
             entity.Property(x => x.Metadata).HasColumnType("jsonb").HasDefaultValueSql("'{}'::jsonb");
@@ -352,6 +353,7 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
         {
             entity.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.Property(x => x.FileName).HasMaxLength(500).IsRequired();
+            entity.Property(x => x.Metadata).HasColumnType("jsonb").HasDefaultValueSql("'{}'::jsonb");
             entity.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(x => x.ChatMessage)
@@ -371,6 +373,7 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
 
             entity.HasIndex(x => x.ChatMessageId);
             entity.HasIndex(x => x.DocumentId);
+            entity.HasIndex(x => x.Metadata).HasMethod("gin");
         });
     }
 

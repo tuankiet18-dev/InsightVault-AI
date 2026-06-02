@@ -36,7 +36,8 @@ class RagSource(BaseModel):
     document_id: str
     file_name: str
     snippet: str
-    similarity: float
+    similarity: float | None = None
+    retrieval_debug: dict = Field(default_factory=dict)
 
 
 class RagQueryResponse(BaseModel):

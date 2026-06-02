@@ -1,5 +1,5 @@
 """
-Document summarizer using Gemini.
+Document summarizer using the configured chat provider.
 Generates: summary, key_points, keywords from extracted text.
 Supports both Vietnamese and English content.
 """
@@ -9,7 +9,7 @@ import logging
 import time
 
 from core.config import settings
-from core.gemini import gemini_chat_model
+from core.chat_provider import chat_model
 
 logger = logging.getLogger(__name__)
 
@@ -64,8 +64,7 @@ def generate_summary(text: str) -> dict:
 
     for attempt in range(1, settings.GEMINI_MAX_RETRIES + 1):
         try:
-            response = gemini_chat_model.generate_content(prompt)
-            raw = response.text.strip()
+            raw = chat_model.generate_text(prompt)
 
             # Strip markdown code fences if present
             if raw.startswith("```"):
@@ -86,7 +85,7 @@ def generate_summary(text: str) -> dict:
             logger.warning("Summary JSON parse failed (attempt %d): %s", attempt, exc)
         except Exception as exc:
             last_error = exc
-            logger.warning("Summary Gemini call failed (attempt %d): %s", attempt, exc)
+            logger.warning("Summary model call failed (attempt %d): %s", attempt, exc)
 
         if attempt < settings.GEMINI_MAX_RETRIES:
             time.sleep(delay)

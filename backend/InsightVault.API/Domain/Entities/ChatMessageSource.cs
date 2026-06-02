@@ -9,6 +9,7 @@ public sealed class ChatMessageSource
     public string FileName { get; set; } = string.Empty;
     public string? Snippet { get; set; }
     public double? SimilarityScore { get; set; }
+    public string Metadata { get; set; } = "{}";
     public int SourceOrder { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 

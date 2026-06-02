@@ -1,6 +1,6 @@
 """
 Report generation service.
-Generates structured Markdown reports using Gemini.
+Generates structured Markdown reports using the configured chat provider.
 Supports: summary_report, comparison_report, gap_analysis_report, section_report.
 """
 
@@ -10,7 +10,7 @@ from typing import Literal
 
 from core.config import settings
 from core.database import get_connection
-from core.gemini import gemini_chat_model
+from core.chat_provider import chat_model
 from services.report_store import insert_report
 
 logger = logging.getLogger(__name__)
@@ -135,7 +135,7 @@ def generate_report(
     store_report: bool = False,
 ) -> dict:
     """
-    Generate a Markdown report using Gemini.
+    Generate a Markdown report using the configured chat provider.
 
     Args:
         workspace_id: For tracing/logging.
@@ -175,8 +175,7 @@ def generate_report(
 
     for attempt in range(1, settings.GEMINI_MAX_RETRIES + 1):
         try:
-            response = gemini_chat_model.generate_content(prompt)
-            markdown_content = response.text.strip()
+            markdown_content = chat_model.generate_text(prompt)
             report_id = None
             if store_report:
                 report_id = insert_report(
@@ -197,7 +196,7 @@ def generate_report(
             }
         except Exception as exc:
             last_error = exc
-            logger.warning("Report Gemini call failed (attempt %d): %s", attempt, exc)
+            logger.warning("Report model call failed (attempt %d): %s", attempt, exc)
             if attempt < settings.GEMINI_MAX_RETRIES:
                 time.sleep(delay)
                 delay *= 2

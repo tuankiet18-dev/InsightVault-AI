@@ -3,7 +3,7 @@
 import json
 from typing import Any
 
-from core.config import settings
+from core.chat_provider import get_chat_model_name
 from core.database import get_connection
 
 
@@ -40,7 +40,7 @@ def insert_report(
                 markdown_content,
                 json.dumps(source_document_ids),
                 json.dumps(structured_result or {}, ensure_ascii=False),
-                settings.GEMINI_CHAT_MODEL,
+                get_chat_model_name(),
             ),
         )
         report_id = cursor.fetchone()[0]
