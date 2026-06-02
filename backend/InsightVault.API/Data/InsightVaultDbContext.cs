@@ -108,11 +108,17 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
                 .HasForeignKey(x => x.InvitedById)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            entity.HasIndex(x => new { x.WorkspaceId, x.Email }).IsUnique();
-            entity.HasIndex(x => new { x.WorkspaceId, x.UserId }).IsUnique();
+            entity.HasIndex(x => new { x.WorkspaceId, x.Email })
+                .IsUnique()
+                .HasFilter("removed_at IS NULL");
+
+            entity.HasIndex(x => new { x.WorkspaceId, x.UserId })
+                .IsUnique()
+                .HasFilter("removed_at IS NULL AND user_id IS NOT NULL");
             entity.HasIndex(x => x.UserId);
             entity.HasIndex(x => x.Email);
             entity.HasIndex(x => x.Status);
+            entity.HasIndex(x => x.RemovedAt);
         });
     }
 
@@ -142,11 +148,11 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
 
             entity.HasIndex(x => new { x.WorkspaceId, x.ParentFolderId, x.Name })
                 .IsUnique()
-                .HasFilter("parent_folder_id IS NOT NULL");
+                .HasFilter("parent_folder_id IS NOT NULL AND deleted_at IS NULL");
 
             entity.HasIndex(x => new { x.WorkspaceId, x.Name })
                 .IsUnique()
-                .HasFilter("parent_folder_id IS NULL");
+                .HasFilter("parent_folder_id IS NULL AND deleted_at IS NULL");
             entity.HasIndex(x => x.WorkspaceId);
             entity.HasIndex(x => x.ParentFolderId);
             entity.HasIndex(x => x.DeletedAt);
