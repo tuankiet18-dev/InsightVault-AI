@@ -8,11 +8,6 @@ from minio import Minio
 from core.config import settings
 from models.process import ProcessDocumentRequest, ProcessDocumentResponse
 from services.chunker import chunk_text
-from services.document_store import (
-    mark_document_completed,
-    mark_document_failed,
-    mark_document_processing,
-)
 from services.embedder import embed_documents
 from services.extractor import extract
 from services.summarizer import generate_summary
@@ -40,26 +35,7 @@ async def process_document(req: ProcessDocumentRequest) -> ProcessDocumentRespon
         req.file_name,
         req.workspace_id,
     )
-    try:
-        mark_document_processing(req.document_id)
-    except Exception as exc:
-        logger.warning("Could not mark document %s as processing: %s", req.document_id, exc)
-
-    try:
-        return _process_document(req)
-    except HTTPException as exc:
-        _mark_failed_safely(req.document_id, str(exc.detail))
-        raise
-    except Exception as exc:
-        _mark_failed_safely(req.document_id, str(exc))
-        raise
-
-
-def _mark_failed_safely(document_id: str, error: str) -> None:
-    try:
-        mark_document_failed(document_id, error)
-    except Exception as exc:
-        logger.warning("Could not mark document %s as failed: %s", document_id, exc)
+    return _process_document(req)
 
 
 def _process_document(req: ProcessDocumentRequest) -> ProcessDocumentResponse:
@@ -115,16 +91,6 @@ def _process_document(req: ProcessDocumentRequest) -> ProcessDocumentResponse:
         raise HTTPException(status_code=500, detail=f"Vector store error: {exc}")
 
     summary_result = generate_summary(text)
-    try:
-        mark_document_completed(
-            document_id=req.document_id,
-            summary=summary_result.get("summary", ""),
-            key_points=summary_result.get("key_points", []),
-            keywords=summary_result.get("keywords", []),
-        )
-    except Exception as exc:
-        logger.error("Failed to persist document summary/status for %s: %s", req.document_id, exc)
-        raise HTTPException(status_code=500, detail=f"Document status update error: {exc}")
 
     logger.info(
         "Document %s processed successfully: %d chunks, summary %d chars",
