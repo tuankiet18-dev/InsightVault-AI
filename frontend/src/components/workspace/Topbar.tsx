@@ -3,10 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuPortal, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
-import { useWorkspace } from "@/lib/workspace/mock-store";
 import { useAuthStore } from "@/stores/authStore";
 import { useThemeStore } from "@/stores/themeStore";
 import { useUiStore } from "@/stores/uiStore";
+import { useWorkspaceStore } from "@/stores/workspaceStore";
+import { useWorkspaces } from "@/hooks/useWorkspaces";
+import { hasPermission } from "@/utils/permission";
 import { SettingsModal } from "@/components/settings/SettingsModal";
 import { useState } from "react";
 
@@ -23,12 +25,18 @@ export function Topbar({
   onToggleExplorer: () => void;
   onToggleInspector: () => void;
 }) {
-  const { workspaces, activeWorkspaceId, setActiveWorkspaceId, role, setRole } = useWorkspace();
-  const isViewer = role === "viewer";
   const { user, logout } = useAuthStore();
   const { theme, setTheme } = useThemeStore();
-  const { setCreateWorkspaceModalOpen } = useUiStore();
+  const { setCreateWorkspaceModalOpen, setInviteModalOpen } = useUiStore();
+  const { activeWorkspaceId, setActiveWorkspace } = useWorkspaceStore();
+  const { data: workspaces = [] } = useWorkspaces();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId);
+  const currentUserRole = activeWorkspace?.currentUserRole;
+
+  const canInvite = hasPermission(currentUserRole, 'invite_member');
+  const canUpload = hasPermission(currentUserRole, 'upload_document');
 
   return (
     <header className="flex h-12 items-center gap-2 border-b border-border bg-card px-3">
@@ -43,9 +51,9 @@ export function Topbar({
       </Button>
 
       <div className="flex items-center gap-1">
-        <Select value={activeWorkspaceId} onValueChange={setActiveWorkspaceId}>
+        <Select value={activeWorkspaceId ?? ''} onValueChange={(val) => setActiveWorkspace(val)}>
           <SelectTrigger className="h-8 w-[200px] text-sm">
-            <SelectValue />
+            <SelectValue placeholder="Select workspace" />
           </SelectTrigger>
           <SelectContent>
             {workspaces.map((w) => (
@@ -77,21 +85,10 @@ export function Topbar({
         </kbd>
       </div>
 
-      <Select value={role} onValueChange={(v) => setRole(v as typeof role)}>
-        <SelectTrigger className="h-8 w-[110px] text-xs">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="owner">Owner</SelectItem>
-          <SelectItem value="editor">Editor</SelectItem>
-          <SelectItem value="viewer">Viewer</SelectItem>
-        </SelectContent>
-      </Select>
-
-      <Button variant="ghost" size="sm" className="h-8 gap-1.5" disabled={isViewer}>
+      <Button variant="ghost" size="sm" className="h-8 gap-1.5" disabled={!canInvite} onClick={() => setInviteModalOpen(true)}>
         <UserPlus className="h-4 w-4" /> Invite
       </Button>
-      <Button size="sm" className="h-8 gap-1.5" onClick={onOpenUpload} disabled={isViewer}>
+      <Button size="sm" className="h-8 gap-1.5" onClick={onOpenUpload} disabled={!canUpload}>
         <Upload className="h-4 w-4" /> Upload
       </Button>
 

@@ -26,6 +26,13 @@ export const useDocument = (documentId: string | null) => {
     queryKey: documentKeys.detail(documentId!),
     queryFn: () => documentApi.getDocument(documentId!),
     enabled: !!documentId,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      if (status === 'processing' || status === 'uploaded' || status === 'pending_upload') {
+        return 5000;
+      }
+      return false;
+    },
   });
 };
 

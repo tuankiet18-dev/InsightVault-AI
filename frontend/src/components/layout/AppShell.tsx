@@ -7,6 +7,7 @@ import { ExplorerPanel } from '../explorer/ExplorerPanel'
 import { UploadModal } from '../upload/UploadModal'
 import { CreateWorkspaceModal } from '../workspace/CreateWorkspaceModal'
 import { CreateFolderModal } from '../workspace/CreateFolderModal'
+import { InviteMemberModal } from '../workspace/InviteMemberModal'
 import { useUiStore } from '@/stores/uiStore'
 import { cn } from '@/lib/utils'
 
@@ -55,6 +56,7 @@ export function AppShell({ children, rightPanel }: { children: ReactNode; rightP
       <UploadModal />
       <CreateWorkspaceModal />
       <CreateFolderModal />
+      <InviteMemberModal />
       <Toaster position="bottom-right" richColors />
     </div>
   )

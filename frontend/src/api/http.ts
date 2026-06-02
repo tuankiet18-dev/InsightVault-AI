@@ -51,9 +51,9 @@ interface FetchOptions extends RequestInit {
  */
 export const fetchApi = async <T>(endpoint: string, options: FetchOptions = {}): Promise<T> => {
   const { params, headers, ...customOptions } = options;
-  
+
   const token = getToken();
-  
+
   const defaultHeaders: HeadersInit = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -92,13 +92,13 @@ export const fetchApi = async <T>(endpoint: string, options: FetchOptions = {}):
   }
 
   const isJson = response.headers.get('content-type')?.includes('application/json');
-  
+
   if (!response.ok) {
     let errorData: ApiErrorResponse = {
       errorCode: 'request_failed',
       message: response.statusText,
     };
-    
+
     if (isJson) {
       try {
         const parsedError = await response.json();
@@ -119,7 +119,7 @@ export const fetchApi = async <T>(endpoint: string, options: FetchOptions = {}):
   if (isJson) {
     return response.json();
   }
-  
+
   return response.text() as unknown as T;
 };
 
@@ -127,16 +127,16 @@ export const fetchApi = async <T>(endpoint: string, options: FetchOptions = {}):
 export const http = {
   get: <T>(endpoint: string, options?: Omit<FetchOptions, 'method' | 'body'>) =>
     fetchApi<T>(endpoint, { ...options, method: 'GET' }),
-    
+
   post: <T>(endpoint: string, body?: unknown, options?: Omit<FetchOptions, 'method'>) =>
     fetchApi<T>(endpoint, { ...options, method: 'POST', body: body ? JSON.stringify(body) : undefined }),
-    
+
   put: <T>(endpoint: string, body?: unknown, options?: Omit<FetchOptions, 'method'>) =>
     fetchApi<T>(endpoint, { ...options, method: 'PUT', body: body ? JSON.stringify(body) : undefined }),
-    
+
   patch: <T>(endpoint: string, body?: unknown, options?: Omit<FetchOptions, 'method'>) =>
     fetchApi<T>(endpoint, { ...options, method: 'PATCH', body: body ? JSON.stringify(body) : undefined }),
-    
+
   delete: <T>(endpoint: string, options?: Omit<FetchOptions, 'method' | 'body'>) =>
     fetchApi<T>(endpoint, { ...options, method: 'DELETE' }),
 };

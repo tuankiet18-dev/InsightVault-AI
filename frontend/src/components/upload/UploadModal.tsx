@@ -70,41 +70,65 @@ export function UploadModal() {
   }
 
   const handleUpload = async () => {
-    if (!file || !activeWorkspaceId) return
+    if (!file) return;
+    if (!activeWorkspaceId) {
+      setError('Workspace is not selected. Please refresh the page and try again.');
+      return;
+    }
     
     setStatus('uploading')
     
     try {
       // 1. Request presigned URL
-      const { documentId } = await requestUrlMutation.mutateAsync({
+      const presignResponse = await requestUrlMutation.mutateAsync({
         fileName: file.name,
-        contentType: file.type,
+        contentType: file.type || 'application/octet-stream',
         fileSizeBytes: file.size,
         folderId: uploadTargetFolderId || undefined
       })
 
-      // 2. Simulate S3 upload progress (in a real app, use axios/fetch to uploadUrl)
-      await new Promise<void>((resolve) => {
-        let p = 0
-        const interval = setInterval(() => {
-          p += 20
-          setProgress(p)
-          if (p >= 100) {
-            clearInterval(interval)
-            resolve()
+      // 2. Real upload progress using XMLHttpRequest
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const percentComplete = Math.round((event.loaded / event.total) * 100)
+            setProgress(percentComplete)
           }
-        }, 200)
+        }
+        
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve()
+          } else {
+            reject(new Error(`Upload failed with status: ${xhr.status}`))
+          }
+        }
+        
+        xhr.onerror = () => {
+          reject(new Error('Network error during upload'))
+        }
+        
+        xhr.open('PUT', presignResponse.uploadUrl, true)
+        
+        if (presignResponse.requiredHeaders) {
+          Object.entries(presignResponse.requiredHeaders).forEach(([key, value]) => {
+            xhr.setRequestHeader(key, value as string)
+          })
+        } else {
+          xhr.setRequestHeader('Content-Type', file.type)
+        }
+        
+        xhr.send(file)
       })
 
       // 3. Confirm upload
       await confirmUploadMutation.mutateAsync({
-        documentId,
+        documentId: presignResponse.documentId,
         data: {
           fileSizeBytes: file.size,
-          contentType: file.type,
-          // Sending extra metadata for mock backend to use
-          _folderId: uploadTargetFolderId || undefined,
-          _fileName: file.name
+          contentType: file.type
         } as ConfirmUploadRequest
       })
 
@@ -215,6 +239,12 @@ export function UploadModal() {
                     </button>
                   </div>
 
+                  {error && (
+                    <div className="px-3 py-1.5 bg-danger-100 text-danger-700 text-sm font-medium rounded-md">
+                      {error}
+                    </div>
+                  )}
+
                   {status === 'uploading' && (
                     <div className="flex flex-col gap-2">
                       <div className="flex justify-between text-xs font-medium">
@@ -223,7 +253,7 @@ export function UploadModal() {
                       </div>
                       <div className="h-2 bg-surface-100 rounded-full overflow-hidden">
                         <div 
-                          className="h-full bg-primary-500 transition-all duration-300 ease-out rounded-full"
+                          className="h-full bg-blue-500 transition-all duration-300 ease-out rounded-full"
                           style={{ width: `${progress}%` }}
                         />
                       </div>
@@ -241,7 +271,7 @@ export function UploadModal() {
                     <button 
                       onClick={handleUpload}
                       disabled={status === 'uploading'}
-                      className="px-6 py-2 rounded-lg text-sm font-medium bg-primary-500 text-white hover:bg-primary-600 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      className="px-6 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >
                       {status === 'uploading' && (
                         <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />

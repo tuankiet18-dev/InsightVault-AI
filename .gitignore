@@ -60,3 +60,7 @@ out/
 # Infra
 docker-compose.yml
 docker-compose.dev.yml
+#backend
+launchSettings.json
+#ai-service
+.env.example

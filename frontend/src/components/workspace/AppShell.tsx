@@ -8,6 +8,7 @@ import { AIInspector } from "./AIInspector";
 import { UploadModal } from "./UploadModal";
 import { CreateWorkspaceModal } from "./CreateWorkspaceModal";
 import { CreateFolderModal } from "./CreateFolderModal";
+import { InviteMemberModal } from "./InviteMemberModal";
 import { WorkspaceProvider } from "@/lib/workspace/mock-store";
 import { cn } from "@/lib/utils";
 
@@ -67,6 +68,7 @@ export function AppShell() {
         <UploadModal open={uploadOpen} onOpenChange={setUploadOpen} />
         <CreateWorkspaceModal />
         <CreateFolderModal />
+        <InviteMemberModal />
       </div>
     </WorkspaceProvider>
   );

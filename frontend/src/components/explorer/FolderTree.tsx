@@ -7,13 +7,14 @@ import { useFolders } from '@/hooks/useFolders'
 import { useDocuments } from '@/hooks/useDocuments'
 import { useWorkspace } from '@/hooks/useWorkspaces'
 import { getFileTypeColor, cn } from '@/lib/utils'
+import { hasPermission } from '@/utils/permission'
 import type { DocumentDto } from '@/types/api'
 
 export function FolderTree() {
   const { activeWorkspaceId } = useWorkspaceStore()
   const { data: folders = [] } = useFolders(activeWorkspaceId)
   const { data: activeWorkspace } = useWorkspace(activeWorkspaceId)
-  const canEdit = activeWorkspace?.currentUserRole === 'owner' || activeWorkspace?.currentUserRole === 'editor'
+  const canEdit = hasPermission(activeWorkspace?.currentUserRole, 'upload_document')
   
   if (!activeWorkspaceId) return null
   
@@ -91,7 +92,7 @@ function FolderRow({
           <span className="ml-auto text-[10px] text-muted-foreground">{documents.length}</span>
         </button>
         {canEdit && (
-          <div className="flex items-center rounded bg-surface-100/80 opacity-0 backdrop-blur-sm transition-all group-hover:opacity-100">
+          <div className="flex items-center rounded bg-surface-100/80 opacity-0 backdrop-blur-sm transition-all group-hover:opacity-100 group-has-[data-state=open]:opacity-100">
             <button
               onClick={(e) => {
                 e.stopPropagation()
@@ -193,7 +194,7 @@ function DocumentRow({
         <div className="flex items-center gap-1 shrink-0">
           <MiniStatus status={document.status} />
           {canEdit && (
-            <div className="flex items-center rounded bg-surface-100/80 opacity-0 backdrop-blur-sm transition-all group-hover:opacity-100">
+            <div className="flex items-center rounded bg-surface-100/80 opacity-0 backdrop-blur-sm transition-all group-hover:opacity-100 group-has-[data-state=open]:opacity-100">
               <DropdownMenu align="right">
                 <DropdownMenuItem onClick={() => {}} icon={<Edit2 className="h-4 w-4" />}>
                   Rename
