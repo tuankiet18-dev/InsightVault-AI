@@ -1,0 +1,97 @@
+using InsightVault.API.Application.Abstractions.Storage;
+using Microsoft.Extensions.Options;
+using Minio;
+using Minio.DataModel.Args;
+
+namespace InsightVault.API.Infrastructure.Storage;
+
+public sealed class ConfiguredObjectStorageService(
+    IOptions<ObjectStorageOptions> options,
+    ILogger<ConfiguredObjectStorageService> logger) : IObjectStorageService
+{
+    public string DefaultBucketName => options.Value.BucketName;
+
+    public TimeSpan DefaultPresignedUploadExpiry => TimeSpan.FromMinutes(options.Value.PresignedUploadMinutes);
+
+    public async Task<PresignedUpload> CreatePresignedUploadAsync(
+        PresignedUploadRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var storageOptions = options.Value;
+        var requiredHeaders = new Dictionary<string, string>
+        {
+            ["Content-Type"] = request.ContentType
+        };
+        var minioClient = CreateClient(storageOptions, storageOptions.Endpoint);
+
+        await EnsureBucketExistsAsync(minioClient, request.BucketName, cancellationToken);
+
+        var presignEndpoint = string.IsNullOrWhiteSpace(storageOptions.PublicEndpoint)
+            ? storageOptions.Endpoint
+            : storageOptions.PublicEndpoint;
+        var presignClient = CreateClient(storageOptions, presignEndpoint);
+        var presignedArgs = new PresignedPutObjectArgs()
+            .WithBucket(request.BucketName)
+            .WithObject(request.ObjectKey)
+            .WithExpiry((int)request.ExpiresIn.TotalSeconds)
+            .WithHeaders(requiredHeaders);
+        var uploadUrl = await presignClient.PresignedPutObjectAsync(presignedArgs);
+        var expiresAt = DateTimeOffset.UtcNow.Add(request.ExpiresIn);
+
+        return new PresignedUpload(uploadUrl, expiresAt, requiredHeaders);
+    }
+
+    public async Task DeleteObjectIfExistsAsync(
+        string bucketName,
+        string objectKey,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var minioClient = CreateClient(options.Value, options.Value.Endpoint);
+            var removeArgs = new RemoveObjectArgs()
+                .WithBucket(bucketName)
+                .WithObject(objectKey);
+
+            await minioClient.RemoveObjectAsync(removeArgs, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(
+                exception,
+                "Failed to delete object {ObjectKey} from bucket {BucketName}",
+                objectKey,
+                bucketName);
+        }
+    }
+
+    private static IMinioClient CreateClient(ObjectStorageOptions storageOptions, string endpoint)
+    {
+        var builder = new MinioClient()
+            .WithEndpoint(endpoint)
+            .WithCredentials(storageOptions.AccessKey, storageOptions.SecretKey);
+
+        if (storageOptions.UseSsl)
+        {
+            builder = builder.WithSSL();
+        }
+
+        return builder.Build();
+    }
+
+    private static async Task EnsureBucketExistsAsync(
+        IMinioClient minioClient,
+        string bucketName,
+        CancellationToken cancellationToken)
+    {
+        var existsArgs = new BucketExistsArgs().WithBucket(bucketName);
+
+        if (await minioClient.BucketExistsAsync(existsArgs, cancellationToken))
+        {
+            return;
+        }
+
+        var makeBucketArgs = new MakeBucketArgs().WithBucket(bucketName);
+        await minioClient.MakeBucketAsync(makeBucketArgs, cancellationToken);
+    }
+}

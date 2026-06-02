@@ -11,4 +11,9 @@ public interface IWorkspacePermissionService
         Guid workspaceId,
         Guid userId,
         CancellationToken cancellationToken = default);
+
+    Task EnsureCanManageDocumentsAsync(
+        Guid workspaceId,
+        Guid userId,
+        CancellationToken cancellationToken = default);
 }
