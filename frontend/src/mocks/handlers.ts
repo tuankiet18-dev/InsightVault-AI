@@ -1,11 +1,11 @@
 import { http, HttpResponse, delay } from 'msw'
 
-import { mockDocuments, mockJobs } from '../data/mockDocuments'
+import { mockJobs } from '../data/mockDocuments'
 import { mockReports } from '../data/mockReports'
 import { mockCompareResult } from '../data/mockCompare'
 import { mockChatSessions, mockChatMessages } from '../data/mockChat'
 import { mockAdminStats } from '../data/mockAdmin'
-import type { ChatMessageDto, DocumentDto } from '@/types/api'
+import type { ChatMessageDto } from '@/types/api'
 
 const API_BASE = 'http://localhost:5126/api'
 
