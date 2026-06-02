@@ -132,7 +132,7 @@ def generate_report(
     ai_job_id: str | None = None,
     title: str | None = None,
     custom_prompt: str | None = None,
-    store_report: bool = True,
+    store_report: bool = False,
 ) -> dict:
     """
     Generate a Markdown report using Gemini.
