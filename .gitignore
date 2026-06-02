@@ -60,6 +60,5 @@ out/
 # Infra
 docker-compose.yml
 docker-compose.dev.yml
-
-# Backend
+#backend
 launchSettings.json
