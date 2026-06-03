@@ -244,7 +244,7 @@ Một workspace có thể có nhiều thành viên, mỗi thành viên có một
 |---|---|
 | Owner | Quản lý workspace và thành viên |
 | Editor | Upload tài liệu, tạo folder, hỏi AI, compare, tạo report |
-| Viewer | Xem tài liệu, xem summary/report, dùng chức năng đọc |
+| Viewer | Xem tài liệu, xem summary/report, hỏi AI trong phạm vi được phép đọc |
 
 ### 8.2. Owner làm gì?
 
@@ -274,7 +274,7 @@ Viewer có thể:
 - Xem tài liệu.
 - Xem summary.
 - Xem report.
-- Có thể hỏi AI nếu hệ thống cho phép.
+- Hỏi AI trong phạm vi workspace/folder/document được phép đọc.
 
 ### 8.5. Vì sao co-work quan trọng?
 
@@ -373,6 +373,7 @@ Pipeline:
 Trạng thái document:
 
 ```text
+pending_upload
 uploaded
 processing
 completed

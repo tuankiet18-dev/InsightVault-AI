@@ -84,6 +84,8 @@ Workspace roles:
 - `editor`
 - `viewer`
 
+Viewer được hỏi AI trong phạm vi workspace/folder/document mà họ có quyền đọc, nhưng không được upload, xóa, chỉnh sửa nội dung hoặc quản lý member.
+
 #### Folder management
 
 - Tạo folder trong workspace.
@@ -101,6 +103,7 @@ Workspace roles:
 - Lưu file gốc vào MinIO.
 - Lưu metadata vào PostgreSQL.
 - Hiển thị document status:
+  - `pending_upload`
   - `uploaded`
   - `processing`
   - `completed`
@@ -505,7 +508,7 @@ Có thể giảm scope:
 - Compare chỉ hỗ trợ 2 documents trước.
 - Report chỉ lưu Markdown, chưa cần editor đẹp.
 - RabbitMQ có thể thay bằng `.NET BackgroundService`.
-- Viewer permission có thể đơn giản hóa nếu thiếu thời gian.
+- Viewer permission giữ rõ ràng: được đọc và hỏi AI; không được mutate content hoặc quản lý member.
 
 ---
 

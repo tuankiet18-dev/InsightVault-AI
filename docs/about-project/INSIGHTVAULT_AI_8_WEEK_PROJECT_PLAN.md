@@ -150,7 +150,7 @@ Mục tiêu: user login được, tạo workspace được, upload file vào wor
 - Lưu file vào MinIO và metadata vào PostgreSQL.
 - Implement folder CRUD.
 - Tạo ai_jobs khi upload document.
-- Tạo status flow: uploaded, processing, completed, failed.
+- Tạo status flow: pending_upload, uploaded, processing, completed, failed.
 - Chuẩn bị backend contract để gọi AI service sau khi document được upload.
 
 ## Tuần 5 - Document processing và summary
@@ -447,11 +447,12 @@ Mục tiêu: ổn định sản phẩm, chuẩn bị tài liệu nộp và demo 
 - User tạo workspace, folder và upload tài liệu thành công.
 - File gốc tồn tại trong MinIO hoặc storage đã chọn.
 - Metadata document lưu trong PostgreSQL.
-- Document chuyển status từ uploaded/processing sang completed.
+- Document chuyển status từ pending_upload/uploaded/processing sang completed.
 - Chunks và embeddings được lưu trong pgvector.
 - RAG chat trả lời đúng dựa trên tài liệu và có sources.
 - Compare documents trả về điểm giống, khác, thiếu và conflict tiềm năng.
 - Generate report tạo được Markdown report.
 - Viewer không thực hiện được thao tác chỉ dành cho Owner/Editor.
+- Viewer hỏi AI được trong phạm vi workspace/folder/document được phép đọc.
 - Frontend production build không lỗi.
 - Backend, AI service, database/storage chạy được trên môi trường deployed.

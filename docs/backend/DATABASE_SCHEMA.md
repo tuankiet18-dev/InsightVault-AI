@@ -6,6 +6,7 @@ This document describes the current PostgreSQL schema and the intended data owne
 
 - `Workspace` is the top-level tenant boundary.
 - `Folder` and `Document` belong to exactly one workspace.
+- Active folder names are unique within the same workspace, regardless of parent folder.
 - `ChatSession` belongs to one workspace and does not carry folder/document scope.
 - `ChatMessageContext` stores per-message `@folder` and `@document` mentions.
 - User-facing delete for `Folder` and `Document` is soft delete through `deleted_at`.
