@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils'
 import { NAV_ITEMS } from '@/lib/constants'
 import { useUiStore } from '@/stores/uiStore'
+import { Link } from 'react-router-dom'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { 
   FolderTree, 
@@ -28,12 +29,14 @@ export function ActivityRail() {
   return (
     <TooltipProvider delayDuration={150}>
     <aside className="hidden h-full w-14 shrink-0 flex-col items-center gap-1 border-r border-border bg-rail py-3 text-rail-foreground md:flex">
-      <div 
-        className="mb-2 flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground font-mono text-sm font-bold shadow-sm"
-        title="InsightVault AI"
-      >
-        IV
-      </div>
+      <Link to="/dashboard" className="mb-2 block">
+        <div 
+          className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground font-mono text-sm font-bold shadow-sm transition-transform hover:scale-105"
+          title="InsightVault AI Dashboard"
+        >
+          IV
+        </div>
+      </Link>
       
       <nav aria-label="Primary navigation" className="flex w-full flex-col items-center gap-1">
         {NAV_ITEMS.map((item) => (

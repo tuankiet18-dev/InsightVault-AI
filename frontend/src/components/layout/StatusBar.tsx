@@ -1,14 +1,14 @@
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useWorkspace } from '@/hooks/useWorkspaces'
-import { useAiJobs } from '@/hooks/useAiJobs'
+import { useDocuments } from '@/hooks/useDocuments'
 
 export function StatusBar() {
   const { activeWorkspaceId } = useWorkspaceStore()
   const { data: activeWs } = useWorkspace(activeWorkspaceId)
-  const { data: jobs = [] } = useAiJobs(activeWorkspaceId)
+  const { data: documents = [] } = useDocuments(activeWorkspaceId)
   
-  const processingCount = jobs.filter(j => j.status === 'processing').length
-  const failedCount = jobs.filter(j => j.status === 'failed').length
+  const processingCount = documents.filter(d => d.status === 'processing' || d.status === 'uploaded' || d.status === 'pending_upload').length
+  const failedCount = documents.filter(d => d.status === 'failed').length
 
   return (
     <footer className="ide-statusbar flex items-center justify-between px-3 h-6 bg-surface-800 text-surface-300 text-[11px] select-none shrink-0 z-30">
@@ -17,9 +17,9 @@ export function StatusBar() {
         {activeWs && (
           <>
             <span className="w-px h-3 bg-surface-600" />
-            <span>Role: <strong className="text-surface-100">{activeWs.currentUserRole}</strong></span>
+            <span>Role: <strong className="text-white">{activeWs.currentUserRole}</strong></span>
             <span className="w-px h-3 bg-surface-600" />
-            <span>Retrieval: <span className="text-surface-100">permission-filtered</span></span>
+            <span>Retrieval: <span className="text-white">permission-filtered</span></span>
           </>
         )}
       </div>
@@ -38,7 +38,7 @@ export function StatusBar() {
           </span>
         )}
         <span className="w-px h-3 bg-surface-600" />
-        <span>Gemini 1.5 Pro</span>
+        <span>Gemini 3.5 Flash</span>
       </div>
     </footer>
   )

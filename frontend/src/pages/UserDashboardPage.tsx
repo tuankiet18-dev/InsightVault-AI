@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
-import { adminApi } from '@/api/adminApi'
 import type { UserDashboardDto } from '@/types/api'
 import { Folder, FileText, Settings, LogOut, Plus, ChevronRight, Activity } from 'lucide-react'
 import { useUiStore } from '@/stores/uiStore'
 import { CreateWorkspaceModal } from '@/components/workspace/CreateWorkspaceModal'
 import { useWorkspaces } from '@/hooks/useWorkspaces'
+import { documentApi } from '@/api/documentApi'
+import { reportApi } from '@/api/reportApi'
 
 export function UserDashboardPage() {
   const { user, logout } = useAuthStore()
@@ -16,18 +17,67 @@ export function UserDashboardPage() {
   const { setCreateWorkspaceModalOpen } = useUiStore()
 
   useEffect(() => {
+    let isMounted = true;
     const fetchStats = async () => {
+      if (isWorkspacesLoading) return;
+      
+      if (!workspaces || workspaces.length === 0) {
+        if (isMounted) {
+          setStats({
+            workspaceCount: 0,
+            folderCount: 0,
+            documentCount: 0,
+            completedDocumentCount: 0,
+            processingDocumentCount: 0,
+            failedDocumentCount: 0,
+            reportCount: 0,
+            recentJobs: []
+          })
+          setIsStatsLoading(false)
+        }
+        return;
+      }
+
       try {
-        const statsData = await adminApi.getDashboard()
-        setStats(statsData)
+        let totalDocs = 0;
+        let totalReports = 0;
+
+        await Promise.all(
+          workspaces.map(async (ws) => {
+            try {
+              const [docs, reports] = await Promise.all([
+                documentApi.getDocuments(ws.id),
+                reportApi.getReports(ws.id)
+              ]);
+              totalDocs += docs.length;
+              totalReports += reports.length;
+            } catch (err) {
+              console.error(`Failed to fetch stats for workspace ${ws.id}`, err);
+            }
+          })
+        );
+
+        if (isMounted) {
+          setStats({
+            workspaceCount: workspaces.length,
+            folderCount: 0,
+            documentCount: totalDocs,
+            completedDocumentCount: 0,
+            processingDocumentCount: 0,
+            failedDocumentCount: 0,
+            reportCount: totalReports,
+            recentJobs: []
+          });
+        }
       } catch (error) {
-        console.error('Failed to fetch dashboard data', error)
+        console.error('Failed to aggregate dashboard data', error);
       } finally {
-        setIsStatsLoading(false)
+        if (isMounted) setIsStatsLoading(false);
       }
     }
     fetchStats()
-  }, [])
+    return () => { isMounted = false; }
+  }, [workspaces, isWorkspacesLoading])
 
   const isLoading = isWorkspacesLoading || isStatsLoading
 

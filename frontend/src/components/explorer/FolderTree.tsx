@@ -154,7 +154,7 @@ function DocumentRow({
   canEdit: boolean
 }) {
   const { selectedDocumentId, setSelectedDocument } = useWorkspaceStore()
-  const { openTab } = useTabStore()
+  const { openTab, closeTab } = useTabStore()
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const deleteMutation = useDeleteDocument(workspaceId)
   
@@ -173,7 +173,10 @@ function DocumentRow({
 
   const handleDelete = () => {
     deleteMutation.mutate(document.id, {
-      onSuccess: () => setIsDeleteModalOpen(false)
+      onSuccess: () => {
+        setIsDeleteModalOpen(false)
+        closeTab(`tab-${document.id}`)
+      }
     })
   }
 

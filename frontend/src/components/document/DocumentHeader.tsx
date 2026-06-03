@@ -13,7 +13,9 @@ export function DocumentHeader({ document }: { document: DocumentDto }) {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <StatusChip status={document.status} />
-            <span className="hidden text-[11px] text-muted-foreground md:inline">Updated 2026-05-20</span>
+            <span className="hidden text-[11px] text-muted-foreground md:inline">
+              Updated {new Date(document.updatedAt).toLocaleDateString()}
+            </span>
           </div>
         </div>
         
