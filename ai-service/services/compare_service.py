@@ -9,7 +9,7 @@ import time
 
 from core.config import settings
 from core.database import get_connection
-from core.gemini import gemini_chat_model
+from core.chat_provider import chat_model
 from services.report_store import insert_report
 
 logger = logging.getLogger(__name__)
@@ -111,8 +111,7 @@ def compare_documents(
 
     for attempt in range(1, settings.GEMINI_MAX_RETRIES + 1):
         try:
-            response = gemini_chat_model.generate_content(prompt)
-            raw = response.text.strip()
+            raw = chat_model.generate_text(prompt)
 
             if raw.startswith("```"):
                 raw = raw.split("```")[1]
@@ -152,7 +151,7 @@ def compare_documents(
             logger.warning("Compare JSON parse failed (attempt %d): %s", attempt, exc)
         except Exception as exc:
             last_error = exc
-            logger.warning("Compare Gemini call failed (attempt %d): %s", attempt, exc)
+            logger.warning("Compare model call failed (attempt %d): %s", attempt, exc)
 
         if attempt < settings.GEMINI_MAX_RETRIES:
             time.sleep(delay)

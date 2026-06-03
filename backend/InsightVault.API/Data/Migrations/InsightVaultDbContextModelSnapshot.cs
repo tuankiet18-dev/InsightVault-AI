@@ -220,6 +220,13 @@ namespace InsightVault.API.Data.Migrations
                         .HasColumnType("character varying(500)")
                         .HasColumnName("file_name");
 
+                    b.Property<string>("Metadata")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("metadata")
+                        .HasDefaultValueSql("'{}'::jsonb");
+
                     b.Property<double?>("SimilarityScore")
                         .HasColumnType("double precision")
                         .HasColumnName("similarity_score");
@@ -243,6 +250,11 @@ namespace InsightVault.API.Data.Migrations
 
                     b.HasIndex("DocumentId")
                         .HasDatabaseName("ix_chat_message_sources_document_id");
+
+                    b.HasIndex("Metadata")
+                        .HasDatabaseName("ix_chat_message_sources_metadata");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Metadata"), "gin");
 
                     b.ToTable("chat_message_sources", (string)null);
                 });
@@ -526,6 +538,13 @@ namespace InsightVault.API.Data.Migrations
                         .HasColumnType("jsonb")
                         .HasColumnName("metadata")
                         .HasDefaultValueSql("'{}'::jsonb");
+
+                    b.Property<string>("NormalizedContent")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasColumnName("normalized_content")
+                        .HasDefaultValue("");
 
                     b.Property<int?>("TokenCount")
                         .HasColumnType("integer")

@@ -117,6 +117,16 @@ Target persistence:
 
 Backend calls AI only after checking chat scope permission.
 
+Retrieval uses hybrid RAG:
+
+- Dense branch: Gemini query embedding + pgvector cosine search.
+- Sparse branch: PostgreSQL full-text search over original chunk content.
+- Normalized sparse branch: PostgreSQL full-text search over accent-insensitive normalized chunk content.
+- Fusion: Reciprocal Rank Fusion deduplicates chunks and returns the final top-k.
+
+The original chunk content remains the only text used for prompt context and citations.
+Normalized content is only for retrieval recall.
+
 Request:
 
 ```json
@@ -145,7 +155,16 @@ Response:
       "document_id": "uuid",
       "file_name": "Lecture 1.pdf",
       "snippet": "Relevant text",
-      "similarity": 0.82
+      "similarity": 0.82,
+      "retrieval_debug": {
+        "dense_rank": 1,
+        "dense_score": 0.82,
+        "sparse_original_rank": 3,
+        "sparse_original_score": 0.15,
+        "sparse_normalized_rank": 2,
+        "sparse_normalized_score": 0.21,
+        "fusion_score": 0.0484
+      }
     }
   ],
   "web_sources": []
@@ -157,6 +176,15 @@ Backend persists:
 - User message.
 - Assistant message.
 - Message sources.
+- Retrieval debug score in `chat_message_sources.metadata` as JSON for admin-only audit/debug.
+
+Admin debug endpoint:
+
+```text
+GET /api/admin/retrieval-debug?workspaceId={uuid}&chatMessageId={uuid}&limit=50
+```
+
+The endpoint requires an admin JWT role and returns source metadata with `retrievalDebug`.
 
 ### Generate Report
 

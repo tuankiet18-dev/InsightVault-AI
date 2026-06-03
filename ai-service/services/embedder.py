@@ -14,6 +14,8 @@ from core.config import settings
 
 logger = logging.getLogger(__name__)
 
+genai.configure(api_key=settings.GEMINI_API_KEY)
+
 _TASK_TYPE_DOCUMENT = "RETRIEVAL_DOCUMENT"
 _TASK_TYPE_QUERY = "RETRIEVAL_QUERY"
 
