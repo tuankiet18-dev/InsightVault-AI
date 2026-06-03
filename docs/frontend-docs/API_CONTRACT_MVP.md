@@ -313,6 +313,8 @@ Validation:
 - A `folder` context requires `folderId` and must omit `documentId`.
 - A `document` context requires `documentId` and must omit `folderId`.
 - Every folder/document in message contexts must belong to the session workspace.
+- Backend stores message contexts with `workspaceId` internally and enforces same-workspace context integrity at the database layer.
+- Folder/document deletes are soft deletes in user-facing APIs. Hard delete is restricted by database foreign keys when chat history still references a folder/document context.
 
 ```ts
 type ChatSessionDto = {
@@ -346,6 +348,8 @@ type ChatMessageContextDto = {
   folderId?: string | null;
   documentId?: string | null;
   includeSubfolders: boolean;
+  contextDisplayName?: string | null;
+  contextPath?: string | null;
 };
 
 type ChatMessageDto = {
