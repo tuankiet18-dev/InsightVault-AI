@@ -99,7 +99,8 @@ reports
 Điểm bắt buộc:
 
 - `workspace_members` là nguồn phân quyền trong workspace.
-- `documents.status`: `uploaded`, `processing`, `completed`, `failed`.
+- `documents.status`: `pending_upload`, `uploaded`, `processing`, `completed`, `failed`.
+- `ai_jobs.status`: `queued`, `processing`, `completed`, `failed`, `cancelled`.
 - `document_chunks.embedding`: pgvector, ví dụ `vector(768)`.
 - `chat_messages.sources_json`: lưu chunk/document source cho câu trả lời.
 - `reports.report_type`: dùng chung cho `summary_report`, `comparison_report`, `gap_analysis_report`.
@@ -159,7 +160,7 @@ Deliverables:
 
 Deliverables:
 
-- Worker lấy pending jobs.
+- Worker lấy queued jobs.
 - Extract PDF/DOCX/TXT/Markdown.
 - Clean/chunk text.
 - Gemini embedding.

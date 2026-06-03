@@ -165,6 +165,7 @@ Rules:
 - Creator becomes `owner`.
 - Any workspace access must verify membership.
 - Only `owner` can delete workspace or manage members.
+- `viewer` can read workspace resources and use RAG chat over readable workspace/folder/document scope, but cannot upload, delete, edit content, compare, generate reports, or manage members.
 
 ### Workspace Members
 
@@ -198,6 +199,11 @@ type WorkspaceMemberDto = {
 | GET | `/api/folders/{folderId}` | Yes | - | `FolderDto` |
 | PATCH | `/api/folders/{folderId}` | Yes | `{ name?, description?, parentFolderId? }` | `FolderDto` |
 | DELETE | `/api/folders/{folderId}` | Yes | - | `204` |
+
+Rules:
+
+- Folder names must be unique among all active folders in the same workspace, regardless of parent folder.
+- Soft-deleted folders do not block reusing the same name.
 
 ```ts
 type FolderDto = {

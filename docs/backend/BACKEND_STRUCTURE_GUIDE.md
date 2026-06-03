@@ -223,7 +223,7 @@ Until JWT authentication is implemented, development requests can pass `X-User-I
 
 Deleting a folder is a soft delete. When a parent folder is deleted, all active child folders under that parent are soft-deleted in the same operation.
 
-Folder names are unique only among active folders in the same location. The database uses filtered unique indexes with `deleted_at IS NULL`, so a user can create a new folder with the same name after the old folder is soft-deleted.
+Folder names are unique among all active folders in the same workspace, regardless of parent folder. The database uses filtered unique indexes with `deleted_at IS NULL`, so a user can create a new folder with the same name after the old folder is soft-deleted.
 
 Workspace member email/user uniqueness is also scoped to active membership rows with `removed_at IS NULL`, so removed members can be invited again later.
 

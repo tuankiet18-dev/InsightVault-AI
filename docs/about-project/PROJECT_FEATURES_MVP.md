@@ -69,7 +69,7 @@ Workspace role:
 
 - `owner`: quản lý workspace, member, folder, document, AI features và report.
 - `editor`: tạo folder, upload document, hỏi AI, compare document, tạo report.
-- `viewer`: xem workspace, folder, document, summary, report và có thể hỏi AI nếu team cho phép.
+- `viewer`: xem workspace, folder, document, summary, report và hỏi AI trong phạm vi workspace được phép đọc.
 
 Quy tắc bắt buộc:
 
@@ -124,7 +124,7 @@ Ví dụ folder:
 - Meeting Notes.
 - Reports.
 
-Tên folder trong cùng một workspace nên là duy nhất.
+Tên folder trong cùng một workspace bắt buộc là duy nhất đối với các folder đang active.
 
 ## 6. Document Upload Và Management
 
@@ -155,6 +155,7 @@ MVP chưa hỗ trợ OCR cho file scan hoặc ảnh chụp.
 ### 6.3. Document Status
 
 ```text
+pending_upload
 uploaded
 processing
 completed
@@ -163,6 +164,7 @@ failed
 
 Ý nghĩa:
 
+- `pending_upload`: backend đã tạo metadata và presigned URL, nhưng file chưa được confirm upload.
 - `uploaded`: file đã upload và metadata đã lưu.
 - `processing`: hệ thống đang extract text, chunking và tạo embedding.
 - `completed`: document đã xử lý xong và có thể dùng cho AI.
@@ -197,10 +199,11 @@ compare_documents
 Job status:
 
 ```text
-pending
+queued
 processing
 completed
 failed
+cancelled
 ```
 
 ## 8. Document Processing Pipeline
@@ -356,7 +359,7 @@ Admin dashboard:
 - Tổng số document toàn hệ thống.
 - Tổng số workspace.
 - Tổng số AI job.
-- Job pending/processing/failed.
+- Job queued/processing/failed.
 - Lỗi xử lý gần đây.
 
 ## 15. Admin Features

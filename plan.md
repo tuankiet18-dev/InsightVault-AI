@@ -119,7 +119,7 @@ Workspace role:
 
 - `owner`: quản lý workspace, member, folder, document, AI features, report.
 - `editor`: tạo folder, upload document, hỏi AI, compare, tạo report.
-- `viewer`: xem workspace/folder/document/summary/report; có thể hỏi AI nếu team giữ viewer chat trong MVP.
+- `viewer`: xem workspace/folder/document/summary/report và hỏi AI trong phạm vi được phép đọc.
 
 Member status:
 
@@ -135,7 +135,7 @@ Quy tắc bắt buộc:
 - Active member mới được đọc workspace.
 - Owner quản lý workspace/member.
 - Owner/editor được mutate folder/document/upload/compare/report.
-- Viewer read-only, trừ trường hợp team cho viewer chat.
+- Viewer read-only với content, nhưng được gửi RAG chat và xem AI answer/sources trong phạm vi được phép đọc.
 
 ## 5. Phạm Vi Chính Của Thịnh
 
