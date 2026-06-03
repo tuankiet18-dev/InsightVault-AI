@@ -166,6 +166,8 @@ export type ChatMessageContextDto = {
   folderId?: string | null
   documentId?: string | null
   includeSubfolders: boolean
+  contextDisplayName?: string | null
+  contextPath?: string | null
 }
 
 export type ChatSourceDto = {

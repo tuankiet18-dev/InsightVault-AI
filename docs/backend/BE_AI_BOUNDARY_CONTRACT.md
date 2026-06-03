@@ -182,8 +182,17 @@ Backend persists:
 
 - User message.
 - Assistant message.
+- Message contexts for `@folder` and `@document` mentions. Context rows store `workspace_id` and snapshot display fields so the database can enforce same-workspace references and chat history remains understandable after rename/soft delete.
 - Message sources.
 - Retrieval debug score in `chat_message_sources.metadata` as JSON for admin-only audit/debug.
+
+Database safety:
+
+- `chat_sessions` are workspace-scoped only.
+- `chat_messages.workspace_id` must match the parent session workspace.
+- `chat_message_contexts.workspace_id` must match the parent message workspace.
+- Folder/document contexts use composite references `(resource_id, workspace_id)` to prevent cross-workspace context leakage.
+- User-facing delete for folders/documents is soft delete. Hard delete is restricted when chat context history still references the resource.
 
 Admin debug endpoint:
 

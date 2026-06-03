@@ -148,6 +148,7 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
                 .HasForeignKey(x => x.CreatedById)
                 .OnDelete(DeleteBehavior.SetNull);
 
+            entity.HasAlternateKey(x => new { x.Id, x.WorkspaceId });
             entity.HasIndex(x => new { x.WorkspaceId, x.ParentFolderId, x.Name })
                 .IsUnique()
                 .HasFilter("parent_folder_id IS NOT NULL AND deleted_at IS NULL");
@@ -196,6 +197,7 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
                 .HasForeignKey(x => x.UploadedById)
                 .OnDelete(DeleteBehavior.SetNull);
 
+            entity.HasAlternateKey(x => new { x.Id, x.WorkspaceId });
             entity.HasIndex(x => x.WorkspaceId);
             entity.HasIndex(x => x.FolderId);
             entity.HasIndex(x => x.UploadedById);
@@ -300,6 +302,7 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
                 .HasForeignKey(x => x.CreatedById)
                 .OnDelete(DeleteBehavior.SetNull);
 
+            entity.HasAlternateKey(x => new { x.Id, x.WorkspaceId });
             entity.HasIndex(x => x.WorkspaceId);
             entity.HasIndex(x => x.CreatedById);
             entity.HasIndex(x => x.DeletedAt);
@@ -321,10 +324,13 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
 
             entity.HasOne(x => x.ChatSession)
                 .WithMany(x => x.Messages)
-                .HasForeignKey(x => x.ChatSessionId)
+                .HasForeignKey(x => new { x.ChatSessionId, x.WorkspaceId })
+                .HasPrincipalKey(x => new { x.Id, x.WorkspaceId })
                 .OnDelete(DeleteBehavior.Cascade);
 
+            entity.HasAlternateKey(x => new { x.Id, x.WorkspaceId });
             entity.HasIndex(x => x.ChatSessionId);
+            entity.HasIndex(x => x.WorkspaceId);
             entity.HasIndex(x => x.CreatedAt);
         });
     }
@@ -343,27 +349,39 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
             entity.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.Property(x => x.ContextType).HasConversion(contextTypeConverter).HasMaxLength(50).IsRequired();
             entity.Property(x => x.IncludeSubfolders).HasDefaultValue(true);
+            entity.Property(x => x.ContextDisplayName).HasMaxLength(500);
+            entity.Property(x => x.ContextPath).HasMaxLength(2000);
             entity.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(x => x.ChatMessage)
                 .WithMany(x => x.Contexts)
-                .HasForeignKey(x => x.ChatMessageId)
+                .HasForeignKey(x => new { x.ChatMessageId, x.WorkspaceId })
+                .HasPrincipalKey(x => new { x.Id, x.WorkspaceId })
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(x => x.Folder)
                 .WithMany(x => x.ChatMessageContexts)
-                .HasForeignKey(x => x.FolderId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .HasForeignKey(x => new { x.FolderId, x.WorkspaceId })
+                .HasPrincipalKey(x => new { x.Id, x.WorkspaceId })
+                .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasOne(x => x.Document)
                 .WithMany(x => x.ChatMessageContexts)
-                .HasForeignKey(x => x.DocumentId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .HasForeignKey(x => new { x.DocumentId, x.WorkspaceId })
+                .HasPrincipalKey(x => new { x.Id, x.WorkspaceId })
+                .OnDelete(DeleteBehavior.Restrict);
 
+            entity.HasIndex(x => x.WorkspaceId);
             entity.HasIndex(x => x.ChatMessageId);
             entity.HasIndex(x => x.FolderId);
             entity.HasIndex(x => x.DocumentId);
             entity.HasIndex(x => new { x.ChatMessageId, x.ContextOrder });
+            entity.HasIndex(x => new { x.ChatMessageId, x.ContextType, x.FolderId })
+                .IsUnique()
+                .HasFilter("folder_id IS NOT NULL");
+            entity.HasIndex(x => new { x.ChatMessageId, x.ContextType, x.DocumentId })
+                .IsUnique()
+                .HasFilter("document_id IS NOT NULL");
         });
     }
 

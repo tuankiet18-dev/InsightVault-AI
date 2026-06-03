@@ -161,6 +161,8 @@ export interface ChatMessageContextDto {
   folderId?: string | null;
   documentId?: string | null;
   includeSubfolders: boolean;
+  contextDisplayName?: string | null;
+  contextPath?: string | null;
 }
 
 export interface ChatSourceDto {

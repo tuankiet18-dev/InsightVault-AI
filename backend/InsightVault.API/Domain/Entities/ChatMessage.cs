@@ -5,6 +5,7 @@ namespace InsightVault.API.Domain.Entities;
 public sealed class ChatMessage
 {
     public Guid Id { get; set; }
+    public Guid WorkspaceId { get; set; }
     public Guid ChatSessionId { get; set; }
     public ChatMessageRole Role { get; set; }
     public string Content { get; set; } = string.Empty;
