@@ -18,6 +18,13 @@ export const useDocuments = (workspaceId: string | null, params?: GetDocumentsPa
     queryKey: documentKeys.list(workspaceId!, params),
     queryFn: () => documentApi.getDocuments(workspaceId!, params),
     enabled: !!workspaceId,
+    refetchInterval: (query) => {
+      const docs = query.state.data;
+      if (docs && docs.some(d => d.status === 'processing' || d.status === 'uploaded' || d.status === 'pending_upload')) {
+        return 5000;
+      }
+      return false;
+    },
   });
 };
 

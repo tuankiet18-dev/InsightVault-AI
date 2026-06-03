@@ -9,21 +9,19 @@ export function TabStrip() {
   if (tabs.length === 0) return null
 
   return (
-    <nav className="flex h-9 items-center gap-px overflow-x-auto overflow-y-hidden border-b border-border bg-card select-none">
-      <div className="flex items-center">
-        {tabs.map(tab => (
-          <Tab 
-            key={tab.id} 
-            tab={tab} 
-            isActive={activeTabId === tab.id}
-            onSelect={() => setActiveTab(tab.id)}
-            onClose={(e) => {
-              e.stopPropagation()
-              closeTab(tab.id)
-            }}
-          />
-        ))}
-      </div>
+    <nav className="flex h-9 w-full items-center border-b border-border bg-card select-none overflow-x-auto [&::-webkit-scrollbar]:hidden">
+      {tabs.map(tab => (
+        <Tab 
+          key={tab.id} 
+          tab={tab} 
+          isActive={activeTabId === tab.id}
+          onSelect={() => setActiveTab(tab.id)}
+          onClose={(e) => {
+            e.stopPropagation()
+            closeTab(tab.id)
+          }}
+        />
+      ))}
     </nav>
   )
 }
@@ -43,7 +41,7 @@ function Tab({
     <button
       onClick={onSelect}
       className={cn(
-        "group relative flex h-9 min-w-[120px] max-w-[220px] items-center border-r border-border px-3 text-xs transition-colors",
+        "group relative flex-1 flex h-9 min-w-[60px] max-w-[220px] items-center border-r border-border px-3 text-xs transition-colors shrink",
         isActive 
           ? "bg-background text-foreground"
           : "text-muted-foreground hover:bg-accent"
