@@ -36,7 +36,6 @@ type AiJobType =
   | "generate_report"
   | "compare_documents";
 type AiJobStatus = "queued" | "processing" | "completed" | "failed" | "cancelled";
-type ChatScopeType = "workspace" | "folder" | "document";
 type ChatMessageRole = "user" | "assistant";
 type ReportType =
   | "summary_report"
@@ -305,18 +304,21 @@ Upload security requirements:
 
 ### Chat And RAG
 
-Chat session can target multiple documents when `scopeType = "document"`.
+Chat sessions belong to a workspace and default to RAG over that workspace's readable documents.
+Users do not create folder/document-specific sessions. Instead, individual messages can narrow retrieval with `contexts`, which is the API representation of `@folder` and `@document` mentions in chat input.
+
+Validation:
+
+- A message without `contexts` uses the whole session workspace as its RAG scope.
+- A `folder` context requires `folderId` and must omit `documentId`.
+- A `document` context requires `documentId` and must omit `folderId`.
+- Every folder/document in message contexts must belong to the session workspace.
 
 ```ts
 type ChatSessionDto = {
   id: string;
   workspaceId: string;
   title?: string | null;
-  scopeType: ChatScopeType;
-  scopeWorkspaceId?: string | null;
-  scopeFolderId?: string | null;
-  scopeDocumentIds?: string[];
-  includeSubfolders: boolean;
   webSearchEnabled?: boolean;
   webSearchProvider?: "duckduckgo" | "searxng" | "brave" | null;
   createdAt: string;
@@ -329,19 +331,21 @@ type ChatSessionDto = {
 | GET | `/api/workspaces/{workspaceId}/chat-sessions` | Yes | - | `ChatSessionDto[]` |
 | POST | `/api/workspaces/{workspaceId}/chat-sessions` | Yes | `CreateChatSessionRequest` | `ChatSessionDto` |
 | GET | `/api/chat-sessions/{sessionId}/messages` | Yes | - | `ChatMessageDto[]` |
-| POST | `/api/chat-sessions/{sessionId}/messages` | Yes | `{ content, webSearchOptions? }` | `ChatTurnResponse` |
+| POST | `/api/chat-sessions/{sessionId}/messages` | Yes | `{ content, contexts?, webSearchOptions? }` | `ChatTurnResponse` |
 | DELETE | `/api/chat-sessions/{sessionId}` | Yes | - | `204` |
 
 ```ts
 type CreateChatSessionRequest = {
   title?: string | null;
-  scopeType: ChatScopeType;
-  scopeWorkspaceId?: string | null;
-  scopeFolderId?: string | null;
-  scopeDocumentIds?: string[];
-  includeSubfolders?: boolean;
   webSearchEnabled?: boolean;
   webSearchProvider?: "duckduckgo" | "searxng" | "brave" | null;
+};
+
+type ChatMessageContextDto = {
+  contextType: "folder" | "document";
+  folderId?: string | null;
+  documentId?: string | null;
+  includeSubfolders: boolean;
 };
 
 type ChatMessageDto = {
@@ -350,9 +354,21 @@ type ChatMessageDto = {
   role: ChatMessageRole;
   content: string;
   modelName?: string | null;
+  contexts: ChatMessageContextDto[];
   sources: ChatSourceDto[];
   webSources?: WebSourceDto[];
   createdAt: string;
+};
+
+type SendChatMessageRequest = {
+  content: string;
+  contexts?: Array<{
+    contextType: "folder" | "document";
+    folderId?: string | null;
+    documentId?: string | null;
+    includeSubfolders?: boolean;
+  }>;
+  webSearchOptions?: WebSearchOptions;
 };
 
 type ChatSourceDto = {

@@ -13,7 +13,7 @@ export function ChatHistory() {
   const handleNewChat = () => {
     if (!activeWorkspaceId) return
     createSessionMutation.mutate(
-      { title: 'New Chat', scopeType: 'workspace', scopeWorkspaceId: activeWorkspaceId },
+      { title: 'New Chat' },
       {
         onSuccess: (newSession) => {
           setActiveSession(newSession.id)

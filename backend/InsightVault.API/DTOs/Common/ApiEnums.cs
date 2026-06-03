@@ -95,12 +95,9 @@ public enum ApiAiJobStatus
     Cancelled
 }
 
-[JsonConverter(typeof(JsonStringEnumConverter<ApiChatScopeType>))]
-public enum ApiChatScopeType
+[JsonConverter(typeof(JsonStringEnumConverter<ApiChatContextType>))]
+public enum ApiChatContextType
 {
-    [JsonStringEnumMemberName("workspace")]
-    Workspace,
-
     [JsonStringEnumMemberName("folder")]
     Folder,
 

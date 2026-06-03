@@ -4,11 +4,13 @@ import type {
   CreateChatSessionRequest, 
   ChatMessageDto, 
   ChatTurnResponse,
-  WebSearchOptions
+  WebSearchOptions,
+  ChatMessageContextRequest
 } from '../types/api';
 
 export interface SendMessageData {
   content: string;
+  contexts?: ChatMessageContextRequest[];
   webSearchOptions?: WebSearchOptions;
 }
 

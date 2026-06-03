@@ -5,11 +5,6 @@ export const mockChatSessions: ChatSessionDto[] = [
     id: 'chat-001',
     workspaceId: 'ws-001',
     title: 'MVP scope questions',
-    scopeType: 'workspace',
-    scopeWorkspaceId: 'ws-001',
-    scopeFolderId: null,
-    scopeDocumentIds: [],
-    includeSubfolders: true,
     webSearchEnabled: false,
     webSearchProvider: null,
     createdAt: '2026-05-25T14:00:00Z',
@@ -19,11 +14,6 @@ export const mockChatSessions: ChatSessionDto[] = [
     id: 'chat-002',
     workspaceId: 'ws-001',
     title: 'Requirement deep dive',
-    scopeType: 'document',
-    scopeWorkspaceId: 'ws-001',
-    scopeFolderId: null,
-    scopeDocumentIds: ['doc-001'],
-    includeSubfolders: false,
     webSearchEnabled: false,
     webSearchProvider: null,
     createdAt: '2026-05-26T10:00:00Z',
@@ -33,11 +23,6 @@ export const mockChatSessions: ChatSessionDto[] = [
     id: 'chat-003',
     workspaceId: 'ws-001',
     title: 'Research papers Q&A',
-    scopeType: 'folder',
-    scopeWorkspaceId: 'ws-001',
-    scopeFolderId: 'folder-002',
-    scopeDocumentIds: [],
-    includeSubfolders: false,
     webSearchEnabled: false,
     webSearchProvider: null,
     createdAt: '2026-05-27T09:00:00Z',
@@ -52,6 +37,7 @@ export const mockChatMessages: ChatMessageDto[] = [
     role: 'user',
     content: 'MVP của project gồm những chức năng nào?',
     modelName: null,
+    contexts: [],
     sources: [],
     createdAt: '2026-05-25T14:00:00Z',
   },
@@ -97,6 +83,7 @@ export const mockChatMessages: ChatMessageDto[] = [
 - Dashboard thống kê user, document, jobs
 - Xem/retry failed jobs`,
     modelName: 'gemini-1.5-pro',
+    contexts: [],
     sources: [
       {
         documentId: 'doc-001',
@@ -128,6 +115,7 @@ export const mockChatMessages: ChatMessageDto[] = [
     role: 'user',
     content: 'Có những chức năng nào nằm ngoài scope MVP?',
     modelName: null,
+    contexts: [],
     sources: [],
     createdAt: '2026-05-25T14:05:00Z',
   },
@@ -154,6 +142,7 @@ export const mockChatMessages: ChatMessageDto[] = [
 
 Đây là danh sách "out of scope" được ghi rõ trong requirement document.`,
     modelName: 'gemini-1.5-pro',
+    contexts: [],
     sources: [
       {
         documentId: 'doc-001',

@@ -115,7 +115,14 @@ Target persistence:
 
 ### RAG Query
 
-Backend calls AI only after checking chat scope permission.
+Backend calls AI only after checking chat workspace permission and message context ownership.
+
+RAG scope is resolved by backend before calling AI:
+
+- Message contexts from `@folder` or `@document` mentions take priority for the current message.
+- If a message has no contexts, backend uses all readable documents in the chat session workspace.
+- Folder contexts resolve to documents in the folder, optionally including subfolders.
+- Document contexts resolve to the mentioned documents.
 
 Retrieval uses hybrid RAG:
 

@@ -8,6 +8,13 @@ public sealed record ChatMessageDto(
     ApiChatMessageRole Role,
     string Content,
     string? ModelName,
+    IReadOnlyList<ChatMessageContextDto> Contexts,
     IReadOnlyList<ChatSourceDto> Sources,
     IReadOnlyList<WebSourceDto>? WebSources,
     DateTimeOffset CreatedAt);
+
+public sealed record ChatMessageContextDto(
+    ApiChatContextType ContextType,
+    Guid? FolderId,
+    Guid? DocumentId,
+    bool IncludeSubfolders);

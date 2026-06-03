@@ -14,7 +14,6 @@ export type AiJobType =
   | 'generate_report'
   | 'compare_documents'
 export type AiJobStatus = 'queued' | 'processing' | 'completed' | 'failed' | 'cancelled'
-export type ChatScopeType = 'workspace' | 'folder' | 'document'
 export type ChatMessageRole = 'user' | 'assistant'
 export type ReportType =
   | 'summary_report'
@@ -139,11 +138,6 @@ export type WebSearchOptions = {
 
 export type CreateChatSessionRequest = {
   title?: string | null
-  scopeType: ChatScopeType
-  scopeWorkspaceId?: string | null
-  scopeFolderId?: string | null
-  scopeDocumentIds?: string[]
-  includeSubfolders?: boolean
   webSearchEnabled?: boolean
   webSearchProvider?: WebSearchProvider | null
 }
@@ -152,15 +146,26 @@ export type ChatSessionDto = {
   id: string
   workspaceId: string
   title?: string | null
-  scopeType: ChatScopeType
-  scopeWorkspaceId?: string | null
-  scopeFolderId?: string | null
-  scopeDocumentIds?: string[]
-  includeSubfolders: boolean
   webSearchEnabled?: boolean
   webSearchProvider?: WebSearchProvider | null
   createdAt: string
   updatedAt: string
+}
+
+export type ChatContextType = 'folder' | 'document'
+
+export type ChatMessageContextRequest = {
+  contextType: ChatContextType
+  folderId?: string | null
+  documentId?: string | null
+  includeSubfolders?: boolean
+}
+
+export type ChatMessageContextDto = {
+  contextType: ChatContextType
+  folderId?: string | null
+  documentId?: string | null
+  includeSubfolders: boolean
 }
 
 export type ChatSourceDto = {
@@ -184,6 +189,7 @@ export type ChatMessageDto = {
   role: ChatMessageRole
   content: string
   modelName?: string | null
+  contexts: ChatMessageContextDto[]
   sources: ChatSourceDto[]
   webSources?: WebSourceDto[]
   createdAt: string
@@ -191,6 +197,7 @@ export type ChatMessageDto = {
 
 export type SendChatMessageRequest = {
   content: string
+  contexts?: ChatMessageContextRequest[]
   webSearchOptions?: WebSearchOptions
 }
 

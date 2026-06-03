@@ -16,6 +16,7 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
     public DbSet<AiJob> AiJobs => Set<AiJob>();
     public DbSet<ChatSession> ChatSessions => Set<ChatSession>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+    public DbSet<ChatMessageContext> ChatMessageContexts => Set<ChatMessageContext>();
     public DbSet<ChatMessageSource> ChatMessageSources => Set<ChatMessageSource>();
     public DbSet<Report> Reports => Set<Report>();
 
@@ -33,6 +34,7 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
         ConfigureAiJobs(modelBuilder);
         ConfigureChatSessions(modelBuilder);
         ConfigureChatMessages(modelBuilder);
+        ConfigureChatMessageContexts(modelBuilder);
         ConfigureChatMessageSources(modelBuilder);
         ConfigureReports(modelBuilder);
     }
@@ -281,14 +283,10 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
 
     private static void ConfigureChatSessions(ModelBuilder modelBuilder)
     {
-        var scopeConverter = new EnumToStringConverter<ChatScopeType>();
-
         modelBuilder.Entity<ChatSession>(entity =>
         {
             entity.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.Property(x => x.Title).HasMaxLength(255);
-            entity.Property(x => x.ScopeType).HasConversion(scopeConverter).HasMaxLength(50).IsRequired();
-            entity.Property(x => x.IncludeSubfolders).HasDefaultValue(true);
             entity.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(x => x.UpdatedAt).HasDefaultValueSql("now()");
 
@@ -302,24 +300,8 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
                 .HasForeignKey(x => x.CreatedById)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            entity.HasOne(x => x.ScopeWorkspace)
-                .WithMany()
-                .HasForeignKey(x => x.ScopeWorkspaceId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasOne(x => x.ScopeFolder)
-                .WithMany(x => x.ChatSessions)
-                .HasForeignKey(x => x.ScopeFolderId)
-                .OnDelete(DeleteBehavior.SetNull);
-
-            entity.HasOne(x => x.ScopeDocument)
-                .WithMany(x => x.ChatSessions)
-                .HasForeignKey(x => x.ScopeDocumentId)
-                .OnDelete(DeleteBehavior.SetNull);
-
             entity.HasIndex(x => x.WorkspaceId);
             entity.HasIndex(x => x.CreatedById);
-            entity.HasIndex(x => new { x.ScopeType, x.ScopeWorkspaceId, x.ScopeFolderId, x.ScopeDocumentId });
             entity.HasIndex(x => x.DeletedAt);
         });
     }
@@ -344,6 +326,44 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
 
             entity.HasIndex(x => x.ChatSessionId);
             entity.HasIndex(x => x.CreatedAt);
+        });
+    }
+
+    private static void ConfigureChatMessageContexts(ModelBuilder modelBuilder)
+    {
+        var contextTypeConverter = new EnumToStringConverter<ChatContextType>();
+
+        modelBuilder.Entity<ChatMessageContext>(entity =>
+        {
+            entity.ToTable(table => table.HasCheckConstraint(
+                "ck_chat_message_contexts_context_shape",
+                "(context_type = 'Folder' AND folder_id IS NOT NULL AND document_id IS NULL) OR " +
+                "(context_type = 'Document' AND document_id IS NOT NULL AND folder_id IS NULL)"));
+
+            entity.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+            entity.Property(x => x.ContextType).HasConversion(contextTypeConverter).HasMaxLength(50).IsRequired();
+            entity.Property(x => x.IncludeSubfolders).HasDefaultValue(true);
+            entity.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
+
+            entity.HasOne(x => x.ChatMessage)
+                .WithMany(x => x.Contexts)
+                .HasForeignKey(x => x.ChatMessageId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(x => x.Folder)
+                .WithMany(x => x.ChatMessageContexts)
+                .HasForeignKey(x => x.FolderId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(x => x.Document)
+                .WithMany(x => x.ChatMessageContexts)
+                .HasForeignKey(x => x.DocumentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(x => x.ChatMessageId);
+            entity.HasIndex(x => x.FolderId);
+            entity.HasIndex(x => x.DocumentId);
+            entity.HasIndex(x => new { x.ChatMessageId, x.ContextOrder });
         });
     }
 
