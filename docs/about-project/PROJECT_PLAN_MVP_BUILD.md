@@ -85,6 +85,7 @@ Workspace roles:
 - `viewer`
 
 Viewer được hỏi AI trong phạm vi workspace/folder/document mà họ có quyền đọc, nhưng không được upload, xóa, chỉnh sửa nội dung hoặc quản lý member.
+Owner được xóa, khôi phục và xóa cứng mọi document trong workspace. Editor chỉ được thực hiện các thao tác này với document do chính Editor đó upload.
 
 #### Folder management
 
@@ -127,14 +128,14 @@ Viewer được hỏi AI trong phạm vi workspace/folder/document mà họ có 
 
 #### RAG chat
 
-- Chat theo scope:
-  - document
-  - folder
-  - workspace
-- Retrieve chunks theo đúng quyền workspace.
+- Chat session thuộc một workspace.
+- Không có mention: retrieve chunks trên toàn workspace.
+- Có `@file`: backend resolve sang document id cụ thể.
+- Có `@folder`: backend resolve folder và subfolders sang danh sách document ids.
+- Retrieve chunks theo đúng quyền workspace và explicit document ids khi có mention.
 - Gemini trả lời dựa trên context.
 - Lưu chat history.
-- Lưu sources/citations trong `sources_json`.
+- Lưu sources/citations trong `sources_json` hoặc bảng citation riêng.
 
 #### Document comparison
 
@@ -174,7 +175,7 @@ Admin dashboard:
 - User list.
 - AI job list.
 - Failed jobs.
-- Error logs cơ bản.
+- Error logs cơ bản. Admin dashboard chỉ hiển thị aggregate/job/user metadata, không hiển thị nội dung workspace/document/report của user.
 
 ---
 
@@ -326,7 +327,7 @@ Deliverables:
 - Save key points and keywords.
 - Chat session API.
 - Chat message API.
-- RAG retrieval by document/folder/workspace.
+- RAG retrieval workspace-wide by default, with `@file` and `@folder` mentions resolved to explicit document ids.
 - Gemini answer generation.
 - Source/citation display.
 - FE chat page.
@@ -508,7 +509,7 @@ Có thể giảm scope:
 - Compare chỉ hỗ trợ 2 documents trước.
 - Report chỉ lưu Markdown, chưa cần editor đẹp.
 - RabbitMQ có thể thay bằng `.NET BackgroundService`.
-- Viewer permission giữ rõ ràng: được đọc và hỏi AI; không được mutate content hoặc quản lý member.
+- Viewer permission không được đơn giản hóa: viewer được đọc và hỏi AI/RAG, nhưng không upload, compare, generate report, download file gốc hoặc delete.
 
 ---
 
@@ -599,9 +600,9 @@ MVP được xem là hoàn thành khi:
 - User upload document được.
 - Document được xử lý thành chunks và embeddings.
 - User xem summary được.
-- User chat với document/folder/workspace được.
-- User compare documents được.
-- User generate Markdown report được.
+- User chat trong workspace được, và dùng `@file` / `@folder` để giới hạn nguồn.
+- Owner/Editor compare documents được.
+- Owner/Editor generate Markdown report được.
 - Dashboard hiển thị trạng thái cơ bản.
-- Admin xem user/job/failed jobs được.
+- Admin xem user/job/failed jobs được, nhưng không truy cập nội dung workspace của user.
 - Demo end-to-end chạy được ổn định.

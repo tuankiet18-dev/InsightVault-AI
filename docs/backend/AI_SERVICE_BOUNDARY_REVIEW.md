@@ -37,7 +37,7 @@ Frontend must call backend only. AI service is an internal service.
 | Tight DB coupling | AI service depends on database table/column names. | Keep for MVP, reduce over time by returning structured results to backend. |
 | Wide write access | AI can still update documents and chunks. | Move document/job/report writes to backend; keep vector writes in AI only as MVP compromise. |
 | Report persistence outside backend | Previously defaulted to `store_report=true`. | Default is now `false`; `AI_ALLOW_REPORT_PERSISTENCE=false` blocks accidental AI report writes. |
-| Folder subtree scope | AI folder scope currently filters by one `folder_id`. | Backend should resolve subfolders and pass explicit `document_ids` for include-subfolders queries. |
+| Folder mention subtree | AI folder scope currently filters by one `folder_id`. | New chat flow should resolve `@folder` plus subfolders to explicit `document_ids` before calling AI. |
 
 ## Current Safe Defaults
 
@@ -56,5 +56,5 @@ With this setting:
 1. Backend document worker calls AI and owns `documents.status`, `documents.summary`, `documents.key_points`, `documents.keywords`, and `ai_jobs`.
 2. AI `/process-document` returns chunks/embeddings/summary instead of updating `documents` directly.
 3. Decide whether `document_chunks` remains AI-owned for MVP or moves fully to backend.
-4. Backend resolves folder subtree document ids before calling `/rag/query`.
+4. Backend resolves `@folder` subtree document ids before calling `/rag/query`.
 5. If AI keeps DB access, create a restricted DB user for AI with minimal permissions.

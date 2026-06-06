@@ -27,7 +27,7 @@ Thời gian còn lại: 8 tuần, bắt đầu từ tuần 3 đến tuần 10 c�
 - Lưu metadata bằng PostgreSQL.
 - Xử lý tài liệu bằng AI service: extract text, clean text, chunking, embedding, summary.
 - Lưu vector bằng pgvector.
-- RAG chat theo document, folder hoặc workspace.
+- RAG chat trong workspace, hỗ trợ mention `@file` và `@folder` để giới hạn nguồn.
 - Compare documents.
 - Generate Markdown report.
 - Dashboard user cơ bản.
@@ -185,7 +185,7 @@ Mục tiêu: upload xong thì hệ thống xử lý tài liệu, extract text, c
 
 - Hoàn thiện chunking pipeline cho text đã extract.
 - Hoàn thiện embedding và logic ghi/truy vấn chunks trong pgvector theo document_id, folder_id, workspace_id.
-- Tạo similarity search theo scope: document, folder, workspace.
+- Tạo similarity search theo workspace và explicit document ids được resolve từ `@file` / `@folder`.
 - Viết test dữ liệu mẫu để kiểm tra retrieval có trả về chunk đúng.
 
 ### Anh
@@ -202,14 +202,14 @@ Mục tiêu: user hỏi AI và nhận câu trả lời dựa trên tài liệu �
 
 ### An
 
-- Tích hợp workspace/folder/document selector cho phạm vi hỏi AI.
+- Tích hợp source mention input cho `@file` và `@folder` trong phạm vi workspace.
 - Làm trạng thái loading/error cho AI chat.
 - Kiểm tra flow từ dashboard vào workspace rồi mở AI chat.
 
 ### Nguyên
 
 - Bổ sung document sources preview ở document detail.
-- Hỗ trợ FE integration cho chọn document/folder làm chat scope.
+- Hỗ trợ FE integration cho mention `@file` và `@folder` trong chat input.
 - Test các case document chưa xử lý xong thì không cho hỏi hoặc hiển thị cảnh báo.
 
 ### Phú
@@ -229,7 +229,7 @@ Mục tiêu: user hỏi AI và nhận câu trả lời dựa trên tài liệu �
 - Implement RAG query pipeline: embed question, retrieve top-k chunks, build prompt, call Gemini, return answer.
 - Trả về sources gồm document_id, chunk_id, file_name, snippet.
 - Tối ưu prompt để AI trả lời dựa trên context, không bịa khi thiếu dữ liệu.
-- Expose RAG endpoint/function cho backend gọi với scope và question rõ ràng.
+- Expose RAG endpoint/function cho backend gọi với workspace hoặc explicit document ids rõ ràng.
 - Test ít nhất 5 câu hỏi demo từ proposal/requirement mẫu.
 
 ### Anh

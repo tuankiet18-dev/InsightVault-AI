@@ -9,10 +9,11 @@ Backend is the system-of-record owner.
 Backend owns:
 
 - Authentication and user identity.
-- Workspace/folder/document permission checks.
+- Workspace-level permission checks for all workspace, folder, document, chat, report, and AI requests.
 - MinIO upload authorization and object-key creation.
 - `documents`, `ai_jobs`, `chat_sessions`, `chat_messages`, `chat_message_sources`, and `reports` business state.
-- Deciding which workspace, folder, subfolder, and document ids are allowed for an AI request.
+- Resolving `@file` and `@folder` mentions into allowed document ids before an AI request.
+- Soft delete, trash, restore, hard delete, and report versioning business rules.
 
 AI service owns:
 
@@ -25,6 +26,7 @@ AI service owns:
 - Returning structured AI results to backend.
 
 AI service must not be called directly by frontend.
+AI service must not persist reports or make permission decisions.
 
 ## Current MVP Compromise
 
@@ -32,8 +34,8 @@ The current AI service still has PostgreSQL access for existing RAG code:
 
 - Reads `documents` and `document_chunks`.
 - Writes `document_chunks` during document processing.
-- Updates document processing fields in the current `/process-document` flow.
-- Can write `reports` only when `AI_ALLOW_REPORT_PERSISTENCE=true`.
+- Does not update `documents` business fields.
+- Does not write `reports`; `AI_ALLOW_REPORT_PERSISTENCE=false` must remain the default.
 
 This is accepted as an MVP transition state, not the final architecture.
 
@@ -51,7 +53,7 @@ With this default, report generation and comparison return content to backend, a
 Frontend
   -> Backend
     -> Authenticate JWT
-    -> Check workspace/folder/document permission
+    -> Check workspace permission and resolve mentioned files/folders
     -> Create or update document metadata
     -> Create ai_job
     -> Send internal request or queue message to AI service
@@ -66,12 +68,20 @@ Frontend
 Every backend-to-AI request must include only resources the current user is allowed to access.
 
 AI service may validate required fields, but it must not be responsible for user permissions.
+System `admin` users cannot access workspace content, even if the same account appears in workspace membership. Admin APIs are limited to user/system/job monitoring and must not expose workspace content.
 
-For folder-scoped RAG:
+New MVP RAG rule:
 
-- If `include_subfolders=false`, backend can pass the selected `folder_id`.
-- If `include_subfolders=true`, backend should resolve the folder tree and pass explicit `document_ids`.
-- AI service should treat explicit `document_ids` as the most precise scope.
+- A chat session belongs to one workspace and defaults to workspace-wide retrieval.
+- Users narrow a specific question by mentioning sources in the message:
+  - `@file` resolves to one document id.
+  - `@folder` resolves to all non-deleted documents inside that folder and its subfolders by default.
+- Backend deduplicates all resolved document ids and sends them to AI as explicit `document_ids`.
+- AI should treat explicit `document_ids` as the most precise scope.
+- Direct `folder_id` RAG remains supported for compatibility, but new Backend chat flow should prefer `document_ids` so folder subtree behavior is deterministic.
+- Backend must resolve only `completed` and non-deleted documents.
+- AI similarity search must also filter `documents.deleted_at IS NULL` as defense in depth.
+- Soft-deleted document chunks may remain physically stored, but they must be hidden from retrieval through the document filter.
 
 ## Endpoint Contracts
 
@@ -116,12 +126,13 @@ Target persistence:
 ### RAG Query
 
 Backend calls AI only after checking chat workspace permission and message context ownership.
+Backend resolves any `@file` / `@folder` mentions before calling AI.
 
 RAG scope is resolved by backend before calling AI:
 
-- Message contexts from `@folder` or `@document` mentions take priority for the current message.
+- Message contexts from `@folder` or `@file` mentions take priority for the current message.
 - If a message has no contexts, backend uses all readable documents in the chat session workspace.
-- Folder contexts resolve to documents in the folder, optionally including subfolders.
+- Folder contexts resolve to completed, non-deleted documents in the folder and all subfolders by default.
 - Document contexts resolve to the mentioned documents.
 
 Retrieval uses hybrid RAG:
@@ -140,7 +151,7 @@ Request:
 {
   "question": "Explain chapter 1",
   "workspace_id": "uuid",
-  "scope": "workspace|folder|document",
+  "scope": "workspace|document|folder",
   "folder_id": "uuid-or-null",
   "document_ids": ["uuid"],
   "top_k": 5,
@@ -151,11 +162,20 @@ Request:
 }
 ```
 
+Backend mapping:
+
+- No mention -> `scope = "workspace"`, `folder_id = null`, `document_ids = null`.
+- `@file` -> `scope = "document"`, `document_ids = resolved file ids`.
+- `@folder` -> `scope = "document"`, `document_ids = all resolved document ids under the folder tree`.
+- Compatibility-only folder scope -> `scope = "folder"`, `folder_id = selected folder id`.
+- RAG chat does not create an `ai_jobs` row.
+- Viewer can call RAG chat but cannot run compare or report generation in MVP.
+
 Response:
 
 ```json
 {
-  "answer": "AI answer",
+  "answer": "Markdown answer",
   "sources": [
     {
       "chunk_id": "uuid",
@@ -178,11 +198,11 @@ Response:
 }
 ```
 
-Backend persists:
+Persistence target in Backend:
 
 - User message.
 - Assistant message.
-- Message contexts for `@folder` and `@document` mentions. Context rows store `workspace_id` and snapshot display fields so the database can enforce same-workspace references and chat history remains understandable after rename/soft delete.
+- Message contexts for `@folder` and `@file` mentions. Context rows store `workspace_id` and snapshot display fields so the database can enforce same-workspace references and chat history remains understandable after rename/soft delete.
 - Message sources.
 - Retrieval debug score in `chat_message_sources.metadata` as JSON for admin-only audit/debug.
 
@@ -192,15 +212,12 @@ Database safety:
 - `chat_messages.workspace_id` must match the parent session workspace.
 - `chat_message_contexts.workspace_id` must match the parent message workspace.
 - Folder/document contexts use composite references `(resource_id, workspace_id)` to prevent cross-workspace context leakage.
-- User-facing delete for folders/documents is soft delete. Hard delete is restricted when chat context history still references the resource.
-
-Admin debug endpoint:
-
-```text
-GET /api/admin/retrieval-debug?workspaceId={uuid}&chatMessageId={uuid}&limit=50
-```
-
-The endpoint requires an admin JWT role and returns source metadata with `retrievalDebug`.
+- User-facing delete for folders/documents is soft delete.
+- Workspace Owner may soft-delete, restore, or hard-delete any document in the workspace.
+- Editor may soft-delete, restore, or hard-delete only documents whose `uploaded_by_id` matches the current Editor.
+- Viewer cannot delete, restore, or hard-delete documents.
+- Hard delete from Trash removes document metadata, chunks and MinIO object. Historical chat context must use snapshots or nullable references so it does not grant access to deleted workspace content or block the approved purge flow.
+- System Admin monitoring must not expose workspace questions, chunk content, snippets, report content or other workspace data.
 
 ### Generate Report
 
@@ -235,8 +252,9 @@ Response:
 Backend persists:
 
 - `reports`.
-- Report version records later if versioning is implemented.
+- Report version records. Regenerating a report creates a new version instead of overwriting prior output.
 - `ai_jobs` status.
+- Backend persists report data; AI service returns content only.
 
 ### Compare Documents
 
@@ -272,6 +290,13 @@ Response:
 ```
 
 Backend persists report content if the user requests saving it.
+
+Rules:
+
+- Compare is user-triggered, not automatic after upload.
+- Compare should run async through Backend job orchestration for long-running LLM calls.
+- Only owner/editor can run compare in MVP.
+- Backend decides source documents and excludes deleted or not-completed documents before calling AI.
 
 ## Implementation Notes
 

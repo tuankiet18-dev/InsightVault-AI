@@ -7,7 +7,7 @@ Ngay thuc hien: 2026-05-26
 Da tap trung vao phan `ai-service` theo MVP docs:
 
 - Process document: MinIO -> extract text -> chunk -> embedding -> pgvector -> summary.
-- RAG chat: query theo workspace/folder/document scope va tra ve citations.
+- RAG chat: query theo workspace hoặc explicit document_ids; folder mention sẽ được Backend resolve thành document_ids và trả về citations.
 - Compare documents: phan tich similarities, differences, gaps, conflicts, recommendations.
 - Generate Markdown report: summary/comparison/gap/section report.
 - Test tu dong cho cac case chinh, khong phu thuoc Gemini API key hay PostgreSQL runtime.
@@ -62,9 +62,9 @@ Da bo sung:
   - `ai_job_id`
   - `title`
   - `store_report`
-- Mac dinh `store_report = true`.
-- Khi generate report thanh cong, luu vao bang `reports`.
-- Response co them `report_id`.
+- `store_report` la legacy/optional field; MVP moi de Backend luu report/version.
+- Mac dinh nen la `store_report = false`.
+- Response co the co `report_id` trong legacy mode, nhung Backend khong nen phu thuoc vao AI de persist report.
 - Van tuong thich payload cu vi cac field moi deu optional.
 
 ### Compare persistence
@@ -83,9 +83,9 @@ Da bo sung:
   - `ai_job_id`
   - `title`
   - `store_report`
-- Mac dinh `store_report = true`.
-- Khi compare thanh cong, luu ket qua vao bang `reports` voi `report_type = comparison_report`.
-- Response co them `report_id`.
+- `store_report` la legacy/optional field; MVP moi de Backend luu ket qua compare/report version.
+- Mac dinh nen la `store_report = false`.
+- Response co the co `report_id` trong legacy mode, nhung Backend khong nen phu thuoc vao AI de persist report.
 - Neu Gemini khong tra `raw_markdown`, service tu tao Markdown fallback tu structured result.
 
 ### Automated tests
@@ -99,8 +99,8 @@ Da them 9 test cases:
 1. TXT extraction clean line endings va blank lines.
 2. Unsupported file type bi reject.
 3. Chunking ton trong overlap va metadata token range.
-4. RAG folder scope thieu `folder_id` tra 422.
-5. RAG document scope thieu `document_ids` tra 422.
+4. Compatibility RAG folder scope thiếu `folder_id` trả 422.
+5. RAG explicit document scope thiếu `document_ids` trả 422.
 6. Compare mismatch `document_ids`/`document_names` tra 422.
 7. RAG khong tim thay chunks tra answer fallback va sources rong.
 8. Report generation persist report va tra `report_id`.

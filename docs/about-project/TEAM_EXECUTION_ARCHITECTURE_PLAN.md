@@ -56,7 +56,7 @@ Khuyến nghị MVP: dùng `PostgreSQL ai_jobs + .NET BackgroundService` làm m�
 6. Tạo `process_document` job sau upload.
 7. Extract text, chunk, embedding, lưu vào `document_chunks`.
 8. Summary/key points/keywords cho document.
-9. RAG chat theo scope `document`, `folder`, `workspace`.
+9. RAG chat trong workspace, hỗ trợ mention `@file` và `@folder` để giới hạn nguồn.
 10. Compare 2 documents và phát hiện gap/conflict.
 11. Generate Markdown report và lưu DB.
 12. User dashboard + admin job monitoring cơ bản.
@@ -174,7 +174,7 @@ Deliverables:
 
 - Generate summary/key points/keywords.
 - Chat session/message APIs.
-- Retrieval theo document/folder/workspace.
+- Retrieval mặc định theo workspace; `@file` / `@folder` được backend resolve thành explicit document ids.
 - Gemini answer generation.
 - Save sources.
 - FE chat UI + source display.
@@ -240,7 +240,7 @@ MVP hoàn thành khi demo được:
 3. Editor upload 2 tài liệu.
 4. Worker xử lý xong document.
 5. User xem summary.
-6. User hỏi AI theo workspace/folder/document.
+6. User hỏi AI trong workspace và dùng `@file` / `@folder` khi cần giới hạn nguồn.
 7. User compare proposal và requirement.
 8. AI chỉ ra gap/conflict.
 9. User generate Markdown report.

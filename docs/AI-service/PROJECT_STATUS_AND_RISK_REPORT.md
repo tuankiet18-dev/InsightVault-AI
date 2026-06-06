@@ -16,7 +16,7 @@ Dựa trên kế hoạch `PROJECT_PLAN_MVP_BUILD.md` và `PROJECT_FEATURES_MVP.m
 ✅ **AI Service (Sprint 3, 4, 5)**
 - Hoàn thành 100% các API cho Python AI Service:
   - `/process-document`: Trích xuất text, chunking, embedding, lưu pgvector, tạo summary.
-  - `/rag/query`: RAG theo ngữ cảnh folder/workspace/document.
+  - `/rag/query`: RAG theo workspace hoặc explicit `document_ids`; `@folder` sẽ do Backend resolve thành `document_ids`.
   - `/compare`: So sánh điểm tương đồng, mâu thuẫn giữa các tài liệu.
   - `/generate-report`: Tự động viết báo cáo Markdown.
 - Test tự động (Unit/API tests) đã passing.

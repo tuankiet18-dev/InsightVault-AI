@@ -223,7 +223,7 @@ Until JWT authentication is implemented, development requests can pass `X-User-I
 
 Deleting a folder is a soft delete. When a parent folder is deleted, all active child folders under that parent are soft-deleted in the same operation.
 
-Folder names are unique among all active folders in the same workspace, regardless of parent folder. The database uses filtered unique indexes with `deleted_at IS NULL`, so a user can create a new folder with the same name after the old folder is soft-deleted.
+Folder names are unique among active sibling folders with the same parent in the same workspace. The database uses filtered unique indexes with `deleted_at IS NULL`, so a user can create a new folder with the same name after the old folder is soft-deleted.
 
 Workspace member email/user uniqueness is also scoped to active membership rows with `removed_at IS NULL`, so removed members can be invited again later.
 
@@ -326,7 +326,7 @@ Current AI endpoints from the Python service:
 | Endpoint | Backend responsibility |
 |---|---|
 | `POST /process-document` | Send document id, workspace id, folder id, MinIO bucket/object key, file type, and file name after upload. |
-| `POST /rag/query` | Validate permission, save chat messages/sources, call AI service with scope/question/history. |
+| `POST /rag/query` | Validate workspace permission, resolve `@file` / `@folder` mentions to document ids, save chat messages/sources, call AI service with question/history. |
 | `POST /compare` | Create AI job/report request, pass document ids/names, and persist final job/report state. |
 | `POST /generate-report` | Create AI job/report request, pass document ids/report type/custom prompt, and persist final report. |
 
