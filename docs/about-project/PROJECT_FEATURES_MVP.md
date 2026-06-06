@@ -68,7 +68,7 @@ MVP có co-work cơ bản thông qua bảng `workspace_members`.
 Workspace role:
 
 - `owner`: quản lý workspace, member, folder, document, AI features, report và trash.
-- `editor`: tạo folder, upload document, hỏi AI, compare document, tạo report.
+- `editor`: tạo folder, upload document, hỏi AI, compare document, tạo report và xóa/khôi phục document do chính mình upload.
 - `viewer`: xem workspace/folder/document metadata, xem summary/report đã có và hỏi AI/RAG trong phạm vi được phép đọc. Viewer không upload, compare, generate report, delete, hard delete hoặc download file gốc trong MVP.
 
 Quy tắc bắt buộc:
@@ -190,7 +190,9 @@ failed
 - Soft-deleted document phải bị loại khỏi list thường, source mention, compare/report source resolution và RAG retrieval.
 - Chunks của soft-deleted document không cần xóa vật lý ngay, nhưng phải bị ẩn bằng filter theo `documents.deleted_at IS NULL`.
 - Hard delete chỉ thực hiện từ Trash. Khi hard delete thì xóa metadata, chunks và MinIO object.
-- Chỉ Owner hoặc chính người upload document đó được soft delete và hard delete document.
+- Owner được soft delete, restore và hard delete mọi document trong workspace.
+- Editor chỉ được soft delete, restore và hard delete document do chính Editor đó upload.
+- Viewer không được delete, restore hoặc hard delete document, kể cả document trước đây do Viewer đó upload.
 
 ## 7. Background Job Và Queue Processing
 

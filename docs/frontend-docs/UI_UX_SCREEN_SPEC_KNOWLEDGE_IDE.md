@@ -64,11 +64,13 @@ Trạng thái cần có:
 - Document đang xử lý.
 - Document lỗi và có retry.
 - Viewer bị chặn thao tác do thiếu quyền.
+- Owner có thao tác delete/restore/hard delete trên mọi document; Editor chỉ có các thao tác này trên document do chính mình upload.
 
 UX quan trọng:
 - Citation của RAG phải hiển thị gần câu trả lời.
 - Document đang processing phải disable Compare/Report.
 - Viewer thấy control bị disable kèm lý do ngắn gọn.
+- Việc ẩn/hiện action dựa trên role và `uploadedById` chỉ phục vụ UX; Backend vẫn phải kiểm tra quyền trên từng request.
 
 ### 02 Modal - Luồng Upload Bằng Presigned URL
 

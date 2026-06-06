@@ -45,6 +45,8 @@ Trách nhiệm: khung IDE, workspace state, explorer, tab shell, quyền theo wo
 
 3. Role-based UI trong workspace
    - `viewer`: không thấy Upload, Delete Folder, Delete Document.
+   - `owner`: thấy Delete/Restore/Hard Delete cho mọi document trong workspace.
+   - `editor`: chỉ thấy Delete/Restore/Hard Delete khi `document.uploadedById` là user hiện tại.
    - `editor`: thấy Upload, không thấy Invite/Workspace destructive settings.
    - `owner`: thấy Upload, Invite, workspace-level settings/destructive actions.
 

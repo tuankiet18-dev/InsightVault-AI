@@ -85,6 +85,7 @@ Workspace roles:
 - `viewer`
 
 Viewer được hỏi AI trong phạm vi workspace/folder/document mà họ có quyền đọc, nhưng không được upload, xóa, chỉnh sửa nội dung hoặc quản lý member.
+Owner được xóa, khôi phục và xóa cứng mọi document trong workspace. Editor chỉ được thực hiện các thao tác này với document do chính Editor đó upload.
 
 #### Folder management
 

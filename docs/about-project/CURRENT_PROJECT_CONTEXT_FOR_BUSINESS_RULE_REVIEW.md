@@ -211,7 +211,9 @@ Sau review ngày 2026-06-03, rule mới cho Workspace/Folder/Chat/RAG là:
 - Soft-deleted document/folder phải bị loại khỏi list thường, mention resolution, compare/report source resolution và RAG retrieval.
 - Chunks của soft-deleted document không cần xóa vật lý ngay, nhưng phải bị ẩn qua filter `documents.deleted_at IS NULL`.
 - Hard delete chỉ thực hiện từ Trash; khi hard delete thì xóa metadata, chunks và MinIO object.
-- Chỉ Owner hoặc chính người upload document được soft delete/hard delete document.
+- Owner được soft delete, restore và hard delete mọi document trong workspace.
+- Editor chỉ được soft delete, restore và hard delete document do chính Editor đó upload.
+- Viewer không được delete, restore hoặc hard delete document, kể cả document trước đây do Viewer đó upload.
 - Trash UI/API cần có cho document.
 
 ### Chat/RAG
@@ -500,7 +502,7 @@ Business rules cũ:
 Trạng thái sau chốt 2026-06-04:
 
 - Cần Trash UI/API cho document.
-- Chỉ Owner hoặc uploader của document được hard delete document trong Trash.
+- Owner được hard delete mọi document trong Trash của workspace; Editor chỉ được hard delete document do chính mình upload.
 - Retention period chưa chốt; không blocker MVP, có thể hard delete thủ công trước.
 - Hard delete document sẽ xóa metadata, chunks và MinIO object.
 
@@ -600,7 +602,7 @@ Nếu rule mới đổi, các vùng code/docs có khả năng bị ảnh hưởn
 9. Duplicate active file name trong cùng folder không được phép.
 10. Soft delete document đưa vào Trash, hide chunks khỏi retrieval, chưa xóa MinIO object.
 11. Hard delete trong Trash mới xóa metadata, chunks và MinIO object.
-12. Chỉ Owner hoặc uploader được soft/hard delete document.
+12. Owner được soft delete, restore và hard delete mọi document trong workspace; Editor chỉ được thực hiện các thao tác đó với document do chính mình upload; Viewer không được xóa.
 13. `@folder` mặc định include subfolders.
 14. Chat session private theo user.
 15. Document chưa `Completed` không được dùng cho RAG.
@@ -613,7 +615,7 @@ Nếu rule mới đổi, các vùng code/docs có khả năng bị ảnh hưởn
 22. Owner/Editor được tạo report; chỉ Owner được delete report.
 23. Backend persist report; AI không tự ghi `reports`.
 24. AI service MVP được đọc `documents`, đọc/ghi `document_chunks`; restricted DB user để phase sau.
-25. Trash trong MVP không có auto retention; item chỉ bị xóa cứng khi Owner hoặc uploader thực hiện hard delete hợp lệ.
+25. Trash trong MVP không có auto retention; item chỉ bị xóa cứng khi Owner thực hiện, hoặc khi Editor thực hiện với document do chính Editor đó upload.
 26. Virus scan upload bằng ClamAV hoặc service tương tự là security hardening cho phase sau, không thuộc MVP.
 27. Owner transfer UX/API để phase sau MVP.
 

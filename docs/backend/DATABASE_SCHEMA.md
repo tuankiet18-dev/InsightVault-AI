@@ -99,12 +99,12 @@ Folder/document user deletes are soft deletes:
 
 Soft-deleted resources are hidden from normal list/detail APIs and from future RAG retrieval.
 
-Hard delete is an explicit Trash operation available only to an authorized Owner or the document uploader. Historical chat context must retain snapshot display data or nullable references so it does not block an approved purge.
+Hard delete is an explicit Trash operation. A workspace Owner may purge any document in the workspace; an Editor may purge only a document whose `uploaded_by_id` matches that Editor. A Viewer cannot purge documents. Historical chat context must retain snapshot display data or nullable references so it does not block an approved purge.
 
 Required order for a document purge:
 
 1. Verify the document is already in Trash.
-2. Verify the caller is the workspace Owner or document uploader.
+2. Verify the caller is the workspace Owner, or an Editor whose user ID matches `uploaded_by_id`.
 3. Detach or preserve historical chat references through snapshots.
 4. Delete document chunks and the MinIO object.
 5. Delete document metadata.

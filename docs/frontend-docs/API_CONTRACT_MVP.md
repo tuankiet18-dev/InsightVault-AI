@@ -75,6 +75,7 @@ type DocumentDto = {
   id: string;
   workspaceId: string;
   folderId?: string | null;
+  uploadedById: string;
   fileName: string;
   originalFileName: string;
   fileType: string;
@@ -291,7 +292,7 @@ Other document APIs:
 | GET | `/api/workspaces/{workspaceId}/documents?folderId=&status=&q=` | Yes | List documents |
 | GET | `/api/documents/{documentId}` | Yes | Detail with summary |
 | DELETE | `/api/documents/{documentId}` | Yes | Soft delete to Trash; do not delete MinIO object yet |
-| GET | `/api/workspaces/{workspaceId}/trash/documents` | Yes | Owner/editor see deleted documents they can restore or hard delete |
+| GET | `/api/workspaces/{workspaceId}/trash/documents` | Yes | Owner sees all deleted documents; Editor sees only documents they uploaded |
 | POST | `/api/documents/{documentId}/restore` | Yes | Restore a soft-deleted document |
 | DELETE | `/api/documents/{documentId}/hard-delete` | Yes | Permanently delete metadata, chunks, and MinIO object |
 | POST | `/api/documents/{documentId}/retry-processing` | Yes | Create new `process_document` job |
@@ -305,7 +306,10 @@ Upload security requirements:
 - BE validates extension, MIME type, file size, and document status on confirm.
 - BE must reject confirm if object key does not match the document record.
 - BE rejects duplicate active file names in the same folder.
-- Only the workspace owner or the original uploader can soft delete or hard delete a document.
+- Workspace Owner can soft delete, restore, or hard delete any document in the workspace.
+- Editor can soft delete, restore, or hard delete only documents whose `uploadedById` is the current Editor.
+- Viewer cannot delete, restore, or hard delete documents, even if the document was previously uploaded by that Viewer.
+- FE may use `uploadedById` plus `currentUserRole` to render document actions, but Backend must enforce the authorization independently on every delete/restore endpoint.
 - Soft-deleted documents and their chunks must be excluded from normal list APIs, mention resolution, compare/report resolution, and RAG retrieval.
 
 ### AI Jobs

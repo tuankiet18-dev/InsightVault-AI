@@ -213,6 +213,9 @@ Database safety:
 - `chat_message_contexts.workspace_id` must match the parent message workspace.
 - Folder/document contexts use composite references `(resource_id, workspace_id)` to prevent cross-workspace context leakage.
 - User-facing delete for folders/documents is soft delete.
+- Workspace Owner may soft-delete, restore, or hard-delete any document in the workspace.
+- Editor may soft-delete, restore, or hard-delete only documents whose `uploaded_by_id` matches the current Editor.
+- Viewer cannot delete, restore, or hard-delete documents.
 - Hard delete from Trash removes document metadata, chunks and MinIO object. Historical chat context must use snapshots or nullable references so it does not grant access to deleted workspace content or block the approved purge flow.
 - System Admin monitoring must not expose workspace questions, chunk content, snippets, report content or other workspace data.
 

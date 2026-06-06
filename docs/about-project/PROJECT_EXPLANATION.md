@@ -249,7 +249,7 @@ Một workspace có thể có nhiều thành viên, mỗi thành viên có một
 | Role | Quyền chính |
 |---|---|
 | Owner | Quản lý workspace, thành viên, nội dung, report và trash |
-| Editor | Upload tài liệu, tạo folder, hỏi AI, compare, tạo report |
+| Editor | Upload tài liệu, tạo folder, hỏi AI, compare, tạo report và xóa tài liệu do chính mình upload |
 | Viewer | Xem tài liệu/summary/report đã có và hỏi AI/RAG trong phạm vi được phép đọc |
 
 ### 8.2. Owner làm gì?
@@ -269,6 +269,7 @@ Editor có thể:
 
 - Tạo folder.
 - Upload document.
+- Xóa, khôi phục hoặc xóa cứng document do chính Editor đó upload.
 - Hỏi AI.
 - So sánh tài liệu.
 - Tạo report.
