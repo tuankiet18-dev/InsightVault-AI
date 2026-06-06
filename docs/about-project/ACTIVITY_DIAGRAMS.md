@@ -37,13 +37,14 @@ flowchart TD
     SelectFile --> ValidateFile{Kiểm tra định dạng\nvà kích thước}
     ValidateFile -- Không hợp lệ --> ErrorMsg[Hiển thị lỗi file không hợp lệ]
     ErrorMsg --> SelectFile
-    ValidateFile -- Hợp lệ --> UploadMinIO[Upload file gốc lên MinIO]
-    UploadMinIO --> SaveMetadata[Lưu metadata vào PostgreSQL\nStatus: uploaded]
-    SaveMetadata --> CreateAIJob[Tạo AI Job 'process_document'\nStatus: pending]
+    ValidateFile -- Hợp lệ --> CreateMetadata[Lưu metadata vào PostgreSQL\nStatus: pending_upload]
+    CreateMetadata --> UploadMinIO[Upload file gốc lên MinIO bằng presigned URL]
+    UploadMinIO --> ConfirmUpload[Frontend gọi confirm-upload]
+    ConfirmUpload --> CreateAIJob[Tạo AI Job 'process_document'\nStatus: queued]
     CreateAIJob --> ReturnSuccess[Trả về kết quả Upload thành công]
     ReturnSuccess --> BackgroundService((Background\nService))
 
-    BackgroundService --> JobRun[Lấy Job 'process_document' đang pending]
+    BackgroundService --> JobRun[Lấy Job 'process_document' đang queued]
     JobRun --> UpdateProcessing[Cập nhật status\nJob: processing\nDoc: processing]
     UpdateProcessing --> ExtractText[Trích xuất và làm sạch text từ file MinIO]
     ExtractText --> ChunkText[Chia nhỏ text thành Chunks\nvà đếm Token]
@@ -67,11 +68,12 @@ Mô tả quá trình người dùng đặt câu hỏi và AI tìm kiếm ngữ c
 
 ```mermaid
 flowchart TD
-    Start((Bắt đầu)) --> ChooseScope[Chọn Phạm vi (Scope)\nWorkspace / Folder / Document]
-    ChooseScope --> EnterQuery[Nhập câu hỏi (Query)]
-    EnterQuery --> CreateChatMsg[Lưu Chat Message vào DB]
+    Start((Bắt đầu)) --> EnterQuery[Nhập câu hỏi và tùy chọn @file / @folder]
+    EnterQuery --> CheckOwner[Backend kiểm tra session thuộc user hiện tại]
+    CheckOwner --> ResolveMentions[Resolve mention thành completed, non-deleted document IDs]
+    ResolveMentions --> CreateChatMsg[Lưu Chat Message và contexts vào DB]
     CreateChatMsg --> GenQueryEmbedding[Tạo Embedding cho Query\n(Gemini Embedding API)]
-    GenQueryEmbedding --> VectorSearch[Tìm kiếm Semantic Search pgvector\n(Lọc theo quyền và Scope)]
+    GenQueryEmbedding --> VectorSearch[Tìm kiếm trong workspace hoặc explicit document IDs]
     VectorSearch --> GetContext[Lấy Top-K Chunks liên quan nhất]
     GetContext --> BuildPrompt[Xây dựng Prompt\n(System Prompt + Context + Query)]
     BuildPrompt --> CallGemini[Gọi Gemini API sinh câu trả lời]

@@ -206,31 +206,37 @@ Admin có thể:
 - Xem job lỗi.
 - Kiểm tra trạng thái hệ thống.
 
-Admin không phải là người chính làm nội dung trong workspace, mà là người giám sát hệ thống.
+Admin không phải là người làm nội dung trong workspace mà chỉ giám sát hệ thống. System Admin không được xem hoặc truy cập nội dung workspace, folder, document, chunks, chat hoặc report, kể cả khi cùng tài khoản đó xuất hiện trong workspace membership.
 
 ## 7. Workspace là gì?
 
-Workspace là không gian làm việc của một project hoặc một chủ đề.
+Workspace là không gian làm việc của một môn học, một project hoặc một chủ đề chung cho một nhóm người.
 
 Ví dụ:
 
 ```text
+Workspace: SWD391
 Workspace: InsightVault AI Project
 ```
 
-Trong workspace có thể có nhiều folder:
+Trong workspace có thể có nhiều folder để phân loại tài liệu:
 
 ```text
-Proposal
-Requirements
-Research Papers
+HK1
+FinalExam
+Project Docs
 Meeting Notes
 Reports
 ```
 
-Workspace giúp gom tài liệu theo cùng một ngữ cảnh.
+Workspace giúp gom tài liệu theo cùng một ngữ cảnh và là boundary chính cho member/role/permission trong MVP.
 
-Khi user hỏi AI trong workspace, hệ thống có thể tìm thông tin trong đúng phạm vi workspace đó.
+Khi user hỏi AI trong workspace, hệ thống mặc định tìm thông tin trong toàn workspace. Nếu user muốn hỏi cố định vào một nguồn cụ thể, họ dùng mention:
+
+- `@file`: giới hạn vào một document.
+- `@folder`: giới hạn vào toàn bộ documents trong folder đó và các subfolder.
+
+Folder không có member visibility riêng trong MVP; quyền truy cập vẫn theo workspace role.
 
 ## 8. Co-work là gì?
 
@@ -242,9 +248,9 @@ Một workspace có thể có nhiều thành viên, mỗi thành viên có một
 
 | Role | Quyền chính |
 |---|---|
-| Owner | Quản lý workspace và thành viên |
+| Owner | Quản lý workspace, thành viên, nội dung, report và trash |
 | Editor | Upload tài liệu, tạo folder, hỏi AI, compare, tạo report |
-| Viewer | Xem tài liệu, xem summary/report, hỏi AI trong phạm vi được phép đọc |
+| Viewer | Xem tài liệu/summary/report đã có và hỏi AI/RAG trong phạm vi được phép đọc |
 
 ### 8.2. Owner làm gì?
 
@@ -267,6 +273,8 @@ Editor có thể:
 - So sánh tài liệu.
 - Tạo report.
 
+Editor không được invite/remove member.
+
 ### 8.4. Viewer làm gì?
 
 Viewer có thể:
@@ -274,7 +282,8 @@ Viewer có thể:
 - Xem tài liệu.
 - Xem summary.
 - Xem report.
-- Hỏi AI trong phạm vi workspace/folder/document được phép đọc.
+- Hỏi AI/RAG trong phạm vi workspace/folder/document được phép đọc.
+- Không upload, compare, generate report, download file gốc, delete hoặc hard delete trong MVP.
 
 ### 8.5. Vì sao co-work quan trọng?
 
@@ -392,20 +401,22 @@ Tính năng này giúp user đọc nhanh nội dung chính của tài liệu.
 
 ### 9.8. RAG Chat
 
-User có thể hỏi AI dựa trên tài liệu.
+User có thể hỏi AI dựa trên tài liệu trong workspace.
 
-Phạm vi chat:
+Phạm vi chat mới:
 
-- Theo document.
-- Theo folder.
-- Theo workspace.
+- Mặc định: toàn workspace.
+- `@file`: một document cụ thể.
+- `@folder`: một folder và toàn bộ subfolders.
 
 Luồng RAG:
 
 ```text
-User hỏi câu hỏi
+User hỏi câu hỏi, có thể mention @file hoặc @folder
+-> Backend kiểm tra quyền workspace
+-> Backend resolve mentions thành document_ids nếu có
 -> Hệ thống embedding câu hỏi
--> pgvector tìm chunks liên quan
+-> pgvector tìm chunks liên quan trong workspace hoặc document_ids đã resolve
 -> Gửi context + câu hỏi sang Gemini API
 -> Gemini trả lời
 -> Lưu câu trả lời và sources
@@ -646,7 +657,7 @@ Lưu job xử lý AI.
 
 ### 13.8. chat_sessions
 
-Lưu phiên chat.
+Lưu phiên chat thuộc workspace. Chat session không còn cần cố định vào một folder/document; nguồn cụ thể được chọn theo từng message bằng `@file` hoặc `@folder`.
 
 ### 13.9. chat_messages
 

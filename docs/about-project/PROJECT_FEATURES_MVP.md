@@ -57,7 +57,7 @@ Dữ liệu user cần lưu:
 Hệ thống có 2 role cấp hệ thống:
 
 - `user`: sử dụng các chức năng chính.
-- `admin`: giám sát user, document, AI jobs và lỗi xử lý.
+- `admin`: giám sát user, AI jobs và lỗi hệ thống. Admin không được xem/truy cập nội dung workspace, folder, document, chunks, chat, report của người dùng.
 
 Admin không thay thế quyền workspace member. Admin dùng cho dashboard quản trị và monitoring.
 
@@ -67,15 +67,18 @@ MVP có co-work cơ bản thông qua bảng `workspace_members`.
 
 Workspace role:
 
-- `owner`: quản lý workspace, member, folder, document, AI features và report.
+- `owner`: quản lý workspace, member, folder, document, AI features, report và trash.
 - `editor`: tạo folder, upload document, hỏi AI, compare document, tạo report.
-- `viewer`: xem workspace, folder, document, summary, report và hỏi AI trong phạm vi workspace được phép đọc.
+- `viewer`: xem workspace/folder/document metadata, xem summary/report đã có và hỏi AI/RAG trong phạm vi được phép đọc. Viewer không upload, compare, generate report, delete, hard delete hoặc download file gốc trong MVP.
 
 Quy tắc bắt buộc:
 
 - Mọi API nghiệp vụ cần JWT hợp lệ.
 - Mọi truy vấn workspace/folder/document/chunk/report phải kiểm tra membership.
 - Quyền truy cập dựa trên `workspace_members`, không chỉ dựa vào `workspaces.owner_id`.
+- Member ở trạng thái `invited` chỉ thấy sự tồn tại của workspace/invitation, không thấy folder, document, chunks, chat hoặc report cho tới khi active.
+- Editor không có quyền invite/remove member.
+- Owner transfer không bắt buộc trong MVP; có thể để phase sau.
 
 ## 4. Workspace Và Co-work
 
@@ -106,25 +109,34 @@ Workspace là không gian làm việc chung của một project, môn học ho�
 
 ## 5. Folder Management
 
-Folder dùng để phân loại tài liệu trong workspace.
+Folder dùng để phân loại tài liệu trong một workspace. Workspace mới là boundary cộng tác và permission chính; folder không đại diện cho một nhóm member riêng trong MVP.
+
+Ví dụ:
+
+```text
+Workspace: SWD391
+Folders: HK1, FinalExam, Project Docs, Meeting Notes
+```
 
 Features:
 
 - Tạo folder trong workspace.
-- Xem danh sách folder.
+- Folder hỗ trợ nhiều cấp qua `parentFolderId`.
+- Xem danh sách folder theo parent.
 - Xem chi tiết folder.
 - Cập nhật tên và mô tả folder.
-- Xóa folder.
+- Xóa folder bằng soft delete.
+- Dùng folder như nguồn mention trong chat bằng `@folder`.
 
-Ví dụ folder:
+Business rules:
 
-- Research Papers.
-- Requirements.
-- Project Documents.
-- Meeting Notes.
-- Reports.
-
-Tên folder trong cùng một workspace bắt buộc là duy nhất đối với các folder đang active.
+- Permission vẫn theo workspace role `owner/editor/viewer`.
+- Không làm folder-level member visibility trong MVP.
+- Tên folder chỉ cần unique giữa các folder active có cùng parent trong cùng workspace.
+- `@folder` trong RAG sẽ include documents trong folder đó và subfolders mặc định.
+- Backend resolve `@folder` thành danh sách `document_ids` trước khi gọi AI.
+- Khi soft delete folder cha, backend soft delete toàn bộ folder con và documents nằm trong cây folder đó.
+- Soft-deleted folders/documents phải bị loại khỏi mọi list, mention resolution, compare/report source resolution và RAG retrieval.
 
 ## 6. Document Upload Và Management
 
@@ -149,6 +161,7 @@ MVP chưa hỗ trợ OCR cho file scan hoặc ảnh chụp.
 - Xem danh sách document theo folder.
 - Xem chi tiết document.
 - Xóa document.
+- Trash UI/API cho document.
 - Xem trạng thái xử lý document.
 - Xem lỗi xử lý nếu document failed.
 
@@ -169,6 +182,15 @@ failed
 - `processing`: hệ thống đang extract text, chunking và tạo embedding.
 - `completed`: document đã xử lý xong và có thể dùng cho AI.
 - `failed`: xử lý thất bại.
+
+### 6.4. Delete, Trash Và File Name Rules
+
+- Không cho phép duplicate file name trong cùng một folder nếu document cũ chưa bị soft delete.
+- Soft delete document sẽ đưa document vào Trash và set `deleted_at`; MinIO object chưa bị xóa ngay.
+- Soft-deleted document phải bị loại khỏi list thường, source mention, compare/report source resolution và RAG retrieval.
+- Chunks của soft-deleted document không cần xóa vật lý ngay, nhưng phải bị ẩn bằng filter theo `documents.deleted_at IS NULL`.
+- Hard delete chỉ thực hiện từ Trash. Khi hard delete thì xóa metadata, chunks và MinIO object.
+- Chỉ Owner hoặc chính người upload document đó được soft delete và hard delete document.
 
 ## 7. Background Job Và Queue Processing
 
@@ -247,38 +269,49 @@ Tính năng này giúp user nắm nhanh nội dung chính của tài liệu mà 
 
 ## 10. RAG Chat
 
-RAG Chat cho phép user hỏi đáp dựa trên tài liệu đã upload.
+RAG Chat cho phép user hỏi đáp dựa trên tài liệu đã upload trong workspace.
 
-Scope hỗ trợ:
+Business rule mới:
 
-- Workspace.
-- Folder.
-- Document.
+- Một chat session thuộc một workspace.
+- Nếu user không mention nguồn cụ thể, câu hỏi sẽ retrieve trên toàn workspace.
+- User có thể mention nguồn để giới hạn retrieval:
+  - `@file`: hỏi dựa trên một document cụ thể.
+  - `@folder`: hỏi dựa trên tất cả document trong folder đó và subfolders.
+- Folder chỉ là cách tổ chức và chọn nguồn, không phải permission boundary riêng.
 
 Luồng xử lý:
 
 ```text
-User nhập câu hỏi
--> Backend tạo chat message
+User nhập câu hỏi, có thể kèm @file hoặc @folder
+-> Backend tạo user chat message
+-> Backend kiểm tra workspace role owner/editor/viewer
+-> Backend resolve @file/@folder thành explicit document_ids nếu có mention
+-> Backend gọi AI service /rag/query với workspace hoặc document_ids đã resolve
 -> AI service tạo embedding cho câu hỏi
--> pgvector tìm chunks liên quan theo đúng scope và permission
+-> pgvector tìm chunks liên quan trong đúng retrieval set
 -> Gửi context + câu hỏi sang Gemini API
 -> Gemini trả lời dựa trên context
--> Lưu câu trả lời vào chat_messages
--> Lưu sources vào sources_json
+-> Backend lưu assistant message và citation sources
 ```
 
 Features:
 
-- Tạo chat session.
+- Tạo chat session trong workspace.
 - Lưu chat history.
-- Hiển thị câu hỏi và câu trả lời.
-- Hiển thị source/citation.
-- Retrieval luôn filter theo workspace membership.
+- Hỗ trợ `@file` và `@folder` mention trong message.
+- Validate workspace role `owner/editor/viewer`.
+- User chỉ truy cập dữ liệu trong workspace mà họ là member.
+- Backend deduplicate resolved `document_ids` trước khi gọi AI.
+- Chỉ document `completed` mới được dùng cho RAG. Document chưa completed phải bị chặn hoặc cảnh báo trong UI.
+- RAG chat không tạo `ai_jobs` để tránh sinh quá nhiều job nhỏ.
+- Web search chưa nằm trong MVP; contract có thể giữ placeholder nhưng UI nên disable.
+- Không expose MinIO object public trực tiếp.
+- Không gửi quá nhiều document context sang Gemini API nếu không cần.
 
 ## 11. Document Comparison
 
-User chọn 2 hoặc nhiều document để AI so sánh.
+User chọn 2 hoặc nhiều document để AI so sánh. Compare là user-triggered, không tự chạy sau upload trong MVP.
 
 Kết quả compare nên gồm:
 
@@ -290,7 +323,7 @@ Kết quả compare nên gồm:
 - Potential conflicts.
 - Recommendation.
 
-Trong MVP, kết quả compare lưu vào `reports` với:
+Compare nên chạy async qua `ai_jobs` vì có thể mất thời gian gọi LLM và tránh giữ request HTTP quá lâu. Kết quả compare lưu vào `reports` với:
 
 ```text
 report_type = comparison_report
@@ -330,8 +363,16 @@ Features:
 - Tạo report bằng Gemini API.
 - Lưu report dạng Markdown.
 - Lưu source document IDs.
+- Hỗ trợ tạo report theo folder bằng cách backend resolve folder/subfolders thành danh sách document IDs.
+- Report có versioning: cùng một report có thể có nhiều phiên bản để dễ kiểm chứng lịch sử.
 - Xem lại report đã tạo.
 - Xóa report.
+
+Permission:
+
+- Owner và Editor được tạo report.
+- Chỉ Owner được delete report.
+- Backend là bên persist report; AI service không tự ghi bảng `reports`.
 
 Giới hạn MVP:
 
@@ -421,7 +462,7 @@ Cách xử lý:
 - Validate system role `user/admin`.
 - Validate workspace role `owner/editor/viewer`.
 - User chỉ truy cập dữ liệu trong workspace mà họ là member.
-- RAG retrieval phải filter theo workspace/folder/document scope.
+- RAG retrieval phải filter theo workspace permission và explicit `document_ids` được resolve từ `@file` / `@folder` khi có mention.
 - Không expose MinIO object public trực tiếp.
 - Không gửi quá nhiều document context sang Gemini API nếu không cần.
 
@@ -441,6 +482,18 @@ Cách xử lý:
 - Billing/payment.
 - Fine-tuning model.
 - Phân quyền chi tiết theo folder/document.
+- Owner transfer giữa các workspace member.
+- Virus/malware scan khi upload bằng ClamAV hoặc service tương tự.
+- Tự động hard delete item trong Trash theo retention period.
+- Viewer download file gốc.
+- Restricted database user riêng cho AI service.
+
+### 19.1. Deferred/Post-MVP Notes
+
+- Virus scan nên chạy async sau upload và trước document processing. File nhiễm hoặc chưa scan sạch không được extract/chunk/embed.
+- Owner transfer phải bảo đảm người nhận là active member và workspace luôn có đúng một Owner.
+- Trash retention có thể dùng scheduled/background job để hard delete metadata, chunks và MinIO object sau thời hạn cấu hình. MVP chỉ hard delete thủ công.
+- Các mục deferred ở trên không chặn việc implement hoặc nghiệm thu MVP hiện tại.
 
 ## 20. Luồng Demo Đề Xuất
 
@@ -468,7 +521,7 @@ Cách xử lý:
 5. Background process document.
 6. Chunking + embedding + pgvector.
 7. Document summary.
-8. RAG chat theo document/folder/workspace.
+8. RAG chat trong workspace, có `@file` và `@folder` để giới hạn nguồn.
 9. Compare documents.
 10. Generate Markdown report.
 11. Dashboard cơ bản.

@@ -6,9 +6,9 @@ This document describes the current PostgreSQL schema and the intended data owne
 
 - `Workspace` is the top-level tenant boundary.
 - `Folder` and `Document` belong to exactly one workspace.
-- Active folder names are unique within the same workspace, regardless of parent folder.
+- Active folder names are unique among sibling folders with the same parent in the same workspace.
 - `ChatSession` belongs to one workspace and does not carry folder/document scope.
-- `ChatMessageContext` stores per-message `@folder` and `@document` mentions.
+- `ChatMessageContext` stores per-message `@folder` and `@file` mentions.
 - User-facing delete for `Folder` and `Document` is soft delete through `deleted_at`.
 - Hard delete is intentionally restricted when chat history still references the resource.
 
@@ -59,7 +59,7 @@ Important columns:
 
 `workspace_id` is denormalized from `chat_sessions.workspace_id`. This is intentional: it allows the database to enforce same-workspace constraints for message contexts.
 
-`chat_message_contexts` stores the explicit context selected by the user in a single message, usually from `@folder` or `@document`.
+`chat_message_contexts` stores the explicit context selected by the user in a single message, usually from `@folder` or `@file`.
 
 Important columns:
 
@@ -99,15 +99,15 @@ Folder/document user deletes are soft deletes:
 
 Soft-deleted resources are hidden from normal list/detail APIs and from future RAG retrieval.
 
-Hard delete is a database maintenance operation only. It is restricted when chat history still references the resource through `chat_message_contexts`. This prevents historical conversations from silently losing their context.
+Hard delete is an explicit Trash operation available only to an authorized Owner or the document uploader. Historical chat context must retain snapshot display data or nullable references so it does not block an approved purge.
 
-Recommended maintenance order for true purges:
+Required order for a document purge:
 
-1. Decide whether chat history must be retained.
-2. Export or anonymize chat history if needed.
-3. Delete dependent chat context/source rows explicitly.
-4. Delete document chunks/object storage.
-5. Delete document/folder rows.
+1. Verify the document is already in Trash.
+2. Verify the caller is the workspace Owner or document uploader.
+3. Detach or preserve historical chat references through snapshots.
+4. Delete document chunks and the MinIO object.
+5. Delete document metadata.
 
 ## Important Constraints
 

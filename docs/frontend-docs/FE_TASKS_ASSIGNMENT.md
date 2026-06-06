@@ -100,8 +100,8 @@ Trách nhiệm: chat/RAG, compare, report/document rendering bên trong IDE.
 
 1. AI Inspector / Chat Panel
    - Sở hữu `src/components/ai/*` và `src/components/chat/*`.
-   - Dùng `activeWorkspaceId`, `selectedFolderId`, `selectedDocumentId` từ `workspaceStore`.
-   - Dùng `chatApi.ts` và hooks hiện có; không tạo chat seed store riêng.
+   - Dùng `activeWorkspaceId` từ `workspaceStore`; `selectedFolderId`/`selectedDocumentId` chỉ là gợi ý để prefill `@folder` hoặc `@file`, không phải chat scope cố định.
+   - Dùng `chatApi.ts` và hooks hiện có; thêm support gửi `mentionedSources` cho `@file` và `@folder`, không tạo chat seed store riêng.
    - Hiển thị sources/citations rõ ràng.
 
 2. Compare Panel

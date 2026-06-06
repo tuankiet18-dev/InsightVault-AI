@@ -166,6 +166,8 @@ Rules:
 - Any workspace access must verify membership.
 - Only `owner` can delete workspace or manage members.
 - `viewer` can read workspace resources and use RAG chat over readable workspace/folder/document scope, but cannot upload, delete, edit content, compare, generate reports, or manage members.
+- System `admin` cannot access workspace contents, including when the same account appears in workspace membership.
+- Invited members can see the invitation/workspace shell only, not folders, documents, chunks, chat, or reports until active.
 
 ### Workspace Members
 
@@ -202,7 +204,7 @@ type WorkspaceMemberDto = {
 
 Rules:
 
-- Folder names must be unique among all active folders in the same workspace, regardless of parent folder.
+- Folder names must be unique among active sibling folders with the same parent in the same workspace.
 - Soft-deleted folders do not block reusing the same name.
 
 ```ts
@@ -288,7 +290,10 @@ Other document APIs:
 |---|---|---:|---|
 | GET | `/api/workspaces/{workspaceId}/documents?folderId=&status=&q=` | Yes | List documents |
 | GET | `/api/documents/{documentId}` | Yes | Detail with summary |
-| DELETE | `/api/documents/{documentId}` | Yes | Soft delete metadata and MinIO object if possible |
+| DELETE | `/api/documents/{documentId}` | Yes | Soft delete to Trash; do not delete MinIO object yet |
+| GET | `/api/workspaces/{workspaceId}/trash/documents` | Yes | Owner/editor see deleted documents they can restore or hard delete |
+| POST | `/api/documents/{documentId}/restore` | Yes | Restore a soft-deleted document |
+| DELETE | `/api/documents/{documentId}/hard-delete` | Yes | Permanently delete metadata, chunks, and MinIO object |
 | POST | `/api/documents/{documentId}/retry-processing` | Yes | Create new `process_document` job |
 
 Upload security requirements:
@@ -299,6 +304,9 @@ Upload security requirements:
 - BE validates membership and `owner/editor` role before presign.
 - BE validates extension, MIME type, file size, and document status on confirm.
 - BE must reject confirm if object key does not match the document record.
+- BE rejects duplicate active file names in the same folder.
+- Only the workspace owner or the original uploader can soft delete or hard delete a document.
+- Soft-deleted documents and their chunks must be excluded from normal list APIs, mention resolution, compare/report resolution, and RAG retrieval.
 
 ### AI Jobs
 
@@ -311,7 +319,7 @@ Upload security requirements:
 ### Chat And RAG
 
 Chat sessions belong to a workspace and default to RAG over that workspace's readable documents.
-Users do not create folder/document-specific sessions. Instead, individual messages can narrow retrieval with `contexts`, which is the API representation of `@folder` and `@document` mentions in chat input.
+Each chat session is private to its creator. Users do not create folder/document-specific sessions. Individual messages can narrow retrieval with `contexts`, which is the API representation of `@folder` and `@file` mentions.
 
 Validation:
 
@@ -319,8 +327,14 @@ Validation:
 - A `folder` context requires `folderId` and must omit `documentId`.
 - A `document` context requires `documentId` and must omit `folderId`.
 - Every folder/document in message contexts must belong to the session workspace.
+- `@folder` includes all subfolders by default.
+- Backend resolves contexts to deduplicated explicit `document_ids`.
+- Only completed, non-deleted documents can be resolved for RAG.
 - Backend stores message contexts with `workspaceId` internally and enforces same-workspace context integrity at the database layer.
-- Folder/document deletes are soft deletes in user-facing APIs. Hard delete is restricted by database foreign keys when chat history still references a folder/document context.
+- Labels and paths supplied by the client are display hints only; Backend trusts IDs only after permission checks.
+- Viewer can create private chat sessions and ask RAG questions.
+- RAG messages do not create `ai_jobs`.
+- Web search fields are placeholders and must remain disabled in MVP.
 
 ```ts
 type ChatSessionDto = {
@@ -339,7 +353,7 @@ type ChatSessionDto = {
 | GET | `/api/workspaces/{workspaceId}/chat-sessions` | Yes | - | `ChatSessionDto[]` |
 | POST | `/api/workspaces/{workspaceId}/chat-sessions` | Yes | `CreateChatSessionRequest` | `ChatSessionDto` |
 | GET | `/api/chat-sessions/{sessionId}/messages` | Yes | - | `ChatMessageDto[]` |
-| POST | `/api/chat-sessions/{sessionId}/messages` | Yes | `{ content, contexts?, webSearchOptions? }` | `ChatTurnResponse` |
+| POST | `/api/chat-sessions/{sessionId}/messages` | Yes | `SendChatMessageRequest` | `ChatTurnResponse` |
 | DELETE | `/api/chat-sessions/{sessionId}` | Yes | - | `204` |
 
 ```ts
@@ -402,7 +416,7 @@ type ChatTurnResponse = {
 };
 ```
 
-Web search fields are contract-only for the current phase. BE and AI may ignore them until the web search phase.
+Web search fields are contract-only for the current phase. BE and AI must ignore them until the web search phase.
 
 ### Compare
 
@@ -415,7 +429,7 @@ Request:
   "folderId": "uuid-or-null",
   "documentIds": ["uuid-1", "uuid-2"],
   "title": "Comparison report",
-  "storeReport": true,
+  "storeReport": false,
   "webSearchOptions": {
     "enabled": false,
     "provider": "searxng",
@@ -423,6 +437,13 @@ Request:
   }
 }
 ```
+
+Rules:
+
+- Only owner/editor can run compare.
+- Viewer cannot run compare in MVP.
+- Compare is user-triggered, not automatic after upload.
+- Compare should run through async job orchestration for long-running LLM calls.
 
 Response:
 
@@ -464,6 +485,8 @@ type ReportDto = {
   id: string;
   workspaceId: string;
   folderId?: string | null;
+  reportGroupId?: string | null;
+  versionNumber?: number;
   title: string;
   reportType: ReportType;
   markdownContent: string;
@@ -474,6 +497,15 @@ type ReportDto = {
   updatedAt: string;
 };
 ```
+
+Rules:
+
+- Owner/editor can generate reports.
+- Viewer can read existing reports but cannot generate or delete reports in MVP.
+- Only owner can delete reports.
+- Report generation can target a folder, but Backend must resolve the folder/subfolders to explicit document IDs before calling AI.
+- Reports use versioning; regenerating the same report creates a new version rather than overwriting prior output.
+- Backend persists reports. AI service must not write `reports`.
 
 ### Dashboard And Admin
 
@@ -531,6 +563,17 @@ Response:
 
 ### `POST /rag/query`
 
+This endpoint is backend-to-AI only. Frontend must call Backend chat APIs, not AI service directly.
+
+Backend decides the retrieval set before calling AI:
+
+- No mention: send `scope = "workspace"` with only `workspace_id`.
+- `@file`: resolve mentioned files to `document_ids`, send `scope = "document"`.
+- `@folder`: resolve mentioned folder plus subfolders to `document_ids`, send `scope = "document"`.
+- Direct `scope = "folder"` remains accepted by AI for compatibility, but Backend should prefer explicit `document_ids` for new chat flow.
+- Backend must ensure all source documents are `completed` and `deleted_at IS NULL`.
+- AI similarity search must join/filter documents so soft-deleted documents never contribute chunks.
+
 Request:
 
 ```json
@@ -547,7 +590,7 @@ Request:
   ],
   "web_search_options": {
     "enabled": false,
-    "provider": "searxng",
+    "provider": null,
     "max_results": 5
   }
 }
@@ -557,12 +600,12 @@ Response:
 
 ```json
 {
-  "answer": "...",
+  "answer": "Markdown answer",
   "sources": [
     {
       "chunk_id": "uuid",
       "document_id": "uuid",
-      "file_name": "proposal.pdf",
+      "file_name": "Requirement.docx",
       "snippet": "...",
       "similarity": 0.82
     }
@@ -570,8 +613,6 @@ Response:
   "web_sources": []
 }
 ```
-
-`web_search_options` and `web_sources` are optional and reserved for a later phase.
 
 ### `POST /compare`
 
@@ -586,7 +627,7 @@ Request:
   "document_ids": ["uuid-1", "uuid-2"],
   "document_names": ["proposal.pdf", "requirements.pdf"],
   "title": "Comparison report",
-  "store_report": true,
+  "store_report": false,
   "web_search_options": {
     "enabled": false,
     "provider": "searxng",
@@ -609,7 +650,7 @@ Request:
   "report_type": "summary_report",
   "title": "Summary",
   "custom_prompt": null,
-  "store_report": true,
+  "store_report": false,
   "web_search_options": {
     "enabled": false,
     "provider": "searxng",
