@@ -7,7 +7,11 @@ import { ChatInput } from './ChatInput'
 export function ChatCanvas() {
   const { activeSessionId } = useChatStore()
   const { data: messages = [] } = useChatMessages(activeSessionId)
-  const isLoading = useSendMessage(activeSessionId || '').isPending
+  const sendMessageMutation = useSendMessage(activeSessionId || '')
+
+  const isLoading = sendMessageMutation.isPending
+  const isError = sendMessageMutation.isError
+  const error = sendMessageMutation.error
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -21,7 +25,7 @@ export function ChatCanvas() {
       <div className="flex-1 flex flex-col h-full bg-surface-50 border-r border-border items-center justify-center text-surface-400">
         <div className="flex flex-col items-center max-w-sm text-center">
           <div className="w-12 h-12 rounded-full bg-surface-200 flex items-center justify-center mb-4">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z" /></svg>
           </div>
           <h3 className="text-lg font-semibold text-surface-900 mb-2">No Chat Session Selected</h3>
           <p className="text-sm text-surface-500">Select an existing chat from the sidebar or start a new one to begin.</p>
@@ -32,14 +36,14 @@ export function ChatCanvas() {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-surface-50 border-r border-border min-w-0">
-      <div 
+      <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 scroll-smooth"
       >
         {messages.map(msg => (
           <ChatMessage key={msg.id} message={msg} />
         ))}
-        
+
         {isLoading && (
           <div className="flex justify-start">
             <div className="max-w-3xl w-full flex gap-4 p-4">
@@ -55,7 +59,16 @@ export function ChatCanvas() {
           </div>
         )}
       </div>
-      
+      {isError && (
+        <div className="mx-6 mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          Failed to generate AI response.
+          {error instanceof Error && (
+            <span className="block mt-1 text-xs">
+              {error.message}
+            </span>
+          )}
+        </div>
+      )}
       <ChatInput />
     </div>
   )
