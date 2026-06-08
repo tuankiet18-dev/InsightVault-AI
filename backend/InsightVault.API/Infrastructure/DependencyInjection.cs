@@ -24,6 +24,7 @@ public static class DependencyInjection
         services.Configure<ObjectStorageOptions>(configuration.GetSection("MinIO"));
         services.Configure<RabbitMqOptions>(configuration.GetSection("RabbitMQ"));
         services.Configure<AiServiceOptions>(configuration.GetSection("AIService"));
+        services.Configure<TrashCleanupOptions>(configuration.GetSection("TrashCleanup"));
         services.AddScoped<IObjectStorageService, ConfiguredObjectStorageService>();
         services.AddSingleton<IMessagePublisher, RabbitMqMessagePublisher>();
         services.AddHttpClient<IAiServiceClient, AiServiceClient>((serviceProvider, client) =>
@@ -35,6 +36,7 @@ public static class DependencyInjection
             client.BaseAddress = new Uri(options.BaseUrl);
         });
         services.AddHostedService<DocumentProcessingWorker>();
+        services.AddHostedService<TrashCleanupWorker>();
 
         // Repositories
         services.AddScoped(typeof(IRepository<>), typeof(GenericRepository<>));

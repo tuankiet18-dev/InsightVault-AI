@@ -406,7 +406,7 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
             entity.HasOne(x => x.Document)
                 .WithMany(x => x.ChatMessageSources)
                 .HasForeignKey(x => x.DocumentId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.SetNull);
 
             entity.HasOne(x => x.DocumentChunk)
                 .WithMany(x => x.ChatMessageSources)

@@ -201,12 +201,13 @@ type WorkspaceMemberDto = {
 | POST | `/api/workspaces/{workspaceId}/folders` | Yes | `{ name, description?, parentFolderId? }` | `FolderDto` |
 | GET | `/api/folders/{folderId}` | Yes | - | `FolderDto` |
 | PATCH | `/api/folders/{folderId}` | Yes | `{ name?, description?, parentFolderId? }` | `FolderDto` |
-| DELETE | `/api/folders/{folderId}` | Yes | - | `204` |
+| DELETE | `/api/folders/{folderId}?documentDeleteMode=` | Yes | - | `204` |
 
 Rules:
 
 - Folder names must be unique among active sibling folders with the same parent in the same workspace.
 - Soft-deleted folders do not block reusing the same name.
+- `documentDeleteMode` defaults to `cascade_to_trash`. FE may pass `move_documents_to_trash` when the user chooses to detach contained documents from the deleted folder tree before moving those documents to Trash.
 
 ```ts
 type FolderDto = {
@@ -305,12 +306,14 @@ Upload security requirements:
 - BE validates membership and `owner/editor` role before presign.
 - BE validates extension, MIME type, file size, and document status on confirm.
 - BE must reject confirm if object key does not match the document record.
+- BE must reject confirm unless the caller is the workspace owner or the user who started the pending upload.
 - BE rejects duplicate active file names in the same folder.
 - Workspace Owner can soft delete, restore, or hard delete any document in the workspace.
 - Editor can soft delete, restore, or hard delete only documents whose `uploadedById` is the current Editor.
 - Viewer cannot delete, restore, or hard delete documents, even if the document was previously uploaded by that Viewer.
 - FE may use `uploadedById` plus `currentUserRole` to render document actions, but Backend must enforce the authorization independently on every delete/restore endpoint.
 - Soft-deleted documents and their chunks must be excluded from normal list APIs, mention resolution, compare/report resolution, and RAG retrieval.
+- Documents left in Trash for more than 30 days are eligible for automatic hard delete by Backend cleanup worker.
 
 ### AI Jobs
 
@@ -400,7 +403,7 @@ type SendChatMessageRequest = {
 };
 
 type ChatSourceDto = {
-  documentId: string;
+  documentId?: string | null;
   documentChunkId?: string | null;
   fileName: string;
   snippet: string;
@@ -421,6 +424,8 @@ type ChatTurnResponse = {
 ```
 
 Web search fields are contract-only for the current phase. BE and AI must ignore them until the web search phase.
+
+When a source document is hard-deleted, existing chat messages remain. Backend may return `documentId = null` for historical citations, and FE should render that source as deleted/unavailable.
 
 ### Compare
 

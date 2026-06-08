@@ -4,7 +4,7 @@ public sealed class ChatMessageSource
 {
     public Guid Id { get; set; }
     public Guid ChatMessageId { get; set; }
-    public Guid DocumentId { get; set; }
+    public Guid? DocumentId { get; set; }
     public Guid? DocumentChunkId { get; set; }
     public string FileName { get; set; } = string.Empty;
     public string? Snippet { get; set; }
@@ -14,6 +14,6 @@ public sealed class ChatMessageSource
     public DateTimeOffset CreatedAt { get; set; }
 
     public ChatMessage ChatMessage { get; set; } = null!;
-    public Document Document { get; set; } = null!;
+    public Document? Document { get; set; }
     public DocumentChunk? DocumentChunk { get; set; }
 }

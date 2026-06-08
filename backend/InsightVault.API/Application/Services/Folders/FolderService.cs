@@ -133,6 +133,7 @@ public sealed class FolderService(
 
     public async Task DeleteAsync(
         Guid folderId,
+        string? documentDeleteMode = null,
         CancellationToken cancellationToken = default)
     {
         var folder = await GetActiveFolderAsync(folderId, cancellationToken);
@@ -148,6 +149,7 @@ public sealed class FolderService(
             folder.WorkspaceId,
             folderIds,
             cancellationToken);
+        var deleteMode = ParseDocumentDeleteMode(documentDeleteMode);
         var role = await workspacePermissionService.GetUserRoleAsync(
             folder.WorkspaceId,
             userId,
@@ -174,9 +176,38 @@ public sealed class FolderService(
         {
             document.DeletedAt = deletedAt;
             document.UpdatedAt = deletedAt;
+            if (deleteMode == FolderDocumentDeleteMode.MoveDocumentsToTrash)
+            {
+                document.FolderId = null;
+            }
         }
 
         await db.SaveChangesAsync(cancellationToken);
+    }
+
+    private static FolderDocumentDeleteMode ParseDocumentDeleteMode(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)
+            || string.Equals(value, "cascade_to_trash", StringComparison.OrdinalIgnoreCase))
+        {
+            return FolderDocumentDeleteMode.CascadeToTrash;
+        }
+
+        if (string.Equals(value, "move_documents_to_trash", StringComparison.OrdinalIgnoreCase))
+        {
+            return FolderDocumentDeleteMode.MoveDocumentsToTrash;
+        }
+
+        throw new ApiException(
+            StatusCodes.Status400BadRequest,
+            "folder.invalid_document_delete_mode",
+            "documentDeleteMode must be cascade_to_trash or move_documents_to_trash.");
+    }
+
+    private enum FolderDocumentDeleteMode
+    {
+        CascadeToTrash,
+        MoveDocumentsToTrash
     }
 
     private static IReadOnlyList<Folder> GetFolderTreeForDelete(

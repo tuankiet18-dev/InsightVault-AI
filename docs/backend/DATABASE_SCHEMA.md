@@ -10,6 +10,7 @@ This document describes the current PostgreSQL schema and the intended data owne
 - Active document file names are unique inside the same folder, including root-level documents where `folder_id IS NULL`.
 - `ChatSession` belongs to one workspace and does not carry folder/document scope.
 - `ChatMessageContext` stores per-message `@folder` and `@file` mentions.
+- `ChatMessageSource.document_id` is nullable so hard-deleting a document preserves historical chat messages and citation snapshots.
 - User-facing delete for `Folder` and `Document` is soft delete through `deleted_at`.
 - Historical chat context uses snapshot fields and nullable resource references so approved Trash purge is not blocked by old chat history.
 
