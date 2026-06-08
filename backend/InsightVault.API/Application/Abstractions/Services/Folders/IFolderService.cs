@@ -25,5 +25,6 @@ public interface IFolderService
 
     Task DeleteAsync(
         Guid folderId,
+        string? documentDeleteMode = null,
         CancellationToken cancellationToken = default);
 }

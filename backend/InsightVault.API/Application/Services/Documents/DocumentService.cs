@@ -173,6 +173,7 @@ public sealed class DocumentService(
         var document = await GetActiveDocumentAsync(documentId, cancellationToken);
         var userId = GetRequiredUserId();
         await workspacePermissionService.EnsureCanManageDocumentsAsync(document.WorkspaceId, userId, cancellationToken);
+        await EnsureCanConfirmUploadAsync(document, userId, cancellationToken);
 
         if (document.Status != DocumentStatus.PendingUpload)
         {
@@ -197,6 +198,27 @@ public sealed class DocumentService(
         await PublishProcessingJobAsync(document, aiJob, cancellationToken);
 
         return new ConfirmUploadResponse(ToDocumentDto(document), ToAiJobDto(aiJob));
+    }
+
+    private async Task EnsureCanConfirmUploadAsync(
+        Document document,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var role = await workspacePermissionService.GetUserRoleAsync(
+            document.WorkspaceId,
+            userId,
+            cancellationToken);
+
+        if (role == WorkspaceRole.Owner || document.UploadedById == userId)
+        {
+            return;
+        }
+
+        throw new ApiException(
+            StatusCodes.Status403Forbidden,
+            "document.confirm_forbidden",
+            "Only the workspace owner or the user who started this upload can confirm it.");
     }
 
     public async Task DeleteAsync(

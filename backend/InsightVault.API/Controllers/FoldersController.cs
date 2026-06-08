@@ -58,9 +58,10 @@ public sealed class FoldersController(IFolderService folderService) : Controller
     [HttpDelete("api/folders/{folderId:guid}")]
     public async Task<IActionResult> DeleteFolder(
         Guid folderId,
+        [FromQuery] string? documentDeleteMode,
         CancellationToken cancellationToken)
     {
-        await folderService.DeleteAsync(folderId, cancellationToken);
+        await folderService.DeleteAsync(folderId, documentDeleteMode, cancellationToken);
 
         return NoContent();
     }
