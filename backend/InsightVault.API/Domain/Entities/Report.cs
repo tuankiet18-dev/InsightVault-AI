@@ -9,6 +9,8 @@ public sealed class Report
     public Guid? FolderId { get; set; }
     public Guid? CreatedById { get; set; }
     public Guid? AiJobId { get; set; }
+    public Guid ReportGroupId { get; set; }
+    public int VersionNumber { get; set; } = 1;
     public string Title { get; set; } = string.Empty;
     public ReportType ReportType { get; set; }
     public string MarkdownContent { get; set; } = string.Empty;

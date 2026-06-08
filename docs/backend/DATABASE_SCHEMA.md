@@ -7,10 +7,11 @@ This document describes the current PostgreSQL schema and the intended data owne
 - `Workspace` is the top-level tenant boundary.
 - `Folder` and `Document` belong to exactly one workspace.
 - Active folder names are unique among sibling folders with the same parent in the same workspace.
+- Active document file names are unique inside the same folder, including root-level documents where `folder_id IS NULL`.
 - `ChatSession` belongs to one workspace and does not carry folder/document scope.
 - `ChatMessageContext` stores per-message `@folder` and `@file` mentions.
 - User-facing delete for `Folder` and `Document` is soft delete through `deleted_at`.
-- Hard delete is intentionally restricted when chat history still references the resource.
+- Historical chat context uses snapshot fields and nullable resource references so approved Trash purge is not blocked by old chat history.
 
 ## Core Hierarchy
 
@@ -77,10 +78,10 @@ Important columns:
 
 Rules:
 
-- If `context_type = Folder`, `folder_id` is required and `document_id` must be null.
-- If `context_type = Document`, `document_id` is required and `folder_id` must be null.
+- If `context_type = Folder`, `document_id` must be null. `folder_id` may later become null after hard delete because `context_display_name` and `context_path` preserve the historical snapshot.
+- If `context_type = Document`, `folder_id` must be null. `document_id` may later become null after hard delete because `context_display_name` and `context_path` preserve the historical snapshot.
 - `workspace_id` must match the parent chat message.
-- Folder/document references must belong to the same workspace.
+- New folder/document references must belong to the same workspace. The application validates this on write; the database keeps nullable resource references so hard delete can preserve chat history snapshots.
 - Duplicate folder/document contexts in one message are rejected by unique indexes.
 - `context_display_name` and `context_path` are snapshots for readable chat history after rename or soft delete.
 
@@ -117,8 +118,12 @@ Required order for a document purge:
 - `documents (id, workspace_id)` is an alternate key.
 - `chat_messages (chat_session_id, workspace_id)` references `chat_sessions (id, workspace_id)`.
 - `chat_message_contexts (chat_message_id, workspace_id)` references `chat_messages (id, workspace_id)`.
-- `chat_message_contexts (folder_id, workspace_id)` references `folders (id, workspace_id)` with hard-delete restrict.
-- `chat_message_contexts (document_id, workspace_id)` references `documents (id, workspace_id)` with hard-delete restrict.
+- `chat_message_contexts.folder_id` references `folders.id` with `SET NULL`.
+- `chat_message_contexts.document_id` references `documents.id` with `SET NULL`.
+- `documents` has filtered unique indexes for active file names per folder:
+  - `(workspace_id, folder_id, file_name)` where `folder_id IS NOT NULL AND deleted_at IS NULL`
+  - `(workspace_id, file_name)` where `folder_id IS NULL AND deleted_at IS NULL`
+- `reports` has `report_group_id` and `version_number`; `(workspace_id, report_group_id, version_number)` is unique.
 
 ## DBML
 
@@ -177,8 +182,8 @@ Table chat_message_contexts {
   indexes {
     workspace_id
     (chat_message_id, workspace_id)
-    (folder_id, workspace_id)
-    (document_id, workspace_id)
+  folder_id
+  document_id
     (chat_message_id, context_order)
     (chat_message_id, context_type, folder_id) [unique, note: 'folder_id IS NOT NULL']
     (chat_message_id, context_type, document_id) [unique, note: 'document_id IS NOT NULL']
@@ -186,9 +191,10 @@ Table chat_message_contexts {
 
   Note: '''
   Check:
-  (context_type = 'Folder' AND folder_id IS NOT NULL AND document_id IS NULL)
+  (context_type = 'Folder' AND document_id IS NULL)
   OR
-  (context_type = 'Document' AND document_id IS NOT NULL AND folder_id IS NULL)
+  (context_type = 'Document' AND folder_id IS NULL)
+  Folder/document ids are nullable after hard delete; snapshot display fields preserve chat history.
   '''
 }
 
@@ -196,8 +202,8 @@ Ref: chat_sessions.workspace_id > workspaces.id [delete: cascade]
 Ref: chat_sessions.created_by_id > users.id [delete: set null]
 Ref: chat_messages.(chat_session_id, workspace_id) > chat_sessions.(id, workspace_id) [delete: cascade]
 Ref: chat_message_contexts.(chat_message_id, workspace_id) > chat_messages.(id, workspace_id) [delete: cascade]
-Ref: chat_message_contexts.(folder_id, workspace_id) > folders.(id, workspace_id) [delete: restrict]
-Ref: chat_message_contexts.(document_id, workspace_id) > documents.(id, workspace_id) [delete: restrict]
+Ref: chat_message_contexts.folder_id > folders.id [delete: set null]
+Ref: chat_message_contexts.document_id > documents.id [delete: set null]
 ```
 
 For the full schema, use the EF Core model in `backend/InsightVault.API/Data/InsightVaultDbContext.cs` as the source of truth.
