@@ -5,7 +5,8 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AdminPage } from '@/pages/AdminPage'
 import { WorkspacePage } from '@/pages/WorkspacePage'
 import { UserDashboardPage } from '@/pages/UserDashboardPage'
-
+import { ChatPage } from '@/pages/ChatPage'
+import { ComparePage } from '@/pages/ComparePage'
 const AdminLayout = () => (
   <div className="min-h-screen bg-background text-foreground">
     <header className="flex h-14 items-center gap-6 border-b border-border bg-card px-6">
@@ -61,6 +62,14 @@ const router = createBrowserRouter([
     path: '/workspaces/:workspaceId',
     element: <ProtectedRoute><WorkspacePage /></ProtectedRoute>,
   },
+  {
+  path: '/chat',
+  element: (<ProtectedRoute> <ChatPage /> </ProtectedRoute>),
+},
+{
+  path: '/compare',
+  element: (<ProtectedRoute><ComparePage /></ProtectedRoute>),
+},
   {
     path: '/admin',
     element: <ProtectedRoute requireAdmin><AdminLayout /></ProtectedRoute>,
