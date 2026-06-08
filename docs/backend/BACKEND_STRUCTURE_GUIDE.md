@@ -80,10 +80,19 @@ backend/InsightVault.API/
   Properties/
   Program.cs
   appsettings.json
-  appsettings.Development.json
+  appsettings.Development.example.json
 ```
 
 `bin/` and `obj/` are build output folders and should not be edited or committed.
+
+`appsettings.Development.json` is local-only and ignored by Git. Copy
+`appsettings.Development.example.json` to `appsettings.Development.json` for local
+development, then fill local credentials there or use environment variables such as
+`ConnectionStrings__Postgres`, `Jwt__SigningKey`, `MinIO__SecretKey`, and
+`RabbitMQ__Password`.
+
+Do not use values from the example file in staging or production. Deployment must
+provide secrets through environment variables or the platform secret manager.
 
 ## What Goes Where
 
