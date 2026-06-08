@@ -546,6 +546,12 @@ type UserDashboardDto = {
 };
 ```
 
+Dashboard rules:
+
+- Workspace users see aggregate counts only for active workspaces where they are active members.
+- Admin sees system-wide aggregate metadata only.
+- Dashboard responses must not include document content, chunks, report Markdown, chat messages, snippets, or user questions.
+
 ```ts
 type UpdateUserAdminRequest = {
   isActive?: boolean | null;
