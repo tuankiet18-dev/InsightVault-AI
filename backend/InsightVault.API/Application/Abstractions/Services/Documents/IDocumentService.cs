@@ -15,6 +15,10 @@ public interface IDocumentService
         Guid documentId,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<DocumentDto>> ListTrashByWorkspaceAsync(
+        Guid workspaceId,
+        CancellationToken cancellationToken = default);
+
     Task<PresignUploadResponse> CreatePresignedUploadAsync(
         Guid workspaceId,
         PresignUploadRequest request,
@@ -26,6 +30,14 @@ public interface IDocumentService
         CancellationToken cancellationToken = default);
 
     Task DeleteAsync(
+        Guid documentId,
+        CancellationToken cancellationToken = default);
+
+    Task<DocumentDto> RestoreAsync(
+        Guid documentId,
+        CancellationToken cancellationToken = default);
+
+    Task HardDeleteAsync(
         Guid documentId,
         CancellationToken cancellationToken = default);
 

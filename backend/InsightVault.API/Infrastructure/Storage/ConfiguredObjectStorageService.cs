@@ -66,6 +66,28 @@ public sealed class ConfiguredObjectStorageService(
         }
     }
 
+    public async Task DeleteObjectAsync(
+        string bucketName,
+        string objectKey,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var minioClient = CreateClient(options.Value, options.Value.Endpoint);
+            var removeArgs = new RemoveObjectArgs()
+                .WithBucket(bucketName)
+                .WithObject(objectKey);
+
+            await minioClient.RemoveObjectAsync(removeArgs, cancellationToken);
+        }
+        catch (ObjectNotFoundException)
+        {
+        }
+        catch (BucketNotFoundException)
+        {
+        }
+    }
+
     public async Task<StoredObjectMetadata?> GetObjectMetadataAsync(
         string bucketName,
         string objectKey,

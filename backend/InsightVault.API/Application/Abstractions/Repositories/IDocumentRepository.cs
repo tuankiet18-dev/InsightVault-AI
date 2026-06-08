@@ -16,6 +16,11 @@ public interface IDocumentRepository : IRepository<Document>
         DocumentStatus? status = null,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<Document>> ListDeletedByWorkspaceAsync(
+        Guid workspaceId,
+        Guid? uploadedById = null,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<Document>> ListCompletedByIdsAsync(
         Guid workspaceId,
         IReadOnlyCollection<Guid> documentIds,
