@@ -546,6 +546,20 @@ type UserDashboardDto = {
 };
 ```
 
+```ts
+type UpdateUserAdminRequest = {
+  isActive?: boolean | null;
+  systemRole?: SystemRole | null;
+};
+```
+
+Admin rules:
+
+- Admin APIs expose user and AI job metadata only.
+- Admin APIs must not expose workspace content, document content, chunks, chat messages, report Markdown, snippets, or user questions.
+- Admin cannot deactivate or demote their own account.
+- The system must keep at least one active admin.
+
 ## Backend To AI Service APIs
 
 ### `POST /process-document`
