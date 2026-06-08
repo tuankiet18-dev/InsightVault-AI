@@ -15,38 +15,47 @@ export function AdminPanel() {
     queryKey: ['admin', 'dashboard'],
     queryFn: () => adminApi.getDashboard(),
   })
-
+  const { data: users = [] } = useQuery({
+    queryKey: ['admin', 'users'],
+    queryFn: () => adminApi.getUsers(),
+  })
   return (
     <div className="flex flex-col h-full bg-surface-50 overflow-y-auto p-6 lg:p-8">
       <div className="max-w-6xl mx-auto w-full space-y-8">
-        
+
         {/* Metrics Grid */}
         <section>
           <h2 className="text-sm font-semibold text-surface-500 uppercase tracking-wider mb-4">System Overview</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <MetricCard 
-              title="Active Workspaces" 
-              value={dashboard?.workspaceCount?.toString() || '0'} 
+            <MetricCard
+              title="Active Workspaces"
+              value={dashboard?.workspaceCount?.toString() || '0'}
               icon={<Database className="w-5 h-5 text-primary-500" />}
               trend="Current active"
             />
-            <MetricCard 
-              title="Total Documents" 
-              value={dashboard?.documentCount?.toString() || '0'} 
+            <MetricCard
+              title="Total Documents"
+              value={dashboard?.documentCount?.toString() || '0'}
               icon={<FileText className="w-5 h-5 text-ai-500" />}
               trend="All workspaces"
             />
-            <MetricCard 
-              title="Total Reports" 
-              value={dashboard?.reportCount?.toString() || '0'} 
+            <MetricCard
+              title="Total Reports"
+              value={dashboard?.reportCount?.toString() || '0'}
               icon={<HardDrive className="w-5 h-5 text-surface-500" />}
               trend="Generated"
             />
-            <MetricCard 
-              title="Completed Docs" 
-              value={dashboard?.completedDocumentCount?.toString() || '0'} 
+            <MetricCard
+              title="Completed Docs"
+              value={dashboard?.completedDocumentCount?.toString() || '0'}
               icon={<Users className="w-5 h-5 text-success-500" />}
               trend="Ready for RAG"
+            />
+            <MetricCard
+              title="Total Users"
+              value={users.length.toString()}
+              icon={<Users className="w-5 h-5 text-primary-500" />}
+              trend="Registered"
             />
           </div>
         </section>
@@ -60,7 +69,7 @@ export function AdminPanel() {
                 {processingJobs.length} active
               </span>
             </div>
-            
+
             <div className="bg-surface-0 border border-border rounded-xl shadow-sm overflow-hidden">
               <table className="w-full text-left text-sm">
                 <thead className="bg-surface-50 border-b border-border text-xs uppercase text-surface-500">
@@ -74,7 +83,7 @@ export function AdminPanel() {
                 <tbody className="divide-y divide-border">
                   {jobs.slice(0, 8).map(job => (
                     <tr key={job.id} className="hover:bg-surface-50 transition-colors">
-                      <td className="px-4 py-3 font-mono text-xs text-surface-500">{job.id.substring(0,8)}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-surface-500">{job.id.substring(0, 8)}</td>
                       <td className="px-4 py-3 font-medium text-surface-900">{job.jobType.replace(/_/g, ' ')}</td>
                       <td className="px-4 py-3">
                         <JobStatusBadge status={job.status} />
@@ -90,24 +99,24 @@ export function AdminPanel() {
           {/* System Health */}
           <section className="space-y-4">
             <h2 className="text-sm font-semibold text-surface-500 uppercase tracking-wider">System Health</h2>
-            
+
             <div className="bg-surface-0 border border-border rounded-xl shadow-sm p-5 space-y-6">
-              <HealthMetric 
-                label="AI Embedding Service" 
-                status="healthy" 
-                value="99.9% uptime" 
+              <HealthMetric
+                label="AI Embedding Service"
+                status="healthy"
+                value="99.9% uptime"
               />
-              <HealthMetric 
-                label="Vector Database" 
-                status="healthy" 
-                value="45ms avg latency" 
+              <HealthMetric
+                label="Vector Database"
+                status="healthy"
+                value="45ms avg latency"
               />
-              <HealthMetric 
-                label="Document Processor" 
-                status={failedJobs.length > 0 ? "warning" : "healthy"} 
-                value={`${failedJobs.length} errors in last hour`} 
+              <HealthMetric
+                label="Document Processor"
+                status={failedJobs.length > 0 ? "warning" : "healthy"}
+                value={`${failedJobs.length} errors in last hour`}
               />
-              
+
               <div className="pt-4 border-t border-border">
                 <div className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-3">AI Credits Usage</div>
                 <div className="space-y-2">
@@ -164,11 +173,10 @@ function HealthMetric({ label, status, value }: { label: string, status: 'health
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2.5">
-        <div className={`w-2 h-2 rounded-full ${
-          status === 'healthy' ? 'bg-success-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 
-          status === 'warning' ? 'bg-warning-500 shadow-[0_0_8px_rgba(234,179,8,0.4)] animate-pulse' : 
-          'bg-danger-500'
-        }`} />
+        <div className={`w-2 h-2 rounded-full ${status === 'healthy' ? 'bg-success-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' :
+          status === 'warning' ? 'bg-warning-500 shadow-[0_0_8px_rgba(234,179,8,0.4)] animate-pulse' :
+            'bg-danger-500'
+          }`} />
         <span className="text-sm font-medium text-surface-700">{label}</span>
       </div>
       <span className="text-xs text-surface-500">{value}</span>

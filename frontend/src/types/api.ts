@@ -259,3 +259,10 @@ export interface UserDashboardDto {
   reportCount: number;
   recentJobs: AiJobDto[];
 }
+export interface AdminDashboardDto {
+  workspaceCount: number;
+  userCount: number;
+  documentCount: number;
+  reportCount: number;
+  aiJobCount: number;
+}
