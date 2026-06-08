@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import type { UserDashboardDto } from '@/types/api'
-import { Folder, FileText, Settings, LogOut, Plus, ChevronRight, Activity } from 'lucide-react'
+import { Folder, FileText, Settings, LogOut, Plus, ChevronRight, Activity, CheckCircle, AlertTriangle, Clock} from 'lucide-react'
 import { useUiStore } from '@/stores/uiStore'
 import { CreateWorkspaceModal } from '@/components/workspace/CreateWorkspaceModal'
 import { useWorkspaces } from '@/hooks/useWorkspaces'
@@ -20,7 +20,7 @@ export function UserDashboardPage() {
     let isMounted = true;
     const fetchStats = async () => {
       if (isWorkspacesLoading) return;
-      
+
       if (!workspaces || workspaces.length === 0) {
         if (isMounted) {
           setStats({
@@ -42,6 +42,10 @@ export function UserDashboardPage() {
         let totalDocs = 0;
         let totalReports = 0;
 
+        let completedDocs = 0;
+        let processingDocs = 0;
+        let failedDocs = 0;
+
         await Promise.all(
           workspaces.map(async (ws) => {
             try {
@@ -50,6 +54,16 @@ export function UserDashboardPage() {
                 reportApi.getReports(ws.id)
               ]);
               totalDocs += docs.length;
+              docs.forEach(doc => {
+                if (doc.status === 'completed')
+                  completedDocs++;
+
+                if (doc.status === 'processing')
+                  processingDocs++;
+
+                if (doc.status === 'failed')
+                  failedDocs++;
+              });
               totalReports += reports.length;
             } catch (err) {
               console.error(`Failed to fetch stats for workspace ${ws.id}`, err);
@@ -62,9 +76,9 @@ export function UserDashboardPage() {
             workspaceCount: workspaces.length,
             folderCount: 0,
             documentCount: totalDocs,
-            completedDocumentCount: 0,
-            processingDocumentCount: 0,
-            failedDocumentCount: 0,
+            completedDocumentCount: completedDocs,
+            processingDocumentCount: processingDocs,
+            failedDocumentCount: failedDocs,
             reportCount: totalReports,
             recentJobs: []
           });
@@ -117,14 +131,13 @@ export function UserDashboardPage() {
         <p className="mb-8 text-[var(--color-muted-foreground)]">Select a workspace to continue working or create a new one.</p>
 
         {/* Quick Stats */}
-        <section className="mb-12 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-sm">
-            <div className="mb-2 flex items-center gap-2 text-sm font-medium text-[var(--color-muted-foreground)]">
-              <Folder className="h-4 w-4" />
-              Total Workspaces
-            </div>
-            <div className="text-3xl font-bold">{isLoading ? '-' : stats?.workspaceCount || 0}</div>
+        <section className="mb-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-sm">
+          <div className="mb-2 flex items-center gap-2 text-sm font-medium text-[var(--color-muted-foreground)]">
+            <Folder className="h-4 w-4" />
+            Total Workspaces
           </div>
+          <div className="text-3xl font-bold">{isLoading ? '-' : stats?.workspaceCount || 0}</div>
+        </div>
           <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-sm">
             <div className="mb-2 flex items-center gap-2 text-sm font-medium text-[var(--color-muted-foreground)]">
               <FileText className="h-4 w-4" />
@@ -139,13 +152,43 @@ export function UserDashboardPage() {
             </div>
             <div className="text-3xl font-bold">{isLoading ? '-' : stats?.reportCount || 0}</div>
           </div>
-        </section>
 
+          <div className="rounded-xl border border-green-200 bg-green-50 p-5 shadow-sm">
+            <div className="mb-2 flex items-center gap-2 text-sm font-medium text-green-700">
+              <CheckCircle className="h-4 w-4" />
+              Completed Docs
+            </div>
+
+            <div className="text-3xl font-bold text-green-700">
+              {isLoading ? '-' : stats?.completedDocumentCount || 0}
+            </div>
+          </div>
+          <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-5 shadow-sm">
+            <div className="mb-2 flex items-center gap-2 text-sm font-medium text-yellow-700">
+              <Clock className="h-4 w-4" />
+              Processing Docs
+            </div>
+
+            <div className="text-3xl font-bold text-yellow-700">
+              {isLoading ? '-' : stats?.processingDocumentCount || 0}
+            </div>
+          </div>
+          <div className="rounded-xl border border-red-200 bg-red-50 p-5 shadow-sm">
+            <div className="mb-2 flex items-center gap-2 text-sm font-medium text-red-700">
+              <AlertTriangle className="h-4 w-4" />
+              Failed Docs
+            </div>
+
+            <div className="text-3xl font-bold text-red-700">
+              {isLoading ? '-' : stats?.failedDocumentCount || 0}
+            </div>
+          </div>
+        </section>
         {/* Workspaces List */}
         <section>
           <div className="mb-6 flex items-center justify-between">
             <h2 className="text-xl font-bold">Your Workspaces</h2>
-            <button 
+            <button
               onClick={() => setCreateWorkspaceModalOpen(true)}
               className="flex items-center gap-2 rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[var(--color-primary)]/90"
             >

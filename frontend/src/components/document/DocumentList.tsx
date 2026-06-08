@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+import { StatusChip } from "./StatusChip";
 type Props = {
   documents: {
     id: string;
@@ -24,9 +26,20 @@ function DocumentList({ documents }: Props) {
         >
           <h3>{doc.fileName}</h3>
 
-          <p>Status: {doc.status}</p>
+          <StatusChip status={doc.status} />
 
           <p>{doc.summary}</p>
+          <div style={{ marginTop: "10px" }}>
+            <Link
+              to={`/compare?doc=${doc.id}`}
+              style={{
+                color: "#2563eb",
+                fontWeight: 600,
+              }}
+            >
+              Compare Document
+            </Link>
+          </div>
         </div>
       ))}
     </div>
