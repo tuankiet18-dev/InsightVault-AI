@@ -5,7 +5,7 @@ import { useCreateFolder } from '@/hooks/useFolders'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 
 export function CreateFolderModal() {
-  const { createFolderModalOpen, setCreateFolderModalOpen } = useUiStore()
+  const { createFolderModalOpen, closeCreateFolderModal, createFolderTargetParentId } = useUiStore()
   const { activeWorkspaceId } = useWorkspaceStore()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -16,7 +16,7 @@ export function CreateFolderModal() {
   if (!createFolderModalOpen) return null
 
   const resetAndClose = () => {
-    setCreateFolderModalOpen(false)
+    closeCreateFolderModal()
     setTimeout(() => {
       setName('')
       setDescription('')
@@ -28,7 +28,7 @@ export function CreateFolderModal() {
     if (!name.trim() || !activeWorkspaceId) return
 
     createMutation.mutate(
-      { name: name.trim(), description: description.trim() },
+      { name: name.trim(), description: description.trim(), parentFolderId: createFolderTargetParentId || null },
       {
         onSuccess: () => {
           resetAndClose()
@@ -46,7 +46,9 @@ export function CreateFolderModal() {
       
       <div className="relative bg-card rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         <header className="px-6 py-4 border-b border-border flex items-center justify-between">
-          <h2 className="text-lg font-bold text-card-foreground">Create Folder</h2>
+          <h2 className="text-lg font-bold text-card-foreground">
+            {createFolderTargetParentId ? 'Create Subfolder' : 'Create Folder'}
+          </h2>
           <button 
             type="button"
             onClick={resetAndClose}
@@ -105,7 +107,7 @@ export function CreateFolderModal() {
               {createMutation.isPending && (
                 <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
               )}
-              {createMutation.isPending ? 'Creating...' : 'Create Folder'}
+              {createMutation.isPending ? 'Creating...' : 'Create'}
             </button>
           </div>
         </form>

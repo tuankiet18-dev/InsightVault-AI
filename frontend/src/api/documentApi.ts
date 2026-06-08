@@ -41,4 +41,17 @@ export const documentApi = {
   confirmUpload: (documentId: string, data: ConfirmUploadRequest) => {
     return http.post<ConfirmUploadResponse>(`/documents/${documentId}/confirm-upload`, data);
   },
+
+  // Trash Flow
+  getTrashDocuments: (workspaceId: string) => {
+    return http.get<DocumentDto[]>(`/workspaces/${workspaceId}/trash/documents`);
+  },
+
+  restoreDocument: (documentId: string) => {
+    return http.post<DocumentDto>(`/documents/${documentId}/restore`);
+  },
+
+  hardDeleteDocument: (documentId: string) => {
+    return http.delete<void>(`/documents/${documentId}/hard-delete`);
+  },
 };

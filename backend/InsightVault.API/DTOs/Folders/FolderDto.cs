@@ -6,5 +6,6 @@ public sealed record FolderDto(
     Guid? ParentFolderId,
     string Name,
     string? Description,
+    Guid? CreatedById,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);

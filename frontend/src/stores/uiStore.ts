@@ -7,6 +7,7 @@ type UiState = {
   uploadTargetFolderId: string | null
   createWorkspaceModalOpen: boolean
   createFolderModalOpen: boolean
+  createFolderTargetParentId: string | null
   commandPaletteOpen: boolean
   inviteModalOpen: boolean
   activeNavItem: string
@@ -17,7 +18,8 @@ type UiState = {
   setUploadModalOpen: (open: boolean) => void
   openUploadModal: (folderId?: string) => void
   setCreateWorkspaceModalOpen: (open: boolean) => void
-  setCreateFolderModalOpen: (open: boolean) => void
+  openCreateFolderModal: (parentId?: string) => void
+  closeCreateFolderModal: () => void
   setCommandPaletteOpen: (open: boolean) => void
   setInviteModalOpen: (open: boolean) => void
   setActiveNavItem: (id: string) => void
@@ -31,6 +33,7 @@ export const useUiStore = create<UiState>((set) => ({
   uploadTargetFolderId: null,
   createWorkspaceModalOpen: false,
   createFolderModalOpen: false,
+  createFolderTargetParentId: null,
   commandPaletteOpen: false,
   inviteModalOpen: false,
   activeNavItem: 'explorer',
@@ -41,7 +44,8 @@ export const useUiStore = create<UiState>((set) => ({
   setUploadModalOpen: (open) => set({ uploadModalOpen: open, uploadTargetFolderId: open ? undefined : null }),
   openUploadModal: (folderId) => set({ uploadModalOpen: true, uploadTargetFolderId: folderId || null }),
   setCreateWorkspaceModalOpen: (open) => set({ createWorkspaceModalOpen: open }),
-  setCreateFolderModalOpen: (open) => set({ createFolderModalOpen: open }),
+  openCreateFolderModal: (parentId) => set({ createFolderModalOpen: true, createFolderTargetParentId: parentId || null }),
+  closeCreateFolderModal: () => set({ createFolderModalOpen: false, createFolderTargetParentId: null }),
   setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
   setInviteModalOpen: (open) => set({ inviteModalOpen: open }),
   setActiveNavItem: (id) => set({ activeNavItem: id }),

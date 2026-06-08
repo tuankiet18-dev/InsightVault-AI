@@ -1,4 +1,5 @@
 import { FolderTree } from './FolderTree'
+import { TrashSection } from './TrashSection'
 import { useEffect } from 'react'
 import { ChevronDown, Plus, FolderPlus } from 'lucide-react'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
@@ -10,7 +11,7 @@ export function ExplorerPanel() {
   const { activeWorkspaceId, setActiveWorkspace } = useWorkspaceStore()
   const { data: workspaces = [] } = useWorkspaces()
   const activeWorkspace = workspaces.find((ws) => ws.id === activeWorkspaceId) ?? workspaces[0]
-  const { setCreateWorkspaceModalOpen, setCreateFolderModalOpen } = useUiStore()
+  const { setCreateWorkspaceModalOpen, openCreateFolderModal } = useUiStore()
 
   useEffect(() => {
     if (!activeWorkspaceId && workspaces.length > 0) {
@@ -42,7 +43,7 @@ export function ExplorerPanel() {
           </button>
           {canEdit && (
             <button
-              onClick={() => setCreateFolderModalOpen(true)}
+              onClick={() => openCreateFolderModal()}
               className="shrink-0 rounded p-1 opacity-0 text-surface-500 transition-all hover:bg-surface-200 hover:text-surface-900 group-hover:opacity-100"
               title="New Folder"
             >
@@ -51,6 +52,7 @@ export function ExplorerPanel() {
           )}
         </div>
         <FolderTree />
+        <TrashSection />
       </div>
     </aside>
   )

@@ -388,6 +388,7 @@ public sealed class FolderService(
             folder.ParentFolderId,
             folder.Name,
             folder.Description,
+            folder.CreatedById,
             folder.CreatedAt,
             folder.UpdatedAt);
     }

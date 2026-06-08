@@ -1,4 +1,4 @@
-import { ChevronRight, ChevronDown, Folder, File, FileText, Image as ImageIcon, UploadCloud } from 'lucide-react'
+import { ChevronRight, ChevronDown, Folder, File, FileText, Image as ImageIcon, UploadCloud, FolderPlus } from 'lucide-react'
 import { useState } from 'react'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useTabStore } from '@/stores/tabStore'
@@ -8,7 +8,8 @@ import { useDocuments } from '@/hooks/useDocuments'
 import { useWorkspace } from '@/hooks/useWorkspaces'
 import { getFileTypeColor, cn } from '@/lib/utils'
 import { hasPermission } from '@/utils/permission'
-import type { DocumentDto } from '@/types/api'
+import { useAuthStore } from '@/stores/authStore'
+import type { DocumentDto, FolderDto } from '@/types/api'
 
 export function FolderTree() {
   const { activeWorkspaceId } = useWorkspaceStore()
@@ -24,8 +25,7 @@ export function FolderTree() {
         {folders.map(folder => (
           <FolderRow
             key={folder.id}
-            folderId={folder.id}
-            name={folder.name}
+            folder={folder}
             workspaceId={activeWorkspaceId}
             canEdit={canEdit}
           />
@@ -42,27 +42,32 @@ import { useDeleteFolder } from '@/hooks/useFolders'
 import { useDeleteDocument } from '@/hooks/useDocuments'
 
 function FolderRow({
-  folderId,
-  name,
+  folder,
   workspaceId,
   canEdit,
 }: {
-  folderId: string
-  name: string
+  folder: FolderDto
   workspaceId: string
   canEdit: boolean
 }) {
   const [expanded, setExpanded] = useState(true)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const { selectedFolderId, setSelectedFolder } = useWorkspaceStore()
-  const { openUploadModal } = useUiStore()
-  const { data: documents = [] } = useDocuments(workspaceId, { folderId })
+  const { openUploadModal, openCreateFolderModal } = useUiStore()
+  const { data: documents = [] } = useDocuments(workspaceId, { folderId: folder.id })
+  const { data: childFolders = [] } = useFolders(workspaceId, folder.id)
   const deleteMutation = useDeleteFolder(workspaceId)
+  const { user } = useAuthStore()
+  const { data: activeWorkspace } = useWorkspace(workspaceId)
   
-  const isSelected = selectedFolderId === folderId
+  const isSelected = selectedFolderId === folder.id
+  const role = activeWorkspace?.currentUserRole
+  const canDeleteFolder = 
+    role === 'owner' || 
+    (role === 'editor' && (folder.createdById === user?.id || (documents.length === 0 && childFolders.length === 0)))
 
   const handleDelete = () => {
-    deleteMutation.mutate(folderId, {
+    deleteMutation.mutate(folder.id, {
       onSuccess: () => setIsDeleteModalOpen(false)
     })
   }
@@ -78,7 +83,7 @@ function FolderRow({
         <button
           onClick={() => {
             setExpanded(!expanded)
-            setSelectedFolder(folderId)
+            setSelectedFolder(folder.id)
           }}
           className="flex-1 flex items-center gap-1.5 min-w-0"
         >
@@ -88,7 +93,7 @@ function FolderRow({
             <ChevronRight className="w-3.5 h-3.5 text-surface-400 shrink-0" />
           )}
           <Folder className="w-4 h-4 text-surface-400 shrink-0" fill="currentColor" fillOpacity={0.2} />
-          <span className="truncate font-medium">{name}</span>
+          <span className="truncate font-medium">{folder.name}</span>
           <span className="ml-auto text-[10px] text-muted-foreground">{documents.length}</span>
         </button>
         {canEdit && (
@@ -96,7 +101,7 @@ function FolderRow({
             <button
               onClick={(e) => {
                 e.stopPropagation()
-                openUploadModal(folderId)
+                openUploadModal(folder.id)
               }}
               className="rounded p-1 text-surface-500 transition-colors hover:bg-surface-300"
               title="Upload to folder"
@@ -107,26 +112,39 @@ function FolderRow({
               <DropdownMenuItem onClick={() => {}} icon={<Edit2 className="h-4 w-4" />}>
                 Rename
               </DropdownMenuItem>
-              <DropdownMenuItem
-                destructive
-                onClick={() => setIsDeleteModalOpen(true)}
-                icon={<Trash2 className="h-4 w-4" />}
+              <DropdownMenuItem 
+                onClick={() => openCreateFolderModal(folder.id)} 
+                icon={<FolderPlus className="h-4 w-4" />}
               >
-                Delete
+                New Subfolder
               </DropdownMenuItem>
+              {canDeleteFolder && (
+                <DropdownMenuItem
+                  destructive
+                  onClick={() => setIsDeleteModalOpen(true)}
+                  icon={<Trash2 className="h-4 w-4" />}
+                >
+                  Delete
+                </DropdownMenuItem>
+              )}
             </DropdownMenu>
           </div>
         )}
       </div>
       
       {expanded && (
-        <div className="flex flex-col pl-6">
-          {documents.length === 0 ? (
+        <div className="flex flex-col pl-4 border-l border-border/40 ml-2 mt-0.5">
+          {documents.length === 0 && childFolders.length === 0 ? (
             <div className="px-2 py-1 text-xs text-muted-foreground italic">Empty</div>
           ) : (
-            documents.map(doc => (
-              <DocumentRow key={doc.id} document={doc} workspaceId={workspaceId} canEdit={canEdit} />
-            ))
+            <>
+              {childFolders.map(child => (
+                <FolderRow key={child.id} folder={child} workspaceId={workspaceId} canEdit={canEdit} />
+              ))}
+              {documents.map(doc => (
+                <DocumentRow key={doc.id} document={doc} workspaceId={workspaceId} canEdit={canEdit} />
+              ))}
+            </>
           )}
         </div>
       )}
@@ -136,7 +154,7 @@ function FolderRow({
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleDelete}
         isLoading={deleteMutation.isPending}
-        title={`Delete Folder "${name}"?`}
+        title={`Delete Folder "${folder.name}"?`}
         description="This action cannot be undone. All documents inside this folder will also be deleted or orphaned depending on your settings."
         confirmText="Delete Folder"
       />
@@ -157,8 +175,14 @@ function DocumentRow({
   const { openTab, closeTab } = useTabStore()
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const deleteMutation = useDeleteDocument(workspaceId)
+  const { user } = useAuthStore()
+  const { data: activeWorkspace } = useWorkspace(workspaceId)
   
   const isSelected = selectedDocumentId === document.id
+  const role = activeWorkspace?.currentUserRole
+  const canDeleteDocument = 
+    role === 'owner' || 
+    (role === 'editor' && document.uploadedById === user?.id)
   
   const handleOpen = () => {
     setSelectedDocument(document.id)
@@ -202,13 +226,15 @@ function DocumentRow({
                 <DropdownMenuItem onClick={() => {}} icon={<Edit2 className="h-4 w-4" />}>
                   Rename
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  destructive
-                  onClick={() => setIsDeleteModalOpen(true)}
-                  icon={<Trash2 className="h-4 w-4" />}
-                >
-                  Delete
-                </DropdownMenuItem>
+                {canDeleteDocument && (
+                  <DropdownMenuItem
+                    destructive
+                    onClick={() => setIsDeleteModalOpen(true)}
+                    icon={<Trash2 className="h-4 w-4" />}
+                  >
+                    Delete
+                  </DropdownMenuItem>
+                )}
               </DropdownMenu>
             </div>
           )}

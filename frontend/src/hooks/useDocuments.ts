@@ -11,6 +11,7 @@ export const documentKeys = {
     [...documentKeys.lists(workspaceId), { ...params }] as const,
   details: () => [...documentKeys.all, 'detail'] as const,
   detail: (id: string) => [...documentKeys.details(), id] as const,
+  trashLists: (workspaceId: string) => [...documentKeys.workspace(workspaceId), 'trash'] as const,
 };
 
 export const useDocuments = (workspaceId: string | null, params?: GetDocumentsParams) => {
@@ -49,6 +50,7 @@ export const useDeleteDocument = (workspaceId: string) => {
     mutationFn: (documentId: string) => documentApi.deleteDocument(documentId),
     onSuccess: (_, deletedId) => {
       queryClient.invalidateQueries({ queryKey: documentKeys.lists(workspaceId) });
+      queryClient.invalidateQueries({ queryKey: documentKeys.trashLists(workspaceId) });
       queryClient.removeQueries({ queryKey: documentKeys.detail(deletedId) });
       toast.success('Document deleted successfully');
     },
@@ -94,6 +96,44 @@ export const useRetryProcessing = (workspaceId: string) => {
     },
     onError: () => {
       toast.error('Failed to retry processing');
+    }
+  });
+};
+
+export const useTrashDocuments = (workspaceId: string | null) => {
+  return useQuery({
+    queryKey: documentKeys.trashLists(workspaceId!),
+    queryFn: () => documentApi.getTrashDocuments(workspaceId!),
+    enabled: !!workspaceId,
+  });
+};
+
+export const useRestoreDocument = (workspaceId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (documentId: string) => documentApi.restoreDocument(documentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: documentKeys.trashLists(workspaceId) });
+      queryClient.invalidateQueries({ queryKey: documentKeys.lists(workspaceId) });
+      queryClient.invalidateQueries({ queryKey: ['folders'] });
+      toast.success('Document restored successfully');
+    },
+    onError: () => {
+      toast.error('Failed to restore document');
+    }
+  });
+};
+
+export const useHardDeleteDocument = (workspaceId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (documentId: string) => documentApi.hardDeleteDocument(documentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: documentKeys.trashLists(workspaceId) });
+      toast.success('Document permanently deleted');
+    },
+    onError: () => {
+      toast.error('Failed to permanently delete document');
     }
   });
 };

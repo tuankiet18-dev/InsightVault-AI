@@ -11,10 +11,8 @@ type TabState = {
 }
 
 export const useTabStore = create<TabState>((set, get) => ({
-  tabs: [
-    { id: 'tab-doc-001', label: 'Project Proposal v3.pdf', type: 'document', documentId: 'doc-001', closable: true },
-  ],
-  activeTabId: 'tab-doc-001',
+  tabs: [],
+  activeTabId: null,
 
   openTab: (tab) => {
     const { tabs } = get()
