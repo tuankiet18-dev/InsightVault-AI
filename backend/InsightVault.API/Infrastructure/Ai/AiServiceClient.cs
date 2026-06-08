@@ -48,6 +48,85 @@ public sealed class AiServiceClient(HttpClient httpClient) : IAiServiceClient
             result.Error);
     }
 
+    public async Task<GenerateReportResult> GenerateReportAsync(
+        GenerateReportAiRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await httpClient.PostAsJsonAsync(
+            "/generate-report",
+            new GenerateReportRequest(
+                request.WorkspaceId,
+                request.FolderId,
+                request.CreatedById,
+                request.AiJobId,
+                request.DocumentIds,
+                request.ReportType,
+                request.Title,
+                request.CustomPrompt,
+                request.StoreReport),
+            cancellationToken);
+        var result = await response.Content.ReadFromJsonAsync<GenerateReportResponse>(
+            cancellationToken: cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new InvalidOperationException($"AI service generate-report failed: {error}");
+        }
+
+        if (result is null)
+        {
+            throw new InvalidOperationException("AI service returned an empty generate-report response.");
+        }
+
+        return new GenerateReportResult(
+            result.ReportType,
+            result.MarkdownContent,
+            result.ReportId);
+    }
+
+    public async Task<CompareDocumentsResult> CompareDocumentsAsync(
+        CompareDocumentsAiRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await httpClient.PostAsJsonAsync(
+            "/compare",
+            new CompareDocumentsRequest(
+                request.WorkspaceId,
+                request.FolderId,
+                request.CreatedById,
+                request.AiJobId,
+                request.DocumentIds,
+                request.DocumentNames,
+                request.Title,
+                request.StoreReport),
+            cancellationToken);
+        var result = await response.Content.ReadFromJsonAsync<CompareDocumentsResponse>(
+            cancellationToken: cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new InvalidOperationException($"AI service compare failed: {error}");
+        }
+
+        if (result is null)
+        {
+            throw new InvalidOperationException("AI service returned an empty compare response.");
+        }
+
+        return new CompareDocumentsResult(
+            result.Objectives,
+            result.Scope,
+            result.Similarities,
+            result.Differences,
+            result.MissingInformation,
+            result.PotentialConflicts,
+            result.Recommendations,
+            result.RawMarkdown,
+            result.ReportId);
+    }
+
     private sealed record ProcessDocumentRequest(
         [property: JsonPropertyName("document_id")] Guid DocumentId,
         [property: JsonPropertyName("workspace_id")] Guid WorkspaceId,
@@ -65,4 +144,41 @@ public sealed class AiServiceClient(HttpClient httpClient) : IAiServiceClient
         [property: JsonPropertyName("key_points")] IReadOnlyList<string> KeyPoints,
         [property: JsonPropertyName("keywords")] IReadOnlyList<string> Keywords,
         [property: JsonPropertyName("error")] string? Error);
+
+    private sealed record GenerateReportRequest(
+        [property: JsonPropertyName("workspace_id")] Guid WorkspaceId,
+        [property: JsonPropertyName("folder_id")] Guid? FolderId,
+        [property: JsonPropertyName("created_by_id")] Guid? CreatedById,
+        [property: JsonPropertyName("ai_job_id")] Guid AiJobId,
+        [property: JsonPropertyName("document_ids")] IReadOnlyList<Guid> DocumentIds,
+        [property: JsonPropertyName("report_type")] string ReportType,
+        [property: JsonPropertyName("title")] string? Title,
+        [property: JsonPropertyName("custom_prompt")] string? CustomPrompt,
+        [property: JsonPropertyName("store_report")] bool StoreReport);
+
+    private sealed record GenerateReportResponse(
+        [property: JsonPropertyName("report_type")] string ReportType,
+        [property: JsonPropertyName("markdown_content")] string MarkdownContent,
+        [property: JsonPropertyName("report_id")] Guid? ReportId);
+
+    private sealed record CompareDocumentsRequest(
+        [property: JsonPropertyName("workspace_id")] Guid WorkspaceId,
+        [property: JsonPropertyName("folder_id")] Guid? FolderId,
+        [property: JsonPropertyName("created_by_id")] Guid? CreatedById,
+        [property: JsonPropertyName("ai_job_id")] Guid AiJobId,
+        [property: JsonPropertyName("document_ids")] IReadOnlyList<Guid> DocumentIds,
+        [property: JsonPropertyName("document_names")] IReadOnlyList<string> DocumentNames,
+        [property: JsonPropertyName("title")] string? Title,
+        [property: JsonPropertyName("store_report")] bool StoreReport);
+
+    private sealed record CompareDocumentsResponse(
+        [property: JsonPropertyName("objectives")] string Objectives,
+        [property: JsonPropertyName("scope")] string Scope,
+        [property: JsonPropertyName("similarities")] IReadOnlyList<string> Similarities,
+        [property: JsonPropertyName("differences")] IReadOnlyList<string> Differences,
+        [property: JsonPropertyName("missing_information")] IReadOnlyList<string> MissingInformation,
+        [property: JsonPropertyName("potential_conflicts")] IReadOnlyList<string> PotentialConflicts,
+        [property: JsonPropertyName("recommendations")] IReadOnlyList<string> Recommendations,
+        [property: JsonPropertyName("raw_markdown")] string RawMarkdown,
+        [property: JsonPropertyName("report_id")] Guid? ReportId);
 }

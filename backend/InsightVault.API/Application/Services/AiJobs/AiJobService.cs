@@ -68,15 +68,16 @@ public sealed class AiJobService(
                 "Only failed AI jobs can be retried.");
         }
 
-        if (job.JobType != AiJobType.ProcessDocument)
+        if (job.JobType is not (AiJobType.ProcessDocument or AiJobType.GenerateReport or AiJobType.CompareDocuments))
         {
             throw new ApiException(
                 StatusCodes.Status409Conflict,
                 "ai_job.retry_not_supported",
-                "Retry is currently supported only for process_document jobs.");
+                "Retry is currently supported only for process_document, generate_report, and compare_documents jobs.");
         }
 
-        if (job.Document is null || job.Document.DeletedAt is not null)
+        if (job.JobType == AiJobType.ProcessDocument
+            && (job.Document is null || job.Document.DeletedAt is not null))
         {
             throw new ApiException(
                 StatusCodes.Status409Conflict,
@@ -93,12 +94,22 @@ public sealed class AiJobService(
         job.CompletedAt = null;
         job.UpdatedAt = now;
 
-        job.Document.Status = DocumentStatus.Uploaded;
-        job.Document.ProcessingError = null;
-        job.Document.UpdatedAt = now;
+        if (job.Document is not null)
+        {
+            job.Document.Status = DocumentStatus.Uploaded;
+            job.Document.ProcessingError = null;
+            job.Document.UpdatedAt = now;
+        }
 
         await db.SaveChangesAsync(cancellationToken);
-        await messagePublisher.PublishDocumentProcessingJobAsync(job.Id, cancellationToken);
+        if (job.JobType == AiJobType.ProcessDocument)
+        {
+            await messagePublisher.PublishDocumentProcessingJobAsync(job.Id, cancellationToken);
+        }
+        else
+        {
+            await messagePublisher.PublishAiJobAsync(job.Id, cancellationToken);
+        }
 
         return ToDto(job);
     }

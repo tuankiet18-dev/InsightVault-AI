@@ -255,6 +255,7 @@ Backend persists:
 - Report version records. Regenerating a report creates a new version instead of overwriting prior output.
 - `ai_jobs` status.
 - Backend persists report data; AI service returns content only.
+- User-facing report generation endpoint creates an async `generate_report` job. The worker calls AI service and persists the report.
 
 ### Compare Documents
 
@@ -297,6 +298,7 @@ Rules:
 - Compare should run async through Backend job orchestration for long-running LLM calls.
 - Only owner/editor can run compare in MVP.
 - Backend decides source documents and excludes deleted or not-completed documents before calling AI.
+- User-facing compare endpoint creates an async `compare_documents` job. The worker calls AI service and persists a `comparison_report`.
 
 ## Implementation Notes
 
