@@ -7,4 +7,5 @@ public sealed class RabbitMqOptions
     public string Username { get; set; } = "admin";
     public string Password { get; set; } = "password123";
     public string DocumentProcessingQueue { get; set; } = "document-processing";
+    public string AiJobsQueue { get; set; } = "ai-jobs";
 }

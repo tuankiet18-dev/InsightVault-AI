@@ -326,8 +326,8 @@ Upload security requirements:
 Rules:
 
 - Workspace Owner, Editor, and Viewer can view AI jobs in their workspace.
-- Retry is currently supported for failed `process_document` jobs.
-- Retry requires Owner or Editor permission and republishes the document processing job.
+- Retry is currently supported for failed `process_document`, `generate_report`, and `compare_documents` jobs.
+- Retry requires Owner or Editor permission and republishes the appropriate AI job queue message.
 
 ### Chat And RAG
 
@@ -464,17 +464,19 @@ Response:
 
 ```json
 {
-  "objectives": "...",
-  "scope": "...",
-  "similarities": [],
-  "differences": [],
-  "missingInformation": [],
-  "potentialConflicts": [],
-  "recommendations": [],
-  "rawMarkdown": "...",
-  "reportId": "uuid-or-null"
+  "id": "ai-job-id",
+  "workspaceId": "workspace-id",
+  "documentId": null,
+  "jobType": "compare_documents",
+  "status": "queued",
+  "retryCount": 0,
+  "errorMessage": null,
+  "createdAt": "2026-06-08T00:00:00Z",
+  "updatedAt": "2026-06-08T00:00:00Z"
 }
 ```
+
+Compare runs async. FE should poll `GET /api/ai-jobs/{jobId}` and refresh reports after the job is completed. Backend persists the comparison output as a `comparison_report`.
 
 ### Reports
 
@@ -482,7 +484,7 @@ Response:
 |---|---|---:|---|---|
 | GET | `/api/workspaces/{workspaceId}/reports?type=` | Yes | - | `ReportDto[]` |
 | GET | `/api/reports/{reportId}` | Yes | - | `ReportDto` |
-| POST | `/api/workspaces/{workspaceId}/reports/generate` | Yes | `GenerateReportRequest` | `ReportDto` |
+| POST | `/api/workspaces/{workspaceId}/reports/generate` | Yes | `GenerateReportRequest` | `AiJobDto` |
 | DELETE | `/api/reports/{reportId}` | Yes | - | `204` |
 
 ```ts
@@ -519,7 +521,7 @@ Rules:
 - Viewer can read existing reports but cannot generate or delete reports in MVP.
 - Only owner can delete reports.
 - Report generation can target a folder, but Backend must resolve the folder/subfolders to explicit document IDs before calling AI.
-- Reports use versioning; regenerating the same report creates a new version rather than overwriting prior output.
+- Report generation runs async through `ai_jobs`. FE should poll the returned job and refresh report list/detail after completion.
 - Backend persists reports. AI service must not write `reports`.
 
 ### Dashboard And Admin

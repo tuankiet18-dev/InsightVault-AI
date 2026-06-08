@@ -36,6 +36,7 @@ public static class DependencyInjection
             client.BaseAddress = new Uri(options.BaseUrl);
         });
         services.AddHostedService<DocumentProcessingWorker>();
+        services.AddHostedService<AiJobWorker>();
         services.AddHostedService<TrashCleanupWorker>();
 
         // Repositories
