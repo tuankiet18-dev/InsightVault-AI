@@ -41,6 +41,18 @@ public sealed class DocumentsController(IDocumentService documentService) : Cont
         return Ok(response);
     }
 
+    [HttpGet("api/workspaces/{workspaceId:guid}/trash/documents")]
+    public async Task<ActionResult<IReadOnlyList<DocumentDto>>> ListTrashDocuments(
+        Guid workspaceId,
+        CancellationToken cancellationToken)
+    {
+        var documents = await documentService.ListTrashByWorkspaceAsync(
+            workspaceId,
+            cancellationToken);
+
+        return Ok(documents);
+    }
+
     [HttpGet("api/documents/{documentId:guid}")]
     public async Task<ActionResult<DocumentDto>> GetDocument(
         Guid documentId,
@@ -71,6 +83,26 @@ public sealed class DocumentsController(IDocumentService documentService) : Cont
         CancellationToken cancellationToken)
     {
         await documentService.DeleteAsync(documentId, cancellationToken);
+
+        return NoContent();
+    }
+
+    [HttpPost("api/documents/{documentId:guid}/restore")]
+    public async Task<ActionResult<DocumentDto>> RestoreDocument(
+        Guid documentId,
+        CancellationToken cancellationToken)
+    {
+        var document = await documentService.RestoreAsync(documentId, cancellationToken);
+
+        return Ok(document);
+    }
+
+    [HttpDelete("api/documents/{documentId:guid}/hard-delete")]
+    public async Task<IActionResult> HardDeleteDocument(
+        Guid documentId,
+        CancellationToken cancellationToken)
+    {
+        await documentService.HardDeleteAsync(documentId, cancellationToken);
 
         return NoContent();
     }

@@ -19,6 +19,11 @@ public interface IObjectStorageService
         string bucketName,
         string objectKey,
         CancellationToken cancellationToken = default);
+
+    Task DeleteObjectAsync(
+        string bucketName,
+        string objectKey,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed record PresignedUploadRequest(

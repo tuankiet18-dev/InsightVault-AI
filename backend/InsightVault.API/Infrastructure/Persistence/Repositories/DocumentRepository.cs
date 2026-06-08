@@ -48,6 +48,27 @@ public sealed class DocumentRepository(InsightVaultDbContext db)
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Document>> ListDeletedByWorkspaceAsync(
+        Guid workspaceId,
+        Guid? uploadedById = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = Db.Documents
+            .AsNoTracking()
+            .Where(document => document.WorkspaceId == workspaceId
+                && document.DeletedAt != null);
+
+        if (uploadedById.HasValue)
+        {
+            query = query.Where(document => document.UploadedById == uploadedById.Value);
+        }
+
+        return await query
+            .OrderByDescending(document => document.DeletedAt)
+            .ThenByDescending(document => document.UpdatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<Document>> ListCompletedByIdsAsync(
         Guid workspaceId,
         IReadOnlyCollection<Guid> documentIds,

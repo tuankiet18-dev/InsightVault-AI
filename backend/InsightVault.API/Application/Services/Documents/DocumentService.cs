@@ -12,6 +12,7 @@ using InsightVault.API.Domain.Enums;
 using InsightVault.API.DTOs.AiJobs;
 using InsightVault.API.DTOs.Common;
 using InsightVault.API.DTOs.Documents;
+using Microsoft.EntityFrameworkCore;
 
 namespace InsightVault.API.Application.Services.Documents;
 
@@ -77,6 +78,22 @@ public sealed class DocumentService(
         await workspacePermissionService.EnsureCanViewWorkspaceAsync(document.WorkspaceId, userId, cancellationToken);
 
         return ToDocumentDto(document);
+    }
+
+    public async Task<IReadOnlyList<DocumentDto>> ListTrashByWorkspaceAsync(
+        Guid workspaceId,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = GetRequiredUserId();
+        var role = await GetTrashCapableRoleAsync(workspaceId, userId, cancellationToken);
+        var uploadedById = role == WorkspaceRole.Editor ? userId : (Guid?)null;
+
+        var documents = await documentRepository.ListDeletedByWorkspaceAsync(
+            workspaceId,
+            uploadedById,
+            cancellationToken);
+
+        return documents.Select(ToDocumentDto).ToList();
     }
 
     public async Task<PresignUploadResponse> CreatePresignedUploadAsync(
@@ -201,6 +218,65 @@ public sealed class DocumentService(
         await db.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<DocumentDto> RestoreAsync(
+        Guid documentId,
+        CancellationToken cancellationToken = default)
+    {
+        var document = await GetDeletedDocumentAsync(documentId, cancellationToken);
+        var userId = GetRequiredUserId();
+        await workspacePermissionService.EnsureCanDeleteDocumentAsync(
+            document.WorkspaceId,
+            document.UploadedById,
+            userId,
+            cancellationToken);
+
+        if (document.FolderId.HasValue)
+        {
+            await EnsureFolderExistsAsync(document.WorkspaceId, document.FolderId.Value, cancellationToken);
+        }
+
+        if (await documentRepository.HasActiveFileNameAsync(
+                document.WorkspaceId,
+                document.FolderId,
+                document.FileName,
+                cancellationToken))
+        {
+            throw new ApiException(
+                StatusCodes.Status409Conflict,
+                "document.filename_conflict",
+                "An active document with the same file name already exists in this folder.");
+        }
+
+        document.DeletedAt = null;
+        document.UpdatedAt = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync(cancellationToken);
+
+        return ToDocumentDto(document);
+    }
+
+    public async Task HardDeleteAsync(
+        Guid documentId,
+        CancellationToken cancellationToken = default)
+    {
+        var document = await GetDeletedDocumentAsync(documentId, cancellationToken);
+        var userId = GetRequiredUserId();
+        await workspacePermissionService.EnsureCanDeleteDocumentAsync(
+            document.WorkspaceId,
+            document.UploadedById,
+            userId,
+            cancellationToken);
+
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
+        documentRepository.Delete(document);
+        await objectStorageService.DeleteObjectAsync(
+            document.MinioBucket,
+            document.MinioObjectKey,
+            cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
     public async Task<ConfirmUploadResponse> RetryProcessingAsync(
         Guid documentId,
         CancellationToken cancellationToken = default)
@@ -265,6 +341,50 @@ public sealed class DocumentService(
         }
 
         return document;
+    }
+
+    private async Task<Document> GetDeletedDocumentAsync(
+        Guid documentId,
+        CancellationToken cancellationToken)
+    {
+        var document = await documentRepository.GetByIdAsync(documentId, cancellationToken);
+
+        if (document is null)
+        {
+            throw new ApiException(
+                StatusCodes.Status404NotFound,
+                "document.not_found",
+                "Document not found.");
+        }
+
+        if (document.DeletedAt is null)
+        {
+            throw new ApiException(
+                StatusCodes.Status409Conflict,
+                "document.not_in_trash",
+                "Document is not in Trash.");
+        }
+
+        return document;
+    }
+
+    private async Task<WorkspaceRole> GetTrashCapableRoleAsync(
+        Guid workspaceId,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        await workspacePermissionService.EnsureCanViewWorkspaceAsync(workspaceId, userId, cancellationToken);
+
+        var role = await workspacePermissionService.GetUserRoleAsync(workspaceId, userId, cancellationToken);
+        if (role is WorkspaceRole.Owner or WorkspaceRole.Editor)
+        {
+            return role.Value;
+        }
+
+        throw new ApiException(
+            StatusCodes.Status403Forbidden,
+            "workspace.insufficient_role",
+            "Only workspace owners and editors can access document Trash.");
     }
 
     private async Task EnsureFolderExistsAsync(
