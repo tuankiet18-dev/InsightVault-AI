@@ -12,6 +12,8 @@ public interface IAiJobRepository : IRepository<AiJob>
 
     Task<IReadOnlyList<AiJob>> ListRecentByWorkspaceAsync(
         Guid workspaceId,
+        AiJobStatus? status = null,
+        AiJobType? jobType = null,
         int limit = 20,
         CancellationToken cancellationToken = default);
 
