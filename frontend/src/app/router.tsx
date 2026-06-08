@@ -7,6 +7,8 @@ import { WorkspacePage } from '@/pages/WorkspacePage'
 import { UserDashboardPage } from '@/pages/UserDashboardPage'
 import { ChatPage } from '@/pages/ChatPage'
 import { ComparePage } from '@/pages/ComparePage'
+import { AdminUsersPage } from '@/pages/admin/AdminUsersPage'
+import { AdminJobsPage } from '@/pages/admin/AdminJobsPage'
 const AdminLayout = () => (
   <div className="min-h-screen bg-background text-foreground">
     <header className="flex h-14 items-center gap-6 border-b border-border bg-card px-6">
@@ -27,19 +29,6 @@ const AdminLayout = () => (
   </div>
 )
 
-const AdminUsersPage = () => (
-  <main className="p-8">
-    <h1 className="text-xl font-semibold">Users</h1>
-    <p className="mt-2 text-sm text-muted-foreground">User management will be implemented in the admin portal task.</p>
-  </main>
-)
-
-const AdminJobsPage = () => (
-  <main className="p-8">
-    <h1 className="text-xl font-semibold">AI Jobs</h1>
-    <p className="mt-2 text-sm text-muted-foreground">System-wide AI job monitoring will be implemented in the admin portal task.</p>
-  </main>
-)
 
 const router = createBrowserRouter([
   {
@@ -71,23 +60,23 @@ const router = createBrowserRouter([
   element: (<ProtectedRoute><ComparePage /></ProtectedRoute>),
 },
   {
-    path: '/admin',
-    element: <ProtectedRoute requireAdmin><AdminLayout /></ProtectedRoute>,
-    children: [
-      {
-        index: true,
-        element: <AdminPage />,
-      },
-      {
-        path: 'users',
-        element: <AdminUsersPage />,
-      },
-      {
-        path: 'jobs',
-        element: <AdminJobsPage />,
-      },
-    ],
-  },
+  path: '/admin',
+  element: <ProtectedRoute requireAdmin><AdminLayout /></ProtectedRoute>,
+  children: [
+    {
+      index: true,
+      element: <AdminPage />,
+    },
+    {
+      path: 'users',
+      element: <AdminUsersPage />,   
+    },
+    {
+      path: 'jobs',
+      element: <AdminJobsPage />,    
+    },
+  ],
+},
   {
     path: '*',
     element: <Navigate to="/dashboard" replace />,
