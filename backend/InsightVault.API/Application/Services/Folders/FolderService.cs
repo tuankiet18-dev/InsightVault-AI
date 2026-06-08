@@ -1,10 +1,11 @@
-using InsightVault.API.Application.Abstractions.Auth;
 using InsightVault.API.Application.Abstractions.Repositories;
 using InsightVault.API.Application.Abstractions.Services.Auth;
 using InsightVault.API.Application.Abstractions.Services.Folders;
+using InsightVault.API.Application.Abstractions.Services.Workspaces;
 using InsightVault.API.Common.Errors;
 using InsightVault.API.Data;
 using InsightVault.API.Domain.Entities;
+using InsightVault.API.Domain.Enums;
 using InsightVault.API.DTOs.Folders;
 
 namespace InsightVault.API.Application.Services.Folders;
@@ -13,7 +14,8 @@ public sealed class FolderService(
     InsightVaultDbContext db,
     ICurrentUserService currentUserService,
     IWorkspacePermissionService workspacePermissionService,
-    IFolderRepository folderRepository) : IFolderService
+    IFolderRepository folderRepository,
+    IDocumentRepository documentRepository) : IFolderService
 {
     public async Task<IReadOnlyList<FolderDto>> ListByWorkspaceAsync(
         Guid workspaceId,
@@ -141,12 +143,37 @@ public sealed class FolderService(
             folder.WorkspaceId,
             cancellationToken);
         var folderTree = GetFolderTreeForDelete(folders, folder.Id);
+        var folderIds = folderTree.Select(item => item.Id).ToArray();
+        var documents = await documentRepository.ListActiveByFolderIdsAsync(
+            folder.WorkspaceId,
+            folderIds,
+            cancellationToken);
+        var role = await workspacePermissionService.GetUserRoleAsync(
+            folder.WorkspaceId,
+            userId,
+            cancellationToken);
+
+        if (role == WorkspaceRole.Editor
+            && documents.Any(document => document.UploadedById != userId))
+        {
+            throw new ApiException(
+                StatusCodes.Status403Forbidden,
+                "folder.delete_forbidden",
+                "Editors cannot delete a folder tree containing documents uploaded by other users.");
+        }
+
         var deletedAt = DateTimeOffset.UtcNow;
 
         foreach (var item in folderTree)
         {
             item.DeletedAt = deletedAt;
             item.UpdatedAt = deletedAt;
+        }
+
+        foreach (var document in documents)
+        {
+            document.DeletedAt = deletedAt;
+            document.UpdatedAt = deletedAt;
         }
 
         await db.SaveChangesAsync(cancellationToken);

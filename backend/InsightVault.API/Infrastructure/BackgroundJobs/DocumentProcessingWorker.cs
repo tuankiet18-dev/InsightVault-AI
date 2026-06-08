@@ -136,6 +136,20 @@ public sealed class DocumentProcessingWorker(
         try
         {
             var result = await aiServiceClient.ProcessDocumentAsync(job.Document, cancellationToken);
+            ValidateProcessingResult(job.Document, result);
+            await db.Entry(job.Document).ReloadAsync(cancellationToken);
+
+            if (job.Document.DeletedAt is not null)
+            {
+                await MarkFailedAsync(
+                    db,
+                    job,
+                    job.Document,
+                    "Document was deleted while processing.",
+                    cancellationToken);
+                return;
+            }
+
             await MarkCompletedAsync(db, job, job.Document, result, cancellationToken);
         }
         catch (Exception exception)
@@ -150,6 +164,24 @@ public sealed class DocumentProcessingWorker(
         var json = Encoding.UTF8.GetString(body.Span);
         return JsonSerializer.Deserialize<DocumentProcessingMessage>(json, JsonOptions)
             ?? throw new JsonException("RabbitMQ document processing message is empty.");
+    }
+
+    private static void ValidateProcessingResult(
+        Document document,
+        ProcessDocumentResult result)
+    {
+        if (result.DocumentId != document.Id)
+        {
+            throw new InvalidOperationException(
+                $"AI service returned document {result.DocumentId} for job document {document.Id}.");
+        }
+
+        if (!string.Equals(result.Status, "success", StringComparison.OrdinalIgnoreCase)
+            || !string.IsNullOrWhiteSpace(result.Error))
+        {
+            throw new InvalidOperationException(
+                result.Error ?? $"AI service returned unexpected status '{result.Status}'.");
+        }
     }
 
     private static async Task MarkProcessingAsync(

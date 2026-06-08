@@ -1,5 +1,6 @@
 using InsightVault.API.Application.Abstractions.Repositories;
 using InsightVault.API.Application.Abstractions.Services.Workspaces;
+using InsightVault.API.Common.Errors;
 using InsightVault.API.Data;
 using InsightVault.API.Domain.Entities;
 using InsightVault.API.Domain.Enums;
@@ -20,13 +21,17 @@ public sealed class WorkspaceService(
         string? query,
         CancellationToken cancellationToken = default)
     {
+        await GetActiveContentUserAsync(userId, cancellationToken);
         var workspaces = await workspaceRepository.ListByUserAsync(userId, query, cancellationToken);
 
         var result = new List<WorkspaceDto>(workspaces.Count);
         foreach (var workspace in workspaces)
         {
             var role = await permissionService.GetUserRoleAsync(workspace.Id, userId, cancellationToken);
-            result.Add(WorkspaceMapper.ToDto(workspace, role ?? WorkspaceRole.Viewer));
+            if (role.HasValue)
+            {
+                result.Add(WorkspaceMapper.ToDto(workspace, role.Value));
+            }
         }
 
         return result;
@@ -37,13 +42,7 @@ public sealed class WorkspaceService(
         CreateWorkspaceRequest request,
         CancellationToken cancellationToken = default)
     {
-        var currentUser = await userRepository.GetByIdAsync(userId, cancellationToken)
-            ?? throw new UnauthorizedAccessException("Invalid or inactive user.");
-
-        if (!currentUser.IsActive)
-        {
-            throw new UnauthorizedAccessException("Invalid or inactive user.");
-        }
+        var currentUser = await GetActiveContentUserAsync(userId, cancellationToken);
 
         if (string.IsNullOrWhiteSpace(request.Name))
         {
@@ -81,6 +80,29 @@ public sealed class WorkspaceService(
         await db.SaveChangesAsync(cancellationToken);
 
         return WorkspaceMapper.ToDto(workspace, WorkspaceRole.Owner);
+    }
+
+    private async Task<User> GetActiveContentUserAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var user = await userRepository.GetByIdAsync(userId, cancellationToken)
+            ?? throw new UnauthorizedAccessException("Invalid or inactive user.");
+
+        if (!user.IsActive)
+        {
+            throw new UnauthorizedAccessException("Invalid or inactive user.");
+        }
+
+        if (user.SystemRole == SystemRole.Admin)
+        {
+            throw new ApiException(
+                StatusCodes.Status403Forbidden,
+                "workspace.admin_content_forbidden",
+                "System administrators cannot create or access workspace content.");
+        }
+
+        return user;
     }
 
     public async Task<WorkspaceDto> GetWorkspaceAsync(

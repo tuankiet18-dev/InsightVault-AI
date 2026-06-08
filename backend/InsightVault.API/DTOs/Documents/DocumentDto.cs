@@ -6,6 +6,7 @@ public sealed record DocumentDto(
     Guid Id,
     Guid WorkspaceId,
     Guid? FolderId,
+    Guid? UploadedById,
     string FileName,
     string OriginalFileName,
     string FileType,
