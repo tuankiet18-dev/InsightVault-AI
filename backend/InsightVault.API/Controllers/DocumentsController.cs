@@ -1,10 +1,12 @@
 using InsightVault.API.Application.Abstractions.Services.Documents;
 using InsightVault.API.DTOs.Documents;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace InsightVault.API.Controllers;
 
 [ApiController]
+[Authorize]
 public sealed class DocumentsController(IDocumentService documentService) : ControllerBase
 {
     [HttpGet("api/workspaces/{workspaceId:guid}/documents")]

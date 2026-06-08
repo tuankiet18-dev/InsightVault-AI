@@ -19,6 +19,11 @@ public interface IWorkspacePermissionService
         Guid userId,
         CancellationToken cancellationToken = default);
 
+    Task EnsureCanViewWorkspaceAsync(
+        Guid workspaceId,
+        Guid userId,
+        CancellationToken cancellationToken = default);
+
     Task EnsureCanManageWorkspaceAsync(
         Guid workspaceId,
         Guid userId,
@@ -31,6 +36,22 @@ public interface IWorkspacePermissionService
 
     Task EnsureCanMutateWorkspaceContentAsync(
         Guid workspaceId,
+        Guid userId,
+        CancellationToken cancellationToken = default);
+
+    Task EnsureCanManageFoldersAsync(
+        Guid workspaceId,
+        Guid userId,
+        CancellationToken cancellationToken = default);
+
+    Task EnsureCanManageDocumentsAsync(
+        Guid workspaceId,
+        Guid userId,
+        CancellationToken cancellationToken = default);
+
+    Task EnsureCanDeleteDocumentAsync(
+        Guid workspaceId,
+        Guid? uploadedById,
         Guid userId,
         CancellationToken cancellationToken = default);
 }

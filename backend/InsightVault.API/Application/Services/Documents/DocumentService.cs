@@ -1,9 +1,9 @@
 using System.Text.Json;
-using InsightVault.API.Application.Abstractions.Auth;
 using InsightVault.API.Application.Abstractions.Messaging;
 using InsightVault.API.Application.Abstractions.Repositories;
 using InsightVault.API.Application.Abstractions.Services.Auth;
 using InsightVault.API.Application.Abstractions.Services.Documents;
+using InsightVault.API.Application.Abstractions.Services.Workspaces;
 using InsightVault.API.Application.Abstractions.Storage;
 using InsightVault.API.Common.Errors;
 using InsightVault.API.Data;
@@ -96,6 +96,18 @@ public sealed class DocumentService(
             await EnsureFolderExistsAsync(workspaceId, request.FolderId.Value, cancellationToken);
         }
 
+        if (await documentRepository.HasActiveFileNameAsync(
+                workspaceId,
+                request.FolderId,
+                originalFileName,
+                cancellationToken))
+        {
+            throw new ApiException(
+                StatusCodes.Status409Conflict,
+                "document.filename_conflict",
+                "An active document with the same file name already exists in this folder.");
+        }
+
         var documentId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
         var objectKey = CreateObjectKey(workspaceId, documentId, fileExtension);
@@ -153,7 +165,11 @@ public sealed class DocumentService(
                 "Only pending uploads can be confirmed.");
         }
 
-        ValidateConfirmRequest(document, request);
+        var storedObject = await objectStorageService.GetObjectMetadataAsync(
+            document.MinioBucket,
+            document.MinioObjectKey,
+            cancellationToken);
+        ValidateConfirmRequest(document, request, storedObject);
 
         document.Status = DocumentStatus.Uploaded;
         document.UpdatedAt = DateTimeOffset.UtcNow;
@@ -161,7 +177,7 @@ public sealed class DocumentService(
         var aiJob = CreateProcessDocumentJob(document, userId);
         await aiJobRepository.AddAsync(aiJob, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
-        await messagePublisher.PublishDocumentProcessingJobAsync(aiJob.Id, cancellationToken);
+        await PublishProcessingJobAsync(document, aiJob, cancellationToken);
 
         return new ConfirmUploadResponse(ToDocumentDto(document), ToAiJobDto(aiJob));
     }
@@ -172,16 +188,16 @@ public sealed class DocumentService(
     {
         var document = await GetActiveDocumentAsync(documentId, cancellationToken);
         var userId = GetRequiredUserId();
-        await workspacePermissionService.EnsureCanManageDocumentsAsync(document.WorkspaceId, userId, cancellationToken);
+        await workspacePermissionService.EnsureCanDeleteDocumentAsync(
+            document.WorkspaceId,
+            document.UploadedById,
+            userId,
+            cancellationToken);
 
         var now = DateTimeOffset.UtcNow;
         document.DeletedAt = now;
         document.UpdatedAt = now;
 
-        await objectStorageService.DeleteObjectIfExistsAsync(
-            document.MinioBucket,
-            document.MinioObjectKey,
-            cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
     }
 
@@ -193,12 +209,12 @@ public sealed class DocumentService(
         var userId = GetRequiredUserId();
         await workspacePermissionService.EnsureCanManageDocumentsAsync(document.WorkspaceId, userId, cancellationToken);
 
-        if (document.Status is DocumentStatus.PendingUpload)
+        if (document.Status != DocumentStatus.Failed)
         {
             throw new ApiException(
                 StatusCodes.Status409Conflict,
                 "document.invalid_status",
-                "Pending uploads must be confirmed before processing can be retried.");
+                "Only failed documents can be retried.");
         }
 
         document.Status = DocumentStatus.Uploaded;
@@ -208,7 +224,7 @@ public sealed class DocumentService(
         var aiJob = CreateProcessDocumentJob(document, userId);
         await aiJobRepository.AddAsync(aiJob, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
-        await messagePublisher.PublishDocumentProcessingJobAsync(aiJob.Id, cancellationToken);
+        await PublishProcessingJobAsync(document, aiJob, cancellationToken);
 
         return new ConfirmUploadResponse(ToDocumentDto(document), ToAiJobDto(aiJob));
     }
@@ -325,11 +341,23 @@ public sealed class DocumentService(
         }
     }
 
-    private static void ValidateConfirmRequest(Document document, ConfirmUploadRequest request)
+    private static void ValidateConfirmRequest(
+        Document document,
+        ConfirmUploadRequest request,
+        StoredObjectMetadata? storedObject)
     {
+        if (storedObject is null)
+        {
+            throw new ApiException(
+                StatusCodes.Status409Conflict,
+                "document.object_not_found",
+                "The uploaded object was not found in storage.");
+        }
+
         ValidateFileSize(request.FileSizeBytes);
 
-        if (document.FileSizeBytes != request.FileSizeBytes)
+        if (document.FileSizeBytes != request.FileSizeBytes
+            || storedObject.Size != document.FileSizeBytes)
         {
             throw new ApiException(
                 StatusCodes.Status400BadRequest,
@@ -337,7 +365,12 @@ public sealed class DocumentService(
                 "Confirmed file size does not match the presigned upload request.");
         }
 
-        if (!string.Equals(document.MimeType, request.ContentType.Trim(), StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(document.MimeType, request.ContentType.Trim(), StringComparison.OrdinalIgnoreCase)
+            || !string.IsNullOrWhiteSpace(storedObject.ContentType)
+            && !string.Equals(
+                document.MimeType,
+                storedObject.ContentType,
+                StringComparison.OrdinalIgnoreCase))
         {
             throw new ApiException(
                 StatusCodes.Status400BadRequest,
@@ -353,6 +386,34 @@ public sealed class DocumentService(
                 StatusCodes.Status401Unauthorized,
                 "auth.unauthorized",
                 "A valid authenticated user is required.");
+    }
+
+    private async Task PublishProcessingJobAsync(
+        Document document,
+        AiJob aiJob,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await messagePublisher.PublishDocumentProcessingJobAsync(aiJob.Id, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            var now = DateTimeOffset.UtcNow;
+            aiJob.Status = AiJobStatus.Failed;
+            aiJob.ErrorMessage = $"Failed to publish processing job: {exception.Message}";
+            aiJob.CompletedAt = now;
+            aiJob.UpdatedAt = now;
+            document.Status = DocumentStatus.Failed;
+            document.ProcessingError = aiJob.ErrorMessage;
+            document.UpdatedAt = now;
+            await db.SaveChangesAsync(CancellationToken.None);
+
+            throw new ApiException(
+                StatusCodes.Status503ServiceUnavailable,
+                "document.queue_unavailable",
+                "The document was uploaded, but processing could not be queued. Retry processing later.");
+        }
     }
 
     private static string CreateObjectKey(Guid workspaceId, Guid documentId, string fileExtension)
@@ -394,6 +455,7 @@ public sealed class DocumentService(
             document.Id,
             document.WorkspaceId,
             document.FolderId,
+            document.UploadedById,
             document.FileName,
             document.OriginalFileName,
             document.FileType,

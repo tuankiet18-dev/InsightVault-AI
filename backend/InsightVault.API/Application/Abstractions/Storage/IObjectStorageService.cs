@@ -10,6 +10,11 @@ public interface IObjectStorageService
         PresignedUploadRequest request,
         CancellationToken cancellationToken = default);
 
+    Task<StoredObjectMetadata?> GetObjectMetadataAsync(
+        string bucketName,
+        string objectKey,
+        CancellationToken cancellationToken = default);
+
     Task DeleteObjectIfExistsAsync(
         string bucketName,
         string objectKey,
@@ -26,3 +31,7 @@ public sealed record PresignedUpload(
     string UploadUrl,
     DateTimeOffset ExpiresAt,
     IReadOnlyDictionary<string, string> RequiredHeaders);
+
+public sealed record StoredObjectMetadata(
+    long Size,
+    string? ContentType);

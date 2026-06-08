@@ -63,6 +63,35 @@ public sealed class DocumentRepository(InsightVaultDbContext db)
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Document>> ListActiveByFolderIdsAsync(
+        Guid workspaceId,
+        IReadOnlyCollection<Guid> folderIds,
+        CancellationToken cancellationToken = default)
+    {
+        return await Db.Documents
+            .Where(document => document.WorkspaceId == workspaceId
+                && document.FolderId.HasValue
+                && folderIds.Contains(document.FolderId.Value)
+                && document.DeletedAt == null)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<bool> HasActiveFileNameAsync(
+        Guid workspaceId,
+        Guid? folderId,
+        string fileName,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedFileName = fileName.Trim();
+
+        return await Db.Documents.AnyAsync(
+            document => document.WorkspaceId == workspaceId
+                && document.FolderId == folderId
+                && document.FileName == normalizedFileName
+                && document.DeletedAt == null,
+            cancellationToken);
+    }
+
     public async Task<bool> ExistsInWorkspaceAsync(
         Guid documentId,
         Guid workspaceId,

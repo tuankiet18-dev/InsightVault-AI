@@ -1,6 +1,7 @@
 using InsightVault.API.Application.Abstractions.Storage;
 using Microsoft.Extensions.Options;
 using Minio;
+using Minio.Exceptions;
 using Minio.DataModel.Args;
 
 namespace InsightVault.API.Infrastructure.Storage;
@@ -62,6 +63,31 @@ public sealed class ConfiguredObjectStorageService(
                 "Failed to delete object {ObjectKey} from bucket {BucketName}",
                 objectKey,
                 bucketName);
+        }
+    }
+
+    public async Task<StoredObjectMetadata?> GetObjectMetadataAsync(
+        string bucketName,
+        string objectKey,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var minioClient = CreateClient(options.Value, options.Value.Endpoint);
+            var statArgs = new StatObjectArgs()
+                .WithBucket(bucketName)
+                .WithObject(objectKey);
+            var objectStat = await minioClient.StatObjectAsync(statArgs, cancellationToken);
+
+            return new StoredObjectMetadata(objectStat.Size, objectStat.ContentType);
+        }
+        catch (ObjectNotFoundException)
+        {
+            return null;
+        }
+        catch (BucketNotFoundException)
+        {
+            return null;
         }
     }
 

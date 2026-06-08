@@ -21,6 +21,17 @@ public interface IDocumentRepository : IRepository<Document>
         IReadOnlyCollection<Guid> documentIds,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<Document>> ListActiveByFolderIdsAsync(
+        Guid workspaceId,
+        IReadOnlyCollection<Guid> folderIds,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> HasActiveFileNameAsync(
+        Guid workspaceId,
+        Guid? folderId,
+        string fileName,
+        CancellationToken cancellationToken = default);
+
     Task<bool> ExistsInWorkspaceAsync(
         Guid documentId,
         Guid workspaceId,

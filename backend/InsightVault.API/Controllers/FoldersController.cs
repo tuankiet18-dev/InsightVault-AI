@@ -1,10 +1,12 @@
 using InsightVault.API.Application.Abstractions.Services.Folders;
 using InsightVault.API.DTOs.Folders;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace InsightVault.API.Controllers;
 
 [ApiController]
+[Authorize]
 public sealed class FoldersController(IFolderService folderService) : ControllerBase
 {
     [HttpGet("api/workspaces/{workspaceId:guid}/folders")]
