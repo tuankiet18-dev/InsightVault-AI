@@ -200,6 +200,12 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
             entity.HasAlternateKey(x => new { x.Id, x.WorkspaceId });
             entity.HasIndex(x => x.WorkspaceId);
             entity.HasIndex(x => x.FolderId);
+            entity.HasIndex(x => new { x.WorkspaceId, x.FolderId, x.FileName })
+                .IsUnique()
+                .HasFilter("folder_id IS NOT NULL AND deleted_at IS NULL");
+            entity.HasIndex(x => new { x.WorkspaceId, x.FileName })
+                .IsUnique()
+                .HasFilter("folder_id IS NULL AND deleted_at IS NULL");
             entity.HasIndex(x => x.UploadedById);
             entity.HasIndex(x => x.Status);
             entity.HasIndex(x => x.CreatedAt);
@@ -343,8 +349,8 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
         {
             entity.ToTable(table => table.HasCheckConstraint(
                 "ck_chat_message_contexts_context_shape",
-                "(context_type = 'Folder' AND folder_id IS NOT NULL AND document_id IS NULL) OR " +
-                "(context_type = 'Document' AND document_id IS NOT NULL AND folder_id IS NULL)"));
+                "(context_type = 'Folder' AND document_id IS NULL) OR " +
+                "(context_type = 'Document' AND folder_id IS NULL)"));
 
             entity.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.Property(x => x.ContextType).HasConversion(contextTypeConverter).HasMaxLength(50).IsRequired();
@@ -361,15 +367,13 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
 
             entity.HasOne(x => x.Folder)
                 .WithMany(x => x.ChatMessageContexts)
-                .HasForeignKey(x => new { x.FolderId, x.WorkspaceId })
-                .HasPrincipalKey(x => new { x.Id, x.WorkspaceId })
-                .OnDelete(DeleteBehavior.Restrict);
+                .HasForeignKey(x => x.FolderId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             entity.HasOne(x => x.Document)
                 .WithMany(x => x.ChatMessageContexts)
-                .HasForeignKey(x => new { x.DocumentId, x.WorkspaceId })
-                .HasPrincipalKey(x => new { x.Id, x.WorkspaceId })
-                .OnDelete(DeleteBehavior.Restrict);
+                .HasForeignKey(x => x.DocumentId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             entity.HasIndex(x => x.WorkspaceId);
             entity.HasIndex(x => x.ChatMessageId);
@@ -422,6 +426,8 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
         modelBuilder.Entity<Report>(entity =>
         {
             entity.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+            entity.Property(x => x.ReportGroupId).HasDefaultValueSql("gen_random_uuid()");
+            entity.Property(x => x.VersionNumber).HasDefaultValue(1);
             entity.Property(x => x.Title).HasMaxLength(255).IsRequired();
             entity.Property(x => x.ReportType).HasConversion(reportTypeConverter).HasMaxLength(50).IsRequired();
             entity.Property(x => x.MarkdownContent).IsRequired();
@@ -454,6 +460,9 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
             entity.HasIndex(x => x.WorkspaceId);
             entity.HasIndex(x => x.FolderId);
             entity.HasIndex(x => x.CreatedById);
+            entity.HasIndex(x => x.ReportGroupId);
+            entity.HasIndex(x => new { x.WorkspaceId, x.ReportGroupId, x.VersionNumber })
+                .IsUnique();
             entity.HasIndex(x => x.ReportType);
             entity.HasIndex(x => x.CreatedAt);
             entity.HasIndex(x => x.DeletedAt);

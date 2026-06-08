@@ -6,6 +6,8 @@ public sealed record ReportDto(
     Guid Id,
     Guid WorkspaceId,
     Guid? FolderId,
+    Guid? ReportGroupId,
+    int? VersionNumber,
     string Title,
     ApiReportType ReportType,
     string MarkdownContent,
