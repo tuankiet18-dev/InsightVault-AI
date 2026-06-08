@@ -4,8 +4,8 @@ public sealed class RabbitMqOptions
 {
     public string Host { get; set; } = "localhost";
     public int Port { get; set; } = 5672;
-    public string Username { get; set; } = "admin";
-    public string Password { get; set; } = "password123";
+    public string Username { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
     public string DocumentProcessingQueue { get; set; } = "document-processing";
     public string AiJobsQueue { get; set; } = "ai-jobs";
 }
