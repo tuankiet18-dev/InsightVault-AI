@@ -22,12 +22,26 @@ public sealed class AiJobRepository(InsightVaultDbContext db)
 
     public async Task<IReadOnlyList<AiJob>> ListRecentByWorkspaceAsync(
         Guid workspaceId,
+        AiJobStatus? status = null,
+        AiJobType? jobType = null,
         int limit = 20,
         CancellationToken cancellationToken = default)
     {
-        return await Db.AiJobs
+        var query = Db.AiJobs
             .AsNoTracking()
-            .Where(job => job.WorkspaceId == workspaceId)
+            .Where(job => job.WorkspaceId == workspaceId);
+
+        if (status.HasValue)
+        {
+            query = query.Where(job => job.Status == status.Value);
+        }
+
+        if (jobType.HasValue)
+        {
+            query = query.Where(job => job.JobType == jobType.Value);
+        }
+
+        return await query
             .OrderByDescending(job => job.CreatedAt)
             .Take(limit)
             .ToListAsync(cancellationToken);

@@ -323,6 +323,12 @@ Upload security requirements:
 | GET | `/api/ai-jobs/{jobId}` | Yes | `AiJobDto` |
 | POST | `/api/ai-jobs/{jobId}/retry` | Yes | `AiJobDto` |
 
+Rules:
+
+- Workspace Owner, Editor, and Viewer can view AI jobs in their workspace.
+- Retry is currently supported for failed `process_document` jobs.
+- Retry requires Owner or Editor permission and republishes the document processing job.
+
 ### Chat And RAG
 
 Chat sessions belong to a workspace and default to RAG over that workspace's readable documents.
