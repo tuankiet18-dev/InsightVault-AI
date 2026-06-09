@@ -21,10 +21,33 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.Configure<ObjectStorageOptions>(configuration.GetSection("MinIO"));
-        services.Configure<RabbitMqOptions>(configuration.GetSection("RabbitMQ"));
-        services.Configure<AiServiceOptions>(configuration.GetSection("AIService"));
-        services.Configure<TrashCleanupOptions>(configuration.GetSection("TrashCleanup"));
+        services.AddOptions<ObjectStorageOptions>()
+            .Bind(configuration.GetSection("MinIO"))
+            .Validate(options => !string.IsNullOrWhiteSpace(options.Endpoint), "MinIO:Endpoint is required.")
+            .Validate(options => !string.IsNullOrWhiteSpace(options.AccessKey), "MinIO:AccessKey is required.")
+            .Validate(options => !string.IsNullOrWhiteSpace(options.SecretKey), "MinIO:SecretKey is required.")
+            .Validate(options => !string.IsNullOrWhiteSpace(options.BucketName), "MinIO:BucketName is required.")
+            .Validate(options => options.PresignedUploadMinutes > 0, "MinIO:PresignedUploadMinutes must be greater than zero.")
+            .ValidateOnStart();
+        services.AddOptions<RabbitMqOptions>()
+            .Bind(configuration.GetSection("RabbitMQ"))
+            .Validate(options => !string.IsNullOrWhiteSpace(options.Host), "RabbitMQ:Host is required.")
+            .Validate(options => options.Port > 0, "RabbitMQ:Port must be greater than zero.")
+            .Validate(options => !string.IsNullOrWhiteSpace(options.Username), "RabbitMQ:Username is required.")
+            .Validate(options => !string.IsNullOrWhiteSpace(options.Password), "RabbitMQ:Password is required.")
+            .Validate(options => !string.IsNullOrWhiteSpace(options.DocumentProcessingQueue), "RabbitMQ:DocumentProcessingQueue is required.")
+            .Validate(options => !string.IsNullOrWhiteSpace(options.AiJobsQueue), "RabbitMQ:AiJobsQueue is required.")
+            .ValidateOnStart();
+        services.AddOptions<AiServiceOptions>()
+            .Bind(configuration.GetSection("AIService"))
+            .Validate(options => Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out _), "AIService:BaseUrl must be an absolute URI.")
+            .ValidateOnStart();
+        services.AddOptions<TrashCleanupOptions>()
+            .Bind(configuration.GetSection("TrashCleanup"))
+            .Validate(options => options.DocumentRetentionDays > 0, "TrashCleanup:DocumentRetentionDays must be greater than zero.")
+            .Validate(options => options.IntervalHours > 0, "TrashCleanup:IntervalHours must be greater than zero.")
+            .Validate(options => options.BatchSize is > 0 and <= 500, "TrashCleanup:BatchSize must be between 1 and 500.")
+            .ValidateOnStart();
         services.AddScoped<IObjectStorageService, ConfiguredObjectStorageService>();
         services.AddSingleton<IMessagePublisher, RabbitMqMessagePublisher>();
         services.AddHttpClient<IAiServiceClient, AiServiceClient>((serviceProvider, client) =>
