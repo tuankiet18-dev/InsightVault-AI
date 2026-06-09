@@ -4,7 +4,9 @@ using InsightVault.API.Data;
 using InsightVault.API.DTOs.Common;
 using InsightVault.API.Infrastructure;
 using InsightVault.API.Infrastructure.Auth;
+using InsightVault.API.Infrastructure.Health;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -40,12 +42,29 @@ builder.Services.AddControllers()
     });
 builder.Services.AddApplicationServices();
 builder.Services.AddHttpContextAccessor();
-builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
-builder.Services.Configure<GoogleAuthOptions>(builder.Configuration.GetSection("GoogleAuth"));
+builder.Services.AddOptions<JwtOptions>()
+    .Bind(builder.Configuration.GetSection("Jwt"))
+    .Validate(options => !string.IsNullOrWhiteSpace(options.Issuer), "Jwt:Issuer is required.")
+    .Validate(options => !string.IsNullOrWhiteSpace(options.Audience), "Jwt:Audience is required.")
+    .Validate(options => options.ExpiresMinutes > 0, "Jwt:ExpiresMinutes must be greater than zero.")
+    .Validate(options => !string.IsNullOrWhiteSpace(options.SigningKey), "Jwt:SigningKey is required.")
+    .Validate(options => Encoding.UTF8.GetByteCount(options.SigningKey) >= 32, "Jwt:SigningKey must be at least 32 bytes.")
+    .ValidateOnStart();
+builder.Services.AddOptions<GoogleAuthOptions>()
+    .Bind(builder.Configuration.GetSection("GoogleAuth"));
+var postgresConnectionString = builder.Configuration.GetConnectionString("Postgres");
+if (string.IsNullOrWhiteSpace(postgresConnectionString))
+{
+    throw new InvalidOperationException("Connection string 'Postgres' is required.");
+}
+
 builder.Services.AddDbContext<InsightVaultDbContext>(options =>
     options
-        .UseNpgsql(builder.Configuration.GetConnectionString("Postgres"), npgsql => npgsql.UseVector())
+        .UseNpgsql(postgresConnectionString, npgsql => npgsql.UseVector())
         .UseSnakeCaseNamingConvention());
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy(), tags: ["live"])
+    .AddCheck<DatabaseHealthCheck>("postgres", tags: ["ready"]);
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(CorsPolicyName, policy =>
@@ -121,6 +140,14 @@ app.UseHttpsRedirection();
 app.UseCors(CorsPolicyName);
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = registration => registration.Tags.Contains("live")
+});
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = registration => registration.Tags.Contains("ready")
+});
 app.MapControllers();
 
 app.Run();

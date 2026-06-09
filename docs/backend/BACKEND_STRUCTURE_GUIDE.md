@@ -94,6 +94,9 @@ development, then fill local credentials there or use environment variables such
 Do not use values from the example file in staging or production. Deployment must
 provide secrets through environment variables or the platform secret manager.
 
+Deployment/runtime hardening rules are documented in
+`docs/backend/BACKEND_DEPLOYMENT_HARDENING.md`.
+
 ## What Goes Where
 
 | Folder | Purpose |
