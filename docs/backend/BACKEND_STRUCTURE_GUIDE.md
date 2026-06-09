@@ -97,6 +97,9 @@ provide secrets through environment variables or the platform secret manager.
 Deployment/runtime hardening rules are documented in
 `docs/backend/BACKEND_DEPLOYMENT_HARDENING.md`.
 
+Backend MVP manual/integration acceptance checks are documented in
+`docs/backend/BACKEND_MVP_MANUAL_TEST_CHECKLIST.md`.
+
 ## What Goes Where
 
 | Folder | Purpose |
