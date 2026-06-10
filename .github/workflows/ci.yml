@@ -57,6 +57,9 @@ jobs:
       - name: Build
         run: dotnet build backend/InsightVault.API/InsightVault.API.csproj --no-restore --configuration Release
 
+      - name: Build backend container image
+        run: docker build backend/InsightVault.API --tag insightvault-api:ci
+
   ai-service:
     name: AI Service
     runs-on: ubuntu-latest

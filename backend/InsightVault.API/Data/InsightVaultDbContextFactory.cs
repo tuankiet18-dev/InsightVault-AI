@@ -19,7 +19,8 @@ public sealed class InsightVaultDbContextFactory : IDesignTimeDbContextFactory<I
 
         var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__Postgres")
             ?? configuration.GetConnectionString("Postgres")
-            ?? "Host=localhost;Port=5433;Database=insightvault;Username=admin;Password=password123";
+            ?? throw new InvalidOperationException(
+                "Connection string 'Postgres' is required. Set ConnectionStrings__Postgres or create appsettings.Development.json from the example file.");
 
         optionsBuilder
             .UseNpgsql(connectionString, npgsql => npgsql.UseVector())

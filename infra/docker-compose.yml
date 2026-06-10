@@ -26,24 +26,37 @@ services:
       context: ../backend/InsightVault.API
     container_name: insightvault_backend
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB:-insightvault};Username=${POSTGRES_USER:-admin};Password=${POSTGRES_PASSWORD:-password123}
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB:-insightvault};Username=${POSTGRES_USER:-admin};Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in infra/.env}
+      Jwt__Issuer: ${JWT_ISSUER:-InsightVault.API}
+      Jwt__Audience: ${JWT_AUDIENCE:-InsightVault.Frontend}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in infra/.env}
+      GoogleAuth__ClientId: ${GOOGLE_CLIENT_ID:-}
+      Cors__AllowedOrigins__0: ${FRONTEND_ALLOWED_ORIGIN:-http://localhost:5173}
+      Cors__AllowedOrigins__1: ${FRONTEND_ALLOWED_ORIGIN_HTTPS:-https://localhost:5173}
       MinIO__Endpoint: minio:9000
       MinIO__PublicEndpoint: localhost:9000
       MinIO__BucketName: insightvault-documents
       MinIO__PresignedUploadMinutes: 10
       MinIO__UseSsl: false
       MinIO__AccessKey: ${MINIO_ROOT_USER:-admin}
-      MinIO__SecretKey: ${MINIO_ROOT_PASSWORD:-password123}
+      MinIO__SecretKey: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in infra/.env}
       RabbitMQ__Host: rabbitmq
       RabbitMQ__Port: 5672
       RabbitMQ__Username: ${RABBITMQ_DEFAULT_USER:-admin}
-      RabbitMQ__Password: ${RABBITMQ_DEFAULT_PASS:-password123}
+      RabbitMQ__Password: ${RABBITMQ_DEFAULT_PASS:?Set RABBITMQ_DEFAULT_PASS in infra/.env}
       RabbitMQ__DocumentProcessingQueue: document-processing
+      RabbitMQ__AiJobsQueue: ai-jobs
       AIService__BaseUrl: http://ai-service:8000
     ports:
       - "5126:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health/live"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     depends_on:
       postgres:
         condition: service_healthy
@@ -62,10 +75,10 @@ services:
     env_file:
       - ../ai-service/.env
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-password123}@postgres:5432/${POSTGRES_DB:-insightvault}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in infra/.env}@postgres:5432/${POSTGRES_DB:-insightvault}
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-admin}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-password123}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in infra/.env}
     ports:
       - "8000:8000"
     depends_on:
@@ -80,7 +93,7 @@ services:
     container_name: insightvault_postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password123}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in infra/.env}
       POSTGRES_DB: ${POSTGRES_DB:-insightvault}
     ports:
       - "5433:5432"
@@ -99,7 +112,7 @@ services:
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-password123}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in infra/.env}
       MINIO_API_CORS_ALLOW_ORIGIN: "*"
     ports:
       - "9000:9000"
@@ -113,7 +126,7 @@ services:
     container_name: insightvault_rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-admin}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-password123}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:?Set RABBITMQ_DEFAULT_PASS in infra/.env}
     ports:
       - "5672:5672"
       - "15672:15672"
