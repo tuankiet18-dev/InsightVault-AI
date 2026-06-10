@@ -252,7 +252,7 @@ Response:
 Backend persists:
 
 - `reports`.
-- Report version records. Regenerating a report creates a new version instead of overwriting prior output.
+- Report version records. Regenerating a report creates a new version instead of overwriting prior output. User-facing report/compare requests may include an existing `reportGroupId`; Backend validates that the group belongs to the workspace and report type, then persists the completed job output with the next `versionNumber`.
 - `ai_jobs` status.
 - Backend persists report data; AI service returns content only.
 - User-facing report generation endpoint creates an async `generate_report` job. The worker calls AI service and persists the report.

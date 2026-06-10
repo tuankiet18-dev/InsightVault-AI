@@ -183,6 +183,7 @@ public sealed class AiJobWorker(
             reportType = result.ReportType
         }, JsonOptions);
         var report = CreateReport(
+            db,
             job,
             payload,
             reportType,
@@ -232,6 +233,7 @@ public sealed class AiJobWorker(
             result.Recommendations
         }, JsonOptions);
         var report = CreateReport(
+            db,
             job,
             payload,
             ReportType.ComparisonReport,
@@ -253,6 +255,7 @@ public sealed class AiJobWorker(
     }
 
     private static Report CreateReport(
+        InsightVaultDbContext db,
         AiJob job,
         ReportJobPayload payload,
         ReportType reportType,
@@ -261,6 +264,12 @@ public sealed class AiJobWorker(
         string title)
     {
         var now = DateTimeOffset.UtcNow;
+        var reportGroupId = payload.ReportGroupId ?? Guid.NewGuid();
+        var nextVersionNumber = ReportVersioning.GetNextVersionNumber(
+            db.Reports,
+            payload.WorkspaceId,
+            reportGroupId);
+
         return new Report
         {
             Id = Guid.NewGuid(),
@@ -268,8 +277,8 @@ public sealed class AiJobWorker(
             FolderId = payload.FolderId,
             CreatedById = payload.CreatedById,
             AiJobId = job.Id,
-            ReportGroupId = Guid.NewGuid(),
-            VersionNumber = 1,
+            ReportGroupId = reportGroupId,
+            VersionNumber = nextVersionNumber,
             Title = title,
             ReportType = reportType,
             MarkdownContent = markdownContent,
