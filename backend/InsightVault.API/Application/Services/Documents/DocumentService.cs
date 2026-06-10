@@ -80,6 +80,45 @@ public sealed class DocumentService(
         return ToDocumentDto(document);
     }
 
+    public async Task<DocumentDto> UpdateAsync(
+        Guid documentId,
+        UpdateDocumentRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var document = await GetActiveDocumentAsync(documentId, cancellationToken);
+        var userId = GetRequiredUserId();
+        await workspacePermissionService.EnsureCanManageDocumentsAsync(document.WorkspaceId, userId, cancellationToken);
+
+        if (request.HasFolderId)
+        {
+            if (request.FolderId.HasValue)
+            {
+                await EnsureFolderExistsAsync(document.WorkspaceId, request.FolderId.Value, cancellationToken);
+            }
+
+            if (request.FolderId != document.FolderId)
+            {
+                if (await documentRepository.HasActiveFileNameAsync(
+                        document.WorkspaceId,
+                        request.FolderId,
+                        document.FileName,
+                        cancellationToken))
+                {
+                    throw new ApiException(
+                        StatusCodes.Status409Conflict,
+                        "document.filename_conflict",
+                        "An active document with the same file name already exists in the destination folder.");
+                }
+
+                document.FolderId = request.FolderId;
+                document.UpdatedAt = DateTimeOffset.UtcNow;
+                await db.SaveChangesAsync(cancellationToken);
+            }
+        }
+
+        return ToDocumentDto(document);
+    }
+
     public async Task<IReadOnlyList<DocumentDto>> ListTrashByWorkspaceAsync(
         Guid workspaceId,
         CancellationToken cancellationToken = default)

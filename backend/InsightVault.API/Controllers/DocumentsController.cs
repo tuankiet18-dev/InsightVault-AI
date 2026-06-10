@@ -63,6 +63,17 @@ public sealed class DocumentsController(IDocumentService documentService) : Cont
         return Ok(document);
     }
 
+    [HttpPatch("api/documents/{documentId:guid}")]
+    public async Task<ActionResult<DocumentDto>> UpdateDocument(
+        Guid documentId,
+        UpdateDocumentRequest request,
+        CancellationToken cancellationToken)
+    {
+        var document = await documentService.UpdateAsync(documentId, request, cancellationToken);
+
+        return Ok(document);
+    }
+
     [HttpPost("api/documents/{documentId:guid}/confirm-upload")]
     public async Task<ActionResult<ConfirmUploadResponse>> ConfirmUpload(
         Guid documentId,

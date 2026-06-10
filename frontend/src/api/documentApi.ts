@@ -15,6 +15,11 @@ export interface GetDocumentsParams {
   q?: string;
 }
 
+export interface UpdateDocumentData {
+  folderId?: string | null;
+  hasFolderId?: boolean;
+}
+
 export const documentApi = {
   // Standard Document CRUD
   getDocuments: (workspaceId: string, params?: GetDocumentsParams) => {
@@ -23,6 +28,10 @@ export const documentApi = {
 
   getDocument: (documentId: string) => {
     return http.get<DocumentDto>(`/documents/${documentId}`);
+  },
+
+  updateDocument: (documentId: string, data: UpdateDocumentData) => {
+    return http.patch<DocumentDto>(`/documents/${documentId}`, data);
   },
 
   deleteDocument: (documentId: string) => {

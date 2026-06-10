@@ -44,6 +44,23 @@ export const useDocument = (documentId: string | null) => {
   });
 };
 
+export const useUpdateDocument = (workspaceId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ documentId, data }: { documentId: string; data: import('../api/documentApi').UpdateDocumentData }) => 
+      documentApi.updateDocument(documentId, data),
+    onSuccess: (updatedDocument) => {
+      queryClient.invalidateQueries({ queryKey: documentKeys.detail(updatedDocument.id) });
+      queryClient.invalidateQueries({ queryKey: documentKeys.lists(workspaceId) });
+      queryClient.invalidateQueries({ queryKey: ['folders'] });
+      toast.success('Document updated successfully');
+    },
+    onError: () => {
+      toast.error('Failed to update document');
+    }
+  });
+};
+
 export const useDeleteDocument = (workspaceId: string) => {
   const queryClient = useQueryClient();
   return useMutation({

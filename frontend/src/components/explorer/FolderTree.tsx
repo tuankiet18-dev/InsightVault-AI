@@ -3,8 +3,8 @@ import { useState } from 'react'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useTabStore } from '@/stores/tabStore'
 import { useUiStore } from '@/stores/uiStore'
-import { useFolders } from '@/hooks/useFolders'
-import { useDocuments } from '@/hooks/useDocuments'
+import { useFolders, useUpdateFolder } from '@/hooks/useFolders'
+import { useDocuments, useUpdateDocument } from '@/hooks/useDocuments'
 import { useWorkspace } from '@/hooks/useWorkspaces'
 import { getFileTypeColor, cn } from '@/lib/utils'
 import { hasPermission } from '@/utils/permission'
@@ -16,12 +16,49 @@ export function FolderTree() {
   const { data: folders = [] } = useFolders(activeWorkspaceId)
   const { data: activeWorkspace } = useWorkspace(activeWorkspaceId)
   const canEdit = hasPermission(activeWorkspace?.currentUserRole, 'upload_document')
+  const updateFolder = useUpdateFolder()
+  const updateDocument = useUpdateDocument(activeWorkspaceId!)
+  const [isDragOver, setIsDragOver] = useState(false)
   
   if (!activeWorkspaceId) return null
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (!canEdit) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setIsDragOver(true)
+  }
+
+  const handleDragLeave = () => {
+    if (!canEdit) return
+    setIsDragOver(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    if (!canEdit) return
+    e.preventDefault()
+    setIsDragOver(false)
+    
+    try {
+      const data = JSON.parse(e.dataTransfer.getData('application/json'))
+      if (data.type === 'document' && data.folderId !== null) {
+        updateDocument.mutate({ documentId: data.id, data: { folderId: null, hasFolderId: true } })
+      } else if (data.type === 'folder' && data.parentId !== null) {
+        updateFolder.mutate({ folderId: data.id, data: { parentFolderId: null, hasParentFolderId: true } })
+      }
+    } catch {
+      // Ignore
+    }
+  }
   
   return (
-    <section>
-      <div className="flex flex-col border-l border-border pl-3">
+    <section 
+      className={cn("min-h-[100px] transition-colors rounded-md", isDragOver && "bg-surface-100 ring-2 ring-primary ring-inset")}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      <div className="flex flex-col border-l border-border pl-3 mt-1">
         {folders.map(folder => (
           <FolderRow
             key={folder.id}
@@ -52,11 +89,14 @@ function FolderRow({
 }) {
   const [expanded, setExpanded] = useState(true)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isDragOver, setIsDragOver] = useState(false)
   const { selectedFolderId, setSelectedFolder } = useWorkspaceStore()
   const { openUploadModal, openCreateFolderModal } = useUiStore()
   const { data: documents = [] } = useDocuments(workspaceId, { folderId: folder.id })
   const { data: childFolders = [] } = useFolders(workspaceId, folder.id)
   const deleteMutation = useDeleteFolder(workspaceId)
+  const updateFolder = useUpdateFolder()
+  const updateDocument = useUpdateDocument(workspaceId)
   const { user } = useAuthStore()
   const { data: activeWorkspace } = useWorkspace(workspaceId)
   
@@ -72,12 +112,57 @@ function FolderRow({
     })
   }
 
+  const handleDragStart = (e: React.DragEvent) => {
+    e.stopPropagation()
+    e.dataTransfer.setData('application/json', JSON.stringify({ type: 'folder', id: folder.id, parentId: folder.parentFolderId }))
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (!canEdit) return
+    e.preventDefault()
+    e.stopPropagation()
+    e.dataTransfer.dropEffect = 'move'
+    setIsDragOver(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (!canEdit) return
+    e.stopPropagation()
+    setIsDragOver(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    if (!canEdit) return
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
+    
+    try {
+      const data = JSON.parse(e.dataTransfer.getData('application/json'))
+      if (data.type === 'document' && data.folderId !== folder.id) {
+        updateDocument.mutate({ documentId: data.id, data: { folderId: folder.id, hasFolderId: true } })
+      } else if (data.type === 'folder' && data.id !== folder.id && data.parentId !== folder.id) {
+        updateFolder.mutate({ folderId: data.id, data: { parentFolderId: folder.id, hasParentFolderId: true } })
+      }
+    } catch {
+      // Ignore
+    }
+  }
+
   return (
     <div className="flex flex-col">
       <div
+        draggable={canEdit}
+        onDragStart={canEdit ? handleDragStart : undefined}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
         className={cn(
-          "flex items-center gap-1.5 w-full px-2 py-1.5 rounded-md text-sm text-left transition-colors group relative",
-          isSelected ? "bg-surface-200 text-surface-900" : "text-surface-700 hover:bg-surface-100"
+          "flex items-center gap-1.5 w-full px-2 py-1.5 rounded-md text-sm text-left transition-colors group relative select-none",
+          canEdit && "cursor-grab active:cursor-grabbing",
+          isSelected ? "bg-surface-200 text-surface-900" : "text-surface-700 hover:bg-surface-100",
+          isDragOver && "bg-surface-200 ring-2 ring-primary ring-inset"
         )}
       >
         <button
@@ -204,11 +289,20 @@ function DocumentRow({
     })
   }
 
+  const handleDragStart = (e: React.DragEvent) => {
+    e.stopPropagation()
+    e.dataTransfer.setData('application/json', JSON.stringify({ type: 'document', id: document.id, folderId: document.folderId }))
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
   return (
     <>
       <div
+        draggable={canEdit}
+        onDragStart={canEdit ? handleDragStart : undefined}
         className={cn(
-          "flex items-center justify-between w-full px-2 py-1.5 rounded-md text-sm text-left transition-colors group relative cursor-pointer",
+          "flex items-center justify-between w-full px-2 py-1.5 rounded-md text-sm text-left transition-colors group relative select-none",
+          canEdit ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
           isSelected ? "bg-surface-100 text-surface-900" : "text-surface-600 hover:bg-surface-100"
         )}
         onClick={handleOpen}
