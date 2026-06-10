@@ -11,6 +11,7 @@ using InsightVault.API.Domain.Enums;
 using InsightVault.API.DTOs.AiJobs;
 using InsightVault.API.DTOs.Common;
 using InsightVault.API.DTOs.Reports;
+using Microsoft.EntityFrameworkCore;
 
 namespace InsightVault.API.Application.Services.Reports;
 
@@ -62,6 +63,11 @@ public sealed class ReportService(
         await workspacePermissionService.EnsureCanManageDocumentsAsync(workspaceId, userId, cancellationToken);
 
         var reportType = ToDomainReportType(request.ReportType);
+        await EnsureReportGroupCanAppendAsync(
+            workspaceId,
+            request.ReportGroupId,
+            reportType,
+            cancellationToken);
         var sources = await ResolveSourceDocumentsAsync(
             workspaceId,
             request.FolderId,
@@ -79,6 +85,7 @@ public sealed class ReportService(
             InputPayload = JsonSerializer.Serialize(new ReportJobPayload(
                 workspaceId,
                 request.FolderId,
+                request.ReportGroupId,
                 userId,
                 sources.Select(document => document.Id).ToList(),
                 sources.Select(document => document.OriginalFileName).ToList(),
@@ -112,6 +119,11 @@ public sealed class ReportService(
             request.DocumentIds,
             minimumDocumentCount: 2,
             cancellationToken);
+        await EnsureReportGroupCanAppendAsync(
+            workspaceId,
+            request.ReportGroupId,
+            ReportType.ComparisonReport,
+            cancellationToken);
 
         var now = DateTimeOffset.UtcNow;
         var job = new AiJob
@@ -123,6 +135,7 @@ public sealed class ReportService(
             InputPayload = JsonSerializer.Serialize(new ReportJobPayload(
                 workspaceId,
                 request.FolderId,
+                request.ReportGroupId,
                 userId,
                 sources.Select(document => document.Id).ToList(),
                 sources.Select(document => document.OriginalFileName).ToList(),
@@ -170,6 +183,49 @@ public sealed class ReportService(
         }
 
         return report;
+    }
+
+    private async Task EnsureReportGroupCanAppendAsync(
+        Guid workspaceId,
+        Guid? reportGroupId,
+        ReportType reportType,
+        CancellationToken cancellationToken)
+    {
+        if (!reportGroupId.HasValue)
+        {
+            return;
+        }
+
+        var groupReports = await db.Reports
+            .AsNoTracking()
+            .Where(report => report.WorkspaceId == workspaceId
+                && report.ReportGroupId == reportGroupId.Value)
+            .Select(report => new { report.ReportType, report.DeletedAt })
+            .ToListAsync(cancellationToken);
+
+        if (groupReports.Count == 0)
+        {
+            throw new ApiException(
+                StatusCodes.Status404NotFound,
+                "report.group_not_found",
+                "Report group not found.");
+        }
+
+        if (groupReports.All(report => report.DeletedAt is not null))
+        {
+            throw new ApiException(
+                StatusCodes.Status409Conflict,
+                "report.group_deleted",
+                "Cannot append a version to a deleted report group.");
+        }
+
+        if (groupReports.Any(report => report.ReportType != reportType))
+        {
+            throw new ApiException(
+                StatusCodes.Status409Conflict,
+                "report.group_type_mismatch",
+                "Report group type does not match the requested report type.");
+        }
     }
 
     private async Task<IReadOnlyList<Document>> ResolveSourceDocumentsAsync(

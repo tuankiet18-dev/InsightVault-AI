@@ -442,6 +442,7 @@ Request:
 ```json
 {
   "folderId": "uuid-or-null",
+  "reportGroupId": "uuid-or-null",
   "documentIds": ["uuid-1", "uuid-2"],
   "title": "Comparison report",
   "storeReport": false,
@@ -476,7 +477,7 @@ Response:
 }
 ```
 
-Compare runs async. FE should poll `GET /api/ai-jobs/{jobId}` and refresh reports after the job is completed. Backend persists the comparison output as a `comparison_report`.
+Compare runs async. FE should poll `GET /api/ai-jobs/{jobId}` and refresh reports after the job is completed. Backend persists the comparison output as a `comparison_report`. If `reportGroupId` is provided, Backend appends the completed report as the next version in that report group.
 
 ### Reports
 
@@ -490,6 +491,7 @@ Compare runs async. FE should poll `GET /api/ai-jobs/{jobId}` and refresh report
 ```ts
 type GenerateReportRequest = {
   folderId?: string | null;
+  reportGroupId?: string | null;
   documentIds: string[];
   reportType: ReportType;
   title?: string | null;
@@ -523,6 +525,7 @@ Rules:
 - Report generation can target a folder, but Backend must resolve the folder/subfolders to explicit document IDs before calling AI.
 - Report generation runs async through `ai_jobs`. FE should poll the returned job and refresh report list/detail after completion.
 - Backend persists reports. AI service must not write `reports`.
+- To regenerate a report version, FE sends the existing `reportGroupId`; Backend creates the next `versionNumber` instead of overwriting an old report.
 
 ### Dashboard And Admin
 
