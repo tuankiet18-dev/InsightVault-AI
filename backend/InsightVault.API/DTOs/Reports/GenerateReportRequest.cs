@@ -4,6 +4,7 @@ namespace InsightVault.API.DTOs.Reports;
 
 public sealed record GenerateReportRequest(
     Guid? FolderId,
+    Guid? ReportGroupId,
     IReadOnlyList<Guid> DocumentIds,
     ApiReportType ReportType,
     string? Title,

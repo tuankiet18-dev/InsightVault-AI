@@ -175,6 +175,8 @@ Expected result: `ai_jobs` remains the source of truth for frontend polling and 
 - [ ] Generate report returns 202 with an `AiJobDto`.
 - [ ] Worker calls AI service `/generate-report`.
 - [ ] Completed job persists a report with markdown content and source document metadata.
+- [ ] Sending an existing `reportGroupId` for the same report type creates the next `versionNumber`.
+- [ ] Sending a missing, deleted, cross-workspace, or mismatched-type `reportGroupId` fails clearly.
 - [ ] Owner/editor can call `POST /api/workspaces/{workspaceId}/compare`.
 - [ ] Viewer cannot compare documents.
 - [ ] Compare rejects fewer than two valid source documents.
@@ -182,6 +184,7 @@ Expected result: `ai_jobs` remains the source of truth for frontend polling and 
 - [ ] Compare returns 202 with an `AiJobDto`.
 - [ ] Worker calls AI service `/compare`.
 - [ ] Completed compare persists a `comparison_report`.
+- [ ] Sending an existing comparison `reportGroupId` creates the next comparison report version.
 - [ ] `GET /api/workspaces/{workspaceId}/reports?type=` lists readable reports.
 - [ ] `GET /api/reports/{reportId}` returns detail only to allowed workspace users.
 - [ ] Only owner can delete reports.
