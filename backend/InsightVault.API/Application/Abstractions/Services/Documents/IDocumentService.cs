@@ -15,6 +15,11 @@ public interface IDocumentService
         Guid documentId,
         CancellationToken cancellationToken = default);
 
+    Task<DocumentDto> UpdateAsync(
+        Guid documentId,
+        UpdateDocumentRequest request,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<DocumentDto>> ListTrashByWorkspaceAsync(
         Guid workspaceId,
         CancellationToken cancellationToken = default);

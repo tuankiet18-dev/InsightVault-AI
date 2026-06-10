@@ -1,31 +1,68 @@
-import { ChevronRight, ChevronDown, Folder, File, FileText, Image as ImageIcon, UploadCloud } from 'lucide-react'
+import { ChevronRight, ChevronDown, Folder, File, FileText, Image as ImageIcon, UploadCloud, FolderPlus } from 'lucide-react'
 import { useState } from 'react'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useTabStore } from '@/stores/tabStore'
 import { useUiStore } from '@/stores/uiStore'
-import { useFolders } from '@/hooks/useFolders'
-import { useDocuments } from '@/hooks/useDocuments'
+import { useFolders, useUpdateFolder } from '@/hooks/useFolders'
+import { useDocuments, useUpdateDocument } from '@/hooks/useDocuments'
 import { useWorkspace } from '@/hooks/useWorkspaces'
 import { getFileTypeColor, cn } from '@/lib/utils'
 import { hasPermission } from '@/utils/permission'
-import type { DocumentDto } from '@/types/api'
+import { useAuthStore } from '@/stores/authStore'
+import type { DocumentDto, FolderDto } from '@/types/api'
 
 export function FolderTree() {
   const { activeWorkspaceId } = useWorkspaceStore()
   const { data: folders = [] } = useFolders(activeWorkspaceId)
   const { data: activeWorkspace } = useWorkspace(activeWorkspaceId)
   const canEdit = hasPermission(activeWorkspace?.currentUserRole, 'upload_document')
+  const updateFolder = useUpdateFolder()
+  const updateDocument = useUpdateDocument(activeWorkspaceId!)
+  const [isDragOver, setIsDragOver] = useState(false)
   
   if (!activeWorkspaceId) return null
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (!canEdit) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setIsDragOver(true)
+  }
+
+  const handleDragLeave = () => {
+    if (!canEdit) return
+    setIsDragOver(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    if (!canEdit) return
+    e.preventDefault()
+    setIsDragOver(false)
+    
+    try {
+      const data = JSON.parse(e.dataTransfer.getData('application/json'))
+      if (data.type === 'document' && data.folderId !== null) {
+        updateDocument.mutate({ documentId: data.id, data: { folderId: null, hasFolderId: true } })
+      } else if (data.type === 'folder' && data.parentId !== null) {
+        updateFolder.mutate({ folderId: data.id, data: { parentFolderId: null, hasParentFolderId: true } })
+      }
+    } catch {
+      // Ignore
+    }
+  }
   
   return (
-    <section>
-      <div className="flex flex-col border-l border-border pl-3">
+    <section 
+      className={cn("min-h-[100px] transition-colors rounded-md", isDragOver && "bg-surface-100 ring-2 ring-primary ring-inset")}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      <div className="flex flex-col border-l border-border pl-3 mt-1">
         {folders.map(folder => (
           <FolderRow
             key={folder.id}
-            folderId={folder.id}
-            name={folder.name}
+            folder={folder}
             workspaceId={activeWorkspaceId}
             canEdit={canEdit}
           />
@@ -42,43 +79,96 @@ import { useDeleteFolder } from '@/hooks/useFolders'
 import { useDeleteDocument } from '@/hooks/useDocuments'
 
 function FolderRow({
-  folderId,
-  name,
+  folder,
   workspaceId,
   canEdit,
 }: {
-  folderId: string
-  name: string
+  folder: FolderDto
   workspaceId: string
   canEdit: boolean
 }) {
   const [expanded, setExpanded] = useState(true)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isDragOver, setIsDragOver] = useState(false)
   const { selectedFolderId, setSelectedFolder } = useWorkspaceStore()
-  const { openUploadModal } = useUiStore()
-  const { data: documents = [] } = useDocuments(workspaceId, { folderId })
+  const { openUploadModal, openCreateFolderModal } = useUiStore()
+  const { data: documents = [] } = useDocuments(workspaceId, { folderId: folder.id })
+  const { data: childFolders = [] } = useFolders(workspaceId, folder.id)
   const deleteMutation = useDeleteFolder(workspaceId)
+  const updateFolder = useUpdateFolder()
+  const updateDocument = useUpdateDocument(workspaceId)
+  const { user } = useAuthStore()
+  const { data: activeWorkspace } = useWorkspace(workspaceId)
   
-  const isSelected = selectedFolderId === folderId
+  const isSelected = selectedFolderId === folder.id
+  const role = activeWorkspace?.currentUserRole
+  const canDeleteFolder = 
+    role === 'owner' || 
+    (role === 'editor' && (folder.createdById === user?.id || (documents.length === 0 && childFolders.length === 0)))
 
   const handleDelete = () => {
-    deleteMutation.mutate(folderId, {
+    deleteMutation.mutate(folder.id, {
       onSuccess: () => setIsDeleteModalOpen(false)
     })
+  }
+
+  const handleDragStart = (e: React.DragEvent) => {
+    e.stopPropagation()
+    e.dataTransfer.setData('application/json', JSON.stringify({ type: 'folder', id: folder.id, parentId: folder.parentFolderId }))
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (!canEdit) return
+    e.preventDefault()
+    e.stopPropagation()
+    e.dataTransfer.dropEffect = 'move'
+    setIsDragOver(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (!canEdit) return
+    e.stopPropagation()
+    setIsDragOver(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    if (!canEdit) return
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
+    
+    try {
+      const data = JSON.parse(e.dataTransfer.getData('application/json'))
+      if (data.type === 'document' && data.folderId !== folder.id) {
+        updateDocument.mutate({ documentId: data.id, data: { folderId: folder.id, hasFolderId: true } })
+      } else if (data.type === 'folder' && data.id !== folder.id && data.parentId !== folder.id) {
+        updateFolder.mutate({ folderId: data.id, data: { parentFolderId: folder.id, hasParentFolderId: true } })
+      }
+    } catch {
+      // Ignore
+    }
   }
 
   return (
     <div className="flex flex-col">
       <div
+        draggable={canEdit}
+        onDragStart={canEdit ? handleDragStart : undefined}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
         className={cn(
-          "flex items-center gap-1.5 w-full px-2 py-1.5 rounded-md text-sm text-left transition-colors group relative",
-          isSelected ? "bg-surface-200 text-surface-900" : "text-surface-700 hover:bg-surface-100"
+          "flex items-center gap-1.5 w-full px-2 py-1.5 rounded-md text-sm text-left transition-colors group relative select-none",
+          canEdit && "cursor-grab active:cursor-grabbing",
+          isSelected ? "bg-surface-200 text-surface-900" : "text-surface-700 hover:bg-surface-100",
+          isDragOver && "bg-surface-200 ring-2 ring-primary ring-inset"
         )}
       >
         <button
           onClick={() => {
             setExpanded(!expanded)
-            setSelectedFolder(folderId)
+            setSelectedFolder(folder.id)
           }}
           className="flex-1 flex items-center gap-1.5 min-w-0"
         >
@@ -88,7 +178,7 @@ function FolderRow({
             <ChevronRight className="w-3.5 h-3.5 text-surface-400 shrink-0" />
           )}
           <Folder className="w-4 h-4 text-surface-400 shrink-0" fill="currentColor" fillOpacity={0.2} />
-          <span className="truncate font-medium">{name}</span>
+          <span className="truncate font-medium">{folder.name}</span>
           <span className="ml-auto text-[10px] text-muted-foreground">{documents.length}</span>
         </button>
         {canEdit && (
@@ -96,7 +186,7 @@ function FolderRow({
             <button
               onClick={(e) => {
                 e.stopPropagation()
-                openUploadModal(folderId)
+                openUploadModal(folder.id)
               }}
               className="rounded p-1 text-surface-500 transition-colors hover:bg-surface-300"
               title="Upload to folder"
@@ -107,26 +197,39 @@ function FolderRow({
               <DropdownMenuItem onClick={() => {}} icon={<Edit2 className="h-4 w-4" />}>
                 Rename
               </DropdownMenuItem>
-              <DropdownMenuItem
-                destructive
-                onClick={() => setIsDeleteModalOpen(true)}
-                icon={<Trash2 className="h-4 w-4" />}
+              <DropdownMenuItem 
+                onClick={() => openCreateFolderModal(folder.id)} 
+                icon={<FolderPlus className="h-4 w-4" />}
               >
-                Delete
+                New Subfolder
               </DropdownMenuItem>
+              {canDeleteFolder && (
+                <DropdownMenuItem
+                  destructive
+                  onClick={() => setIsDeleteModalOpen(true)}
+                  icon={<Trash2 className="h-4 w-4" />}
+                >
+                  Delete
+                </DropdownMenuItem>
+              )}
             </DropdownMenu>
           </div>
         )}
       </div>
       
       {expanded && (
-        <div className="flex flex-col pl-6">
-          {documents.length === 0 ? (
+        <div className="flex flex-col pl-4 border-l border-border/40 ml-2 mt-0.5">
+          {documents.length === 0 && childFolders.length === 0 ? (
             <div className="px-2 py-1 text-xs text-muted-foreground italic">Empty</div>
           ) : (
-            documents.map(doc => (
-              <DocumentRow key={doc.id} document={doc} workspaceId={workspaceId} canEdit={canEdit} />
-            ))
+            <>
+              {childFolders.map(child => (
+                <FolderRow key={child.id} folder={child} workspaceId={workspaceId} canEdit={canEdit} />
+              ))}
+              {documents.map(doc => (
+                <DocumentRow key={doc.id} document={doc} workspaceId={workspaceId} canEdit={canEdit} />
+              ))}
+            </>
           )}
         </div>
       )}
@@ -136,7 +239,7 @@ function FolderRow({
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleDelete}
         isLoading={deleteMutation.isPending}
-        title={`Delete Folder "${name}"?`}
+        title={`Delete Folder "${folder.name}"?`}
         description="This action cannot be undone. All documents inside this folder will also be deleted or orphaned depending on your settings."
         confirmText="Delete Folder"
       />
@@ -157,8 +260,14 @@ function DocumentRow({
   const { openTab, closeTab } = useTabStore()
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const deleteMutation = useDeleteDocument(workspaceId)
+  const { user } = useAuthStore()
+  const { data: activeWorkspace } = useWorkspace(workspaceId)
   
   const isSelected = selectedDocumentId === document.id
+  const role = activeWorkspace?.currentUserRole
+  const canDeleteDocument = 
+    role === 'owner' || 
+    (role === 'editor' && document.uploadedById === user?.id)
   
   const handleOpen = () => {
     setSelectedDocument(document.id)
@@ -180,11 +289,20 @@ function DocumentRow({
     })
   }
 
+  const handleDragStart = (e: React.DragEvent) => {
+    e.stopPropagation()
+    e.dataTransfer.setData('application/json', JSON.stringify({ type: 'document', id: document.id, folderId: document.folderId }))
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
   return (
     <>
       <div
+        draggable={canEdit}
+        onDragStart={canEdit ? handleDragStart : undefined}
         className={cn(
-          "flex items-center justify-between w-full px-2 py-1.5 rounded-md text-sm text-left transition-colors group relative cursor-pointer",
+          "flex items-center justify-between w-full px-2 py-1.5 rounded-md text-sm text-left transition-colors group relative select-none",
+          canEdit ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
           isSelected ? "bg-surface-100 text-surface-900" : "text-surface-600 hover:bg-surface-100"
         )}
         onClick={handleOpen}
@@ -202,13 +320,15 @@ function DocumentRow({
                 <DropdownMenuItem onClick={() => {}} icon={<Edit2 className="h-4 w-4" />}>
                   Rename
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  destructive
-                  onClick={() => setIsDeleteModalOpen(true)}
-                  icon={<Trash2 className="h-4 w-4" />}
-                >
-                  Delete
-                </DropdownMenuItem>
+                {canDeleteDocument && (
+                  <DropdownMenuItem
+                    destructive
+                    onClick={() => setIsDeleteModalOpen(true)}
+                    icon={<Trash2 className="h-4 w-4" />}
+                  >
+                    Delete
+                  </DropdownMenuItem>
+                )}
               </DropdownMenu>
             </div>
           )}

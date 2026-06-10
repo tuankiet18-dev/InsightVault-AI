@@ -60,6 +60,7 @@ export interface FolderDto {
   parentFolderId?: string | null;
   name: string;
   description?: string | null;
+  createdById?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -68,6 +69,7 @@ export interface DocumentDto {
   id: string;
   workspaceId: string;
   folderId?: string | null;
+  uploadedById?: string | null;
   fileName: string;
   originalFileName: string;
   fileType: string;

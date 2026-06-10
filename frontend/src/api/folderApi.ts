@@ -11,6 +11,7 @@ export interface UpdateFolderData {
   name?: string;
   description?: string;
   parentFolderId?: string | null;
+  hasParentFolderId?: boolean;
 }
 
 export const folderApi = {

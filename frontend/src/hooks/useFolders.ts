@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { folderApi, type CreateFolderData, type UpdateFolderData } from '../api/folderApi';
+import { documentKeys } from './useDocuments';
 
 export const folderKeys = {
   all: ['folders'] as const,
@@ -64,6 +65,8 @@ export const useDeleteFolder = (workspaceId: string) => {
     mutationFn: (folderId: string) => folderApi.deleteFolder(folderId),
     onSuccess: (_, deletedId) => {
       queryClient.invalidateQueries({ queryKey: folderKeys.lists(workspaceId) });
+      queryClient.invalidateQueries({ queryKey: documentKeys.lists(workspaceId) });
+      queryClient.invalidateQueries({ queryKey: documentKeys.trashLists(workspaceId) });
       queryClient.removeQueries({ queryKey: folderKeys.detail(deletedId) });
       toast.success('Folder deleted successfully');
     },
