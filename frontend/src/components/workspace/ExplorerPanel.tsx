@@ -18,7 +18,7 @@ export function ExplorerPanel() {
   const { workspaces, folders, documents, activeWorkspaceId, openDocument, activeTabId } =
     useWorkspace();
   const ws = workspaces.find((w) => w.id === activeWorkspaceId);
-  const { setCreateFolderModalOpen, openUploadModal } = useUiStore();
+  const { openCreateFolderModal, openUploadModal } = useUiStore();
 
   return (
     <aside className="flex h-full w-full flex-col border-r border-border bg-card">
@@ -36,7 +36,7 @@ export function ExplorerPanel() {
               onClick={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                setCreateFolderModalOpen(true);
+                openCreateFolderModal();
               }}
               className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-muted rounded transition-opacity"
               title="New Folder"
