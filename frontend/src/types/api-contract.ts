@@ -7,6 +7,17 @@ export type DocumentStatus =
   | 'processing'
   | 'completed'
   | 'failed'
+export type DocumentType =
+  | 'prd'
+  | 'mvp_spec'
+  | 'business_proposal'
+  | 'meeting_note'
+  | 'technical_doc'
+  | 'project_report'
+  | 'cv_profile'
+  | 'research_note'
+  | 'internal_knowledge'
+  | 'general_document'
 export type AiJobType =
   | 'process_document'
   | 'generate_summary'
@@ -84,13 +95,25 @@ export type DocumentDto = {
   mimeType?: string | null
   fileSizeBytes: number
   status: DocumentStatus
+  documentType?: DocumentType | string | null
+  documentTypeConfidence?: number | null
+  audienceFit?: string | null
   summary?: string | null
   keyPoints: string[]
+  insights?: DocumentInsightsDto | null
   keywords: string[]
   processingError?: string | null
   processedAt?: string | null
   createdAt: string
   updatedAt: string
+}
+
+export type DocumentInsightsDto = {
+  scope: string[]
+  decisions: string[]
+  risks: string[]
+  gaps: string[]
+  nextActions: string[]
 }
 
 export type AiJobDto = {

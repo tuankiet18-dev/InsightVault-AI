@@ -124,6 +124,7 @@ Required order for a document purge:
 - `documents` has filtered unique indexes for active file names per folder:
   - `(workspace_id, folder_id, file_name)` where `folder_id IS NOT NULL AND deleted_at IS NULL`
   - `(workspace_id, file_name)` where `folder_id IS NULL AND deleted_at IS NULL`
+- `documents` stores document intelligence output: `document_type`, `document_type_confidence`, `audience_fit`, and `insights` jsonb.
 - `reports` has `report_group_id` and `version_number`; `(workspace_id, report_group_id, version_number)` is unique.
 
 ## DBML

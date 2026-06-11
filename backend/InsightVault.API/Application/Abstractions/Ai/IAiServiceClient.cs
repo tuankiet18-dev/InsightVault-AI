@@ -21,10 +21,21 @@ public sealed record ProcessDocumentResult(
     string Status,
     Guid DocumentId,
     int ChunkCount,
+    string DocumentType,
+    double DocumentTypeConfidence,
+    string AudienceFit,
     string Summary,
     IReadOnlyList<string> KeyPoints,
+    ProcessDocumentInsights Insights,
     IReadOnlyList<string> Keywords,
     string? Error);
+
+public sealed record ProcessDocumentInsights(
+    IReadOnlyList<string> Scope,
+    IReadOnlyList<string> Decisions,
+    IReadOnlyList<string> Risks,
+    IReadOnlyList<string> Gaps,
+    IReadOnlyList<string> NextActions);
 
 public sealed record GenerateReportAiRequest(
     Guid WorkspaceId,

@@ -214,8 +214,12 @@ public sealed class DocumentProcessingWorker(
         job.CompletedAt = now;
         job.UpdatedAt = now;
         document.Status = DocumentStatus.Completed;
+        document.DocumentType = result.DocumentType;
+        document.DocumentTypeConfidence = result.DocumentTypeConfidence;
+        document.AudienceFit = result.AudienceFit;
         document.Summary = result.Summary;
         document.KeyPoints = JsonSerializer.Serialize(result.KeyPoints, JsonOptions);
+        document.Insights = JsonSerializer.Serialize(result.Insights, JsonOptions);
         document.Keywords = JsonSerializer.Serialize(result.Keywords, JsonOptions);
         document.ProcessingError = result.Error;
         document.ProcessedAt = now;

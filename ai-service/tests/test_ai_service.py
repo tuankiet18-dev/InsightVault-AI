@@ -11,7 +11,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from main import app  # noqa: E402
 from services.chunker import chunk_text  # noqa: E402
 from services.extractor import extract  # noqa: E402
-from services import compare_service, rag_service, report_service  # noqa: E402
+from services import compare_service, rag_service, report_service, summarizer  # noqa: E402
+from services.document_classifier import classify_document  # noqa: E402
 from services.text_normalizer import normalize_for_sparse_search  # noqa: E402
 from services.vector_store import _reciprocal_rank_fusion  # noqa: E402
 from core.chat_provider import GroqChatProvider  # noqa: E402
@@ -74,6 +75,44 @@ class ApiValidationTests(unittest.TestCase):
 
 
 class AiServiceUnitTests(unittest.TestCase):
+    def test_classifier_detects_mvp_spec_for_product_scope_docs(self) -> None:
+        result = classify_document(
+            "The Minute MVP scope includes user flow, core features, out of scope mobile tracking, and AI role.",
+            "THE MINUTE.md",
+        )
+
+        self.assertEqual(result.document_type, "mvp_spec")
+        self.assertEqual(result.audience_fit, "students_founders_pm_ba")
+        self.assertGreaterEqual(result.confidence, 0.45)
+
+    def test_summarizer_returns_new_document_intelligence_schema(self) -> None:
+        payload = {
+            "document_type": "mvp_spec",
+            "document_type_confidence": 0.88,
+            "audience_fit": "students_founders_pm_ba",
+            "summary": "The Minute is an MVP spec for a map-based memory journaling web app.",
+            "key_points": ["Core MVP: Map, memory nodes, and timeline are central."],
+            "insights": {
+                "scope": ["Web MVP focuses on manual memory capture."],
+                "decisions": ["Keep background tracking out of MVP."],
+                "risks": ["Users may not maintain journaling habits."],
+                "gaps": ["AI effectiveness needs validation."],
+                "next_actions": ["Define acceptance criteria for memory node creation."],
+            },
+            "keywords": ["mvp", "memory", "journaling"],
+        }
+
+        with patch.object(summarizer.chat_model, "generate_text", return_value=json.dumps(payload)):
+            result = summarizer.generate_summary(
+                "MVP scope, user flow, core features, out of scope, AI role",
+                "THE MINUTE.md",
+            )
+
+        self.assertEqual(result["document_type"], "mvp_spec")
+        self.assertEqual(result["document_type_confidence"], 0.88)
+        self.assertEqual(result["insights"]["next_actions"], payload["insights"]["next_actions"])
+        self.assertEqual(result["keywords"], ["mvp", "memory", "journaling"])
+
     def test_groq_provider_uses_openai_compatible_chat_completion(self) -> None:
         fake_response = type(
             "FakeResponse",

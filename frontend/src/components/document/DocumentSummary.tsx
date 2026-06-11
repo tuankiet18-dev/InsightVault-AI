@@ -1,9 +1,17 @@
 import type { DocumentDto } from '@/types/api-contract'
-import { AlertCircle, Tag, FileText, Loader2 } from 'lucide-react'
+import { AlertCircle, FileText, Loader2, Sparkles, Tag } from 'lucide-react'
 import { useRetryProcessing } from '@/hooks/useDocuments'
 
 export function DocumentSummary({ document }: { document: DocumentDto }) {
   const retryMutation = useRetryProcessing(document.workspaceId)
+  const insights = document.insights
+  const insightGroups = [
+    { id: 'scope', title: 'Scope', items: insights?.scope ?? [] },
+    { id: 'decisions', title: 'Decisions', items: insights?.decisions ?? [] },
+    { id: 'risks', title: 'Risks', items: insights?.risks ?? [] },
+    { id: 'gaps', title: 'Gaps', items: insights?.gaps ?? [] },
+    { id: 'next-actions', title: 'Next Actions', items: insights?.nextActions ?? [] },
+  ].filter((group) => group.items.length > 0)
 
   if (document.status === 'processing') {
     return (
@@ -24,8 +32,10 @@ export function DocumentSummary({ document }: { document: DocumentDto }) {
           <AlertCircle className="w-5 h-5" />
           Processing Failed
         </div>
-        <p className="text-sm text-danger-600 mb-4">{document.processingError || 'An unknown error occurred during AI processing.'}</p>
-        <button 
+        <p className="text-sm text-danger-600 mb-4">
+          {document.processingError || 'An unknown error occurred during AI processing.'}
+        </p>
+        <button
           onClick={() => retryMutation.mutate(document.id)}
           disabled={retryMutation.isPending}
           className="self-start px-4 py-2 bg-white text-danger-700 border border-danger-200 rounded-lg text-sm font-medium shadow-sm hover:bg-danger-50 transition-colors flex items-center gap-2 disabled:opacity-50"
@@ -51,8 +61,22 @@ export function DocumentSummary({ document }: { document: DocumentDto }) {
       {document.summary && (
         <section id="ai-summary" className="scroll-mt-6">
           <h2 className="flex items-center gap-2 text-lg font-bold text-surface-900 mb-4 border-b border-border pb-2">
-            <span className="text-ai-500">✨</span> AI Summary
+            <Sparkles className="w-4 h-4 text-ai-500" /> AI Summary
           </h2>
+          {(document.documentType || document.documentTypeConfidence) && (
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              {document.documentType && (
+                <span className="inline-flex items-center rounded bg-ai-50 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-ai-700 border border-ai-100">
+                  {formatDocumentType(document.documentType)}
+                </span>
+              )}
+              {typeof document.documentTypeConfidence === 'number' && (
+                <span className="text-[11px] text-surface-500">
+                  {Math.round(document.documentTypeConfidence * 100)}% confidence
+                </span>
+              )}
+            </div>
+          )}
           <p className="text-surface-700 leading-relaxed">{document.summary}</p>
         </section>
       )}
@@ -73,6 +97,28 @@ export function DocumentSummary({ document }: { document: DocumentDto }) {
         </section>
       )}
 
+      {insightGroups.length > 0 && (
+        <section id="document-insights" className="mt-8 scroll-mt-6">
+          <h2 className="text-lg font-bold text-surface-900 mb-4 border-b border-border pb-2">
+            Document Intelligence
+          </h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            {insightGroups.map((group) => (
+              <div key={group.id} className="border border-border rounded-lg p-4 bg-white">
+                <h3 className="text-sm font-semibold text-surface-900 mb-2">{group.title}</h3>
+                <ul className="space-y-2">
+                  {group.items.map((item, i) => (
+                    <li key={i} className="text-sm text-surface-700 leading-6">
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {document.keywords && document.keywords.length > 0 && (
         <section id="keywords" className="mt-8 scroll-mt-6">
           <h2 className="text-sm font-semibold text-surface-500 uppercase tracking-wider mb-3">
@@ -90,4 +136,8 @@ export function DocumentSummary({ document }: { document: DocumentDto }) {
       )}
     </article>
   )
+}
+
+function formatDocumentType(value: string) {
+  return value.replace(/_/g, ' ')
 }

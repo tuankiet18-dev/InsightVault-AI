@@ -82,8 +82,18 @@ type DocumentDto = {
   mimeType?: string | null;
   fileSizeBytes: number;
   status: DocumentStatus;
+  documentType?: string | null;
+  documentTypeConfidence?: number | null;
+  audienceFit?: string | null;
   summary?: string | null;
   keyPoints: string[];
+  insights?: {
+    scope: string[];
+    decisions: string[];
+    risks: string[];
+    gaps: string[];
+    nextActions: string[];
+  } | null;
   keywords: string[];
   processingError?: string | null;
   processedAt?: string | null;
@@ -594,8 +604,18 @@ Response:
   "status": "success",
   "document_id": "uuid",
   "chunk_count": 12,
+  "document_type": "mvp_spec",
+  "document_type_confidence": 0.86,
+  "audience_fit": "students_founders_pm_ba",
   "summary": "...",
   "key_points": [],
+  "insights": {
+    "scope": [],
+    "decisions": [],
+    "risks": [],
+    "gaps": [],
+    "next_actions": []
+  },
   "keywords": [],
   "error": null
 }

@@ -176,7 +176,10 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
             entity.Property(x => x.MinioBucket).HasMaxLength(255).IsRequired();
             entity.Property(x => x.MinioObjectKey).IsRequired();
             entity.Property(x => x.Status).HasConversion(statusConverter).HasMaxLength(50).IsRequired();
+            entity.Property(x => x.DocumentType).HasMaxLength(100);
+            entity.Property(x => x.AudienceFit).HasMaxLength(100);
             entity.Property(x => x.KeyPoints).HasColumnType("jsonb").HasDefaultValueSql("'[]'::jsonb");
+            entity.Property(x => x.Insights).HasColumnType("jsonb").HasDefaultValueSql("'{}'::jsonb");
             entity.Property(x => x.Keywords).HasColumnType("jsonb").HasDefaultValueSql("'[]'::jsonb");
             entity.Property(x => x.ExtractedTextHash).HasMaxLength(128);
             entity.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
@@ -208,8 +211,10 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
                 .HasFilter("folder_id IS NULL AND deleted_at IS NULL");
             entity.HasIndex(x => x.UploadedById);
             entity.HasIndex(x => x.Status);
+            entity.HasIndex(x => x.DocumentType);
             entity.HasIndex(x => x.CreatedAt);
             entity.HasIndex(x => x.DeletedAt);
+            entity.HasIndex(x => x.Insights).HasMethod("gin");
         });
     }
 

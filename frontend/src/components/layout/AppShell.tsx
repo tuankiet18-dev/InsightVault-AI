@@ -15,7 +15,7 @@ export function AppShell({ children, rightPanel }: { children: ReactNode; rightP
   const { explorerOpen, inspectorOpen } = useUiStore()
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
+    <div className="flex h-[100dvh] w-screen flex-col overflow-hidden bg-background text-foreground">
       <div className="flex min-h-0 flex-1">
         <ActivityRail />
         <div className="flex min-w-0 flex-1 flex-col">
@@ -39,7 +39,7 @@ export function AppShell({ children, rightPanel }: { children: ReactNode; rightP
               <div
                 className={cn(
                   "hidden shrink-0 overflow-hidden transition-[width] duration-200 ease-out xl:block",
-                  inspectorOpen ? "xl:w-[380px]" : "xl:w-0"
+                  inspectorOpen ? "xl:w-[340px]" : "xl:w-0"
                 )}
               >
                 <aside className="flex h-full w-full min-w-0 flex-col border-l border-border bg-card">

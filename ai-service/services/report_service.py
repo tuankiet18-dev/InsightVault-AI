@@ -25,6 +25,17 @@ ReportType = Literal[
     "custom_report",
 ]
 
+_DISTILLATION_RULES = """NGUYEN TAC PHAN TICH THEO LLM WIKI:
+- Khong chi tom tat noi dung; hay chat loc tri thuc quan trong de nguoi dung ra quyet dinh.
+- Uu tien: muc tieu, quyet dinh, insight, rui ro, gap, mau thuan, rang buoc, so lieu, deadline, va hanh dong tiep theo.
+- Bo qua boilerplate, loi mo dau, cau lap, vi du phu, va chi tiet khong co tac dong.
+- Khong bia thong tin ngoai tai lieu.
+- Neu mot nhan dinh la suy luan tu tai lieu, them hau to "^[inferred]".
+- Neu tai lieu mo ho, thieu bang chung, hoac cac nguon co the mau thuan, them hau to "^[ambiguous]".
+- Khi co nhieu tai lieu, tong hop theo chu de va tac dong, khong tom tat may moc tung file neu dieu do lam bao cao dai dong.
+- Moi bao cao nen co phan "Diem chinh can nho" va, neu phu hop, "Gap/Rui ro" va "Hanh dong de xuat".
+"""
+
 _REPORT_PROMPTS: dict[str, str] = {
     "summary_report": """Bạn là trợ lý tổng hợp tài liệu chuyên nghiệp.
 
@@ -169,6 +180,8 @@ def generate_report(
         )
     else:
         prompt = prompt_template.format(documents_section=documents_section)
+
+    prompt = f"{_DISTILLATION_RULES}\n\n{prompt}"
 
     last_error: Exception | None = None
     delay = settings.GEMINI_RETRY_DELAY

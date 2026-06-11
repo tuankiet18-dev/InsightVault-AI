@@ -3,6 +3,17 @@ export type SystemRole = "user" | "admin";
 export type WorkspaceRole = "owner" | "editor" | "viewer";
 export type MemberStatus = "invited" | "active" | "removed";
 export type DocumentStatus = "pending_upload" | "uploaded" | "processing" | "completed" | "failed";
+export type DocumentType =
+  | "prd"
+  | "mvp_spec"
+  | "business_proposal"
+  | "meeting_note"
+  | "technical_doc"
+  | "project_report"
+  | "cv_profile"
+  | "research_note"
+  | "internal_knowledge"
+  | "general_document";
 export type AiJobType =
   | "process_document"
   | "generate_summary"
@@ -76,13 +87,25 @@ export interface DocumentDto {
   mimeType?: string | null;
   fileSizeBytes: number;
   status: DocumentStatus;
+  documentType?: DocumentType | string | null;
+  documentTypeConfidence?: number | null;
+  audienceFit?: string | null;
   summary?: string | null;
   keyPoints: string[];
+  insights?: DocumentInsightsDto | null;
   keywords: string[];
   processingError?: string | null;
   processedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface DocumentInsightsDto {
+  scope: string[];
+  decisions: string[];
+  risks: string[];
+  gaps: string[];
+  nextActions: string[];
 }
 
 export interface AiJobDto {

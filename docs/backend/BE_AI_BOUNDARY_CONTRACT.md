@@ -110,8 +110,18 @@ Response:
   "status": "success",
   "document_id": "uuid",
   "chunk_count": 12,
+  "document_type": "mvp_spec",
+  "document_type_confidence": 0.86,
+  "audience_fit": "students_founders_pm_ba",
   "summary": "Short summary",
   "key_points": ["Point 1"],
+  "insights": {
+    "scope": ["Core scope item"],
+    "decisions": ["Decision or strong conclusion"],
+    "risks": ["Risk or constraint"],
+    "gaps": ["Missing or ambiguous information"],
+    "next_actions": ["Recommended next action"]
+  },
   "keywords": ["keyword"],
   "error": null
 }
@@ -120,7 +130,8 @@ Response:
 Target persistence:
 
 - AI returns result.
-- Backend persists document status, summary, key points, keywords, and `ai_jobs`.
+- Backend persists document status, document intelligence fields, summary, key points, keywords, and `ai_jobs`.
+- Document intelligence fields are `document_type`, `document_type_confidence`, `audience_fit`, and `insights` JSON.
 - Vector chunk persistence may temporarily remain in AI for MVP.
 
 ### RAG Query

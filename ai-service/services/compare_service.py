@@ -14,38 +14,45 @@ from services.report_store import insert_report
 
 logger = logging.getLogger(__name__)
 
-_COMPARE_PROMPT = """Bạn là chuyên gia phân tích tài liệu kỹ thuật.
-
-Hãy so sánh các tài liệu sau và trả về kết quả theo định dạng JSON chính xác.
+_COMPARE_PROMPT = """Bạn là chuyên gia phân tích tài liệu kỹ thuật của InsightVault.
+Hãy so sánh các tài liệu theo tinh thần "LLM Wiki": chắt lọc khác biệt có tác động,
+gap quan trọng, mâu thuẫn cần xử lý, và đề xuất hành động rõ ràng.
 
 {documents_section}
 
-NHIỆM VỤ: Phân tích và so sánh toàn diện các tài liệu trên.
+Nguyên tắc:
+- Ưu tiên khác biệt làm thay đổi quyết định, phạm vi, rủi ro, deadline, chi phí, hoặc cách thực hiện.
+- Không liệt kê khác biệt bề mặt nếu không có tác động.
+- missing_information phải là gap quan trọng cần bổ sung, không phải mọi chi tiết vắng mặt.
+- potential_conflicts chỉ ghi khi có dấu hiệu mâu thuẫn thật sự; nếu chưa chắc, thêm "^[ambiguous]".
+- Nếu một nhận định là suy luận từ nhiều tài liệu, thêm "^[inferred]".
+- recommendations phải cụ thể và có thể hành động.
+- Không bịa thông tin ngoài tài liệu.
 
-Trả về JSON với cấu trúc sau (KHÔNG có text ngoài JSON):
+Trả về JSON với cấu trúc sau, KHÔNG có text ngoài JSON:
 {{
-  "objectives": "Mục tiêu/mục đích của các tài liệu này",
-  "scope": "Phạm vi và quy mô được đề cập",
+  "objectives": "Mục tiêu/mục đích chung hoặc khác biệt mục tiêu giữa các tài liệu",
+  "scope": "Phạm vi, đối tượng, ràng buộc, và giới hạn được đề cập",
   "similarities": [
-    "Điểm giống nhau 1",
-    "Điểm giống nhau 2"
+    "Điểm giống nhau có ý nghĩa 1",
+    "Điểm giống nhau có ý nghĩa 2"
   ],
   "differences": [
-    "Điểm khác nhau 1",
-    "Điểm khác nhau 2"
+    "Khác biệt có tác động 1",
+    "Khác biệt có tác động 2"
   ],
   "missing_information": [
-    "Thông tin có trong tài liệu A nhưng không có trong tài liệu B",
-    "Gap hoặc thiếu sót quan trọng"
+    "Gap quan trọng cần bổ sung",
+    "Thông tin thiếu có thể ảnh hưởng quyết định"
   ],
   "potential_conflicts": [
-    "Mâu thuẫn tiềm năng giữa các tài liệu"
+    "Mâu thuẫn hoặc điểm chưa thống nhất giữa các tài liệu"
   ],
   "recommendations": [
-    "Đề xuất cải thiện 1",
-    "Đề xuất cải thiện 2"
+    "Hành động đề xuất cụ thể 1",
+    "Hành động đề xuất cụ thể 2"
   ],
-  "raw_markdown": "# So Sánh Tài Liệu\\n\\n## Điểm Giống Nhau\\n..."
+  "raw_markdown": "# So Sánh Tài Liệu\\n\\n## Điểm Chính Cần Nhớ\\n...\\n\\n## Gap/Rủi Ro\\n...\\n\\n## Hành Động Đề Xuất\\n..."
 }}"""
 
 
@@ -89,16 +96,16 @@ def compare_documents(
 
     Returns:
         dict with: objectives, scope, similarities, differences,
-                   missing_information, potential_conflicts, recommendations, raw_markdown
+                   missing_information, potential_conflicts, recommendations, raw_markdown.
     """
     logger.info("Comparing %d documents: %s", len(document_ids), document_ids)
 
-    # Fetch content for each document
+    # Fetch content for each document.
     documents_section_parts = []
     for doc_id, doc_name in zip(document_ids, document_names):
         content = _get_document_content_for_compare(doc_id)
         if not content:
-            content = "(Không có nội dung — tài liệu chưa được xử lý)"
+            content = "(Không có nội dung - tài liệu chưa được xử lý)"
         documents_section_parts.append(
             f"=== TÀI LIỆU: {doc_name} ===\n{content}"
         )

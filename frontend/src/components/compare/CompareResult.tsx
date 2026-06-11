@@ -1,7 +1,8 @@
-import type { CompareDocumentsResponse } from '@/types/api-contract'
+import type { ReactNode } from 'react'
+import type { CompareResponse } from '@/types/api'
 import { CheckCircle2, AlertTriangle, XCircle, Info, ChevronRight } from 'lucide-react'
 
-export function CompareResult({ result }: { result: CompareDocumentsResponse }) {
+export function CompareResult({ result }: { result: CompareResponse }) {
   return (
     <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <section className="bg-surface-0 p-6 rounded-xl border border-border shadow-sm">
@@ -76,7 +77,7 @@ function ResultList({
 }: { 
   title: string
   items: string[]
-  icon: React.ReactNode
+  icon: ReactNode
   bgColor: string
   borderColor: string
 }) {

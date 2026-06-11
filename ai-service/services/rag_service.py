@@ -1,6 +1,6 @@
 """
 RAG (Retrieval-Augmented Generation) service.
-Pipeline: embed question → retrieve chunks → build prompt → call Gemini → return answer + sources.
+Pipeline: embed question -> retrieve chunks -> build prompt -> call Gemini -> return answer + sources.
 """
 
 import logging
@@ -13,14 +13,20 @@ from services.vector_store import hybrid_search
 
 logger = logging.getLogger(__name__)
 
-_RAG_PROMPT_TEMPLATE = """Bạn là trợ lý AI của InsightVault, giúp người dùng hiểu nội dung tài liệu trong workspace.
+_RAG_PROMPT_TEMPLATE = """Bạn là trợ lý AI của InsightVault, giúp người dùng hiểu tài liệu trong workspace.
+Hãy trả lời theo tinh thần "LLM Wiki": chắt lọc điều quan trọng từ bằng chứng đã truy xuất,
+không kể lại toàn bộ context.
 
 HƯỚNG DẪN QUAN TRỌNG:
-- CHỈ trả lời dựa trên các đoạn tài liệu được cung cấp bên dưới (Context).
-- Nếu Context không có đủ thông tin để trả lời, hãy nói rõ: "Tôi không tìm thấy thông tin liên quan trong các tài liệu hiện có."
+- CHỈ trả lời dựa trên các đoạn tài liệu được cung cấp trong Context.
+- Nếu Context không đủ thông tin, nói rõ: "Tôi không tìm thấy thông tin liên quan trong các tài liệu hiện có."
 - KHÔNG bịa đặt thông tin không có trong tài liệu.
-- Trả lời bằng ngôn ngữ của câu hỏi (tiếng Việt hoặc tiếng Anh).
-- Trích dẫn nguồn tài liệu khi có thể.
+- Trả lời bằng ngôn ngữ của câu hỏi.
+- Ưu tiên câu trả lời có cấu trúc ngắn: kết luận trực tiếp, các ý chính, bằng chứng, gap/rủi ro nếu có.
+- Khi một ý là suy luận từ context chứ không được nói trực tiếp, đánh dấu "^[inferred]".
+- Khi context mơ hồ, thiếu căn cứ, hoặc các nguồn có khả năng mâu thuẫn, đánh dấu "^[ambiguous]".
+- Trích dẫn nguồn bằng dạng [1], [2] tương ứng với Context khi có thể.
+- Nếu người dùng hỏi "tóm tắt", hãy tóm tắt đúng trọng tâm: mục tiêu, quyết định, rủi ro, gap, hành động tiếp theo.
 
 {chat_history_section}
 
@@ -54,7 +60,7 @@ def _build_chat_history(chat_history: list[dict]) -> str:
     if not chat_history:
         return ""
     lines = []
-    for msg in chat_history[-6:]:  # Keep last 6 turns to limit context size
+    for msg in chat_history[-6:]:  # Keep last 6 turns to limit context size.
         role = "Người dùng" if msg.get("role") == "user" else "AI"
         lines.append(f"{role}: {msg.get('content', '')}")
     return "\n".join(lines)
@@ -75,7 +81,7 @@ def query(
     Args:
         question: User's question (Vietnamese or English).
         workspace_id: Required for permission scoping.
-        scope: "workspace" | "folder" | "document"
+        scope: "workspace" | "folder" | "document".
         folder_id: Required when scope="folder".
         document_ids: Required when scope="document".
         top_k: Number of chunks to retrieve.
@@ -86,10 +92,10 @@ def query(
     """
     logger.info("RAG query: scope=%s workspace=%s question=%r", scope, workspace_id, question[:80])
 
-    # Step 1: Embed the question
+    # Step 1: Embed the question.
     query_vector = embed_query(question)
 
-    # Step 2: Retrieve relevant chunks with hybrid dense + sparse search
+    # Step 2: Retrieve relevant chunks with hybrid dense + sparse search.
     chunks = hybrid_search(
         query_text=question,
         query_vector=query_vector,
@@ -106,7 +112,7 @@ def query(
             "sources": [],
         }
 
-    # Step 3: Build prompt
+    # Step 3: Build prompt.
     context_block = _build_context_block(chunks)
     history_text = _build_chat_history(chat_history or [])
     chat_history_section = (
@@ -119,7 +125,7 @@ def query(
         question=question,
     )
 
-    # Step 4: Call Gemini with retry
+    # Step 4: Call Gemini with retry.
     last_error: Exception | None = None
     delay = settings.GEMINI_RETRY_DELAY
 
@@ -138,7 +144,7 @@ def query(
             f"RAG Gemini call failed after {settings.GEMINI_MAX_RETRIES} retries: {last_error}"
         )
 
-    # Step 5: Format sources/citations
+    # Step 5: Format sources/citations.
     sources = [
         {
             "chunk_id": chunk["chunk_id"],

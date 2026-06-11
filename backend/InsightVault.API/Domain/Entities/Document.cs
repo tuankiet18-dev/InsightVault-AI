@@ -16,8 +16,12 @@ public sealed class Document
     public string MinioBucket { get; set; } = string.Empty;
     public string MinioObjectKey { get; set; } = string.Empty;
     public DocumentStatus Status { get; set; } = DocumentStatus.Uploaded;
+    public string? DocumentType { get; set; }
+    public double? DocumentTypeConfidence { get; set; }
+    public string? AudienceFit { get; set; }
     public string? Summary { get; set; }
     public string KeyPoints { get; set; } = "[]";
+    public string Insights { get; set; } = "{}";
     public string Keywords { get; set; } = "[]";
     public string? ExtractedTextHash { get; set; }
     public string? ProcessingError { get; set; }

@@ -42,8 +42,17 @@ public sealed class AiServiceClient(HttpClient httpClient) : IAiServiceClient
             result.Status,
             result.DocumentId,
             result.ChunkCount,
+            string.IsNullOrWhiteSpace(result.DocumentType) ? "general_document" : result.DocumentType,
+            result.DocumentTypeConfidence,
+            string.IsNullOrWhiteSpace(result.AudienceFit) ? "students_founders_pm_ba" : result.AudienceFit,
             result.Summary,
             result.KeyPoints,
+            new ProcessDocumentInsights(
+                result.Insights?.Scope ?? [],
+                result.Insights?.Decisions ?? [],
+                result.Insights?.Risks ?? [],
+                result.Insights?.Gaps ?? [],
+                result.Insights?.NextActions ?? []),
             result.Keywords,
             result.Error);
     }
@@ -140,10 +149,21 @@ public sealed class AiServiceClient(HttpClient httpClient) : IAiServiceClient
         [property: JsonPropertyName("status")] string Status,
         [property: JsonPropertyName("document_id")] Guid DocumentId,
         [property: JsonPropertyName("chunk_count")] int ChunkCount,
+        [property: JsonPropertyName("document_type")] string DocumentType,
+        [property: JsonPropertyName("document_type_confidence")] double DocumentTypeConfidence,
+        [property: JsonPropertyName("audience_fit")] string AudienceFit,
         [property: JsonPropertyName("summary")] string Summary,
         [property: JsonPropertyName("key_points")] IReadOnlyList<string> KeyPoints,
+        [property: JsonPropertyName("insights")] ProcessDocumentInsightsResponse? Insights,
         [property: JsonPropertyName("keywords")] IReadOnlyList<string> Keywords,
         [property: JsonPropertyName("error")] string? Error);
+
+    private sealed record ProcessDocumentInsightsResponse(
+        [property: JsonPropertyName("scope")] IReadOnlyList<string> Scope,
+        [property: JsonPropertyName("decisions")] IReadOnlyList<string> Decisions,
+        [property: JsonPropertyName("risks")] IReadOnlyList<string> Risks,
+        [property: JsonPropertyName("gaps")] IReadOnlyList<string> Gaps,
+        [property: JsonPropertyName("next_actions")] IReadOnlyList<string> NextActions);
 
     private sealed record GenerateReportRequest(
         [property: JsonPropertyName("workspace_id")] Guid WorkspaceId,

@@ -643,8 +643,12 @@ public sealed class DocumentService(
             document.MimeType,
             document.FileSizeBytes,
             ToApiDocumentStatus(document.Status),
+            document.DocumentType,
+            document.DocumentTypeConfidence,
+            document.AudienceFit,
             document.Summary,
             DeserializeStringList(document.KeyPoints),
+            DeserializeInsights(document.Insights),
             DeserializeStringList(document.Keywords),
             document.ProcessingError,
             document.ProcessedAt,
@@ -676,6 +680,24 @@ public sealed class DocumentService(
         {
             return [];
         }
+    }
+
+    private static DocumentInsightsDto DeserializeInsights(string json)
+    {
+        try
+        {
+            var result = JsonSerializer.Deserialize<DocumentInsightsDto>(json, JsonOptions);
+            return result ?? EmptyInsights();
+        }
+        catch (JsonException)
+        {
+            return EmptyInsights();
+        }
+    }
+
+    private static DocumentInsightsDto EmptyInsights()
+    {
+        return new DocumentInsightsDto([], [], [], [], []);
     }
 
     private static ApiDocumentStatus ToApiDocumentStatus(DocumentStatus status)

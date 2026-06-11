@@ -42,8 +42,11 @@ Da bo sung:
 - Set document status thanh `processing` khi bat dau `/process-document`.
 - Neu pipeline loi, set document status thanh `failed` va ghi `processing_error`.
 - Neu thanh cong, set document status thanh `completed`.
-- Persist `summary`, `key_points`, `keywords`, `processed_at`, `updated_at`.
-- Giu response cu: `document_id`, `chunk_count`, `summary`, `key_points`, `keywords`.
+- Persist `summary`, `key_points`, `keywords`, `document_type`, `document_type_confidence`, `audience_fit`, `insights`, `processed_at`, `updated_at`.
+- Response `/process-document` now includes document intelligence fields while keeping `document_id`, `chunk_count`, `summary`, `key_points`, and `keywords`.
+- Target users: students, small founders, PMs and BAs working with project documents.
+- Primary document types: PRD, MVP spec, business proposal, meeting note, technical doc, and project report.
+- Secondary document types: CV/profile, research note, and internal knowledge docs.
 
 ### Report persistence
 

@@ -13,10 +13,21 @@ public sealed record DocumentDto(
     string? MimeType,
     long FileSizeBytes,
     ApiDocumentStatus Status,
+    string? DocumentType,
+    double? DocumentTypeConfidence,
+    string? AudienceFit,
     string? Summary,
     IReadOnlyList<string> KeyPoints,
+    DocumentInsightsDto Insights,
     IReadOnlyList<string> Keywords,
     string? ProcessingError,
     DateTimeOffset? ProcessedAt,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
+
+public sealed record DocumentInsightsDto(
+    IReadOnlyList<string> Scope,
+    IReadOnlyList<string> Decisions,
+    IReadOnlyList<string> Risks,
+    IReadOnlyList<string> Gaps,
+    IReadOnlyList<string> NextActions);
