@@ -31,6 +31,16 @@ public sealed class RabbitMqMessagePublisher(
             cancellationToken);
     }
 
+    public async Task PublishEmailAsync(
+        EmailMessage message,
+        CancellationToken cancellationToken = default)
+    {
+        await PublishAsync(
+            options.Value.EmailQueue,
+            message,
+            cancellationToken);
+    }
+
     private async Task PublishAsync<TMessage>(
         string queueName,
         TMessage message,

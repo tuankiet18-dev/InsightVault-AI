@@ -12,6 +12,8 @@ using InsightVault.API.Infrastructure.BackgroundJobs;
 using InsightVault.API.Infrastructure.Messaging;
 using InsightVault.API.Infrastructure.Persistence.Repositories;
 using InsightVault.API.Infrastructure.Storage;
+using InsightVault.API.Application.Abstractions.Services.Emails;
+using InsightVault.API.Infrastructure.Emails;
 
 namespace InsightVault.API.Infrastructure;
 
@@ -37,6 +39,13 @@ public static class DependencyInjection
             .Validate(options => !string.IsNullOrWhiteSpace(options.Password), "RabbitMQ:Password is required.")
             .Validate(options => !string.IsNullOrWhiteSpace(options.DocumentProcessingQueue), "RabbitMQ:DocumentProcessingQueue is required.")
             .Validate(options => !string.IsNullOrWhiteSpace(options.AiJobsQueue), "RabbitMQ:AiJobsQueue is required.")
+            .Validate(options => !string.IsNullOrWhiteSpace(options.EmailQueue), "RabbitMQ:EmailQueue is required.")
+            .ValidateOnStart();
+        services.AddOptions<SmtpOptions>()
+            .Bind(configuration.GetSection("Smtp"))
+            .Validate(options => !string.IsNullOrWhiteSpace(options.Host), "Smtp:Host is required.")
+            .Validate(options => options.Port > 0, "Smtp:Port must be greater than zero.")
+            .Validate(options => !string.IsNullOrWhiteSpace(options.SenderEmail), "Smtp:SenderEmail is required.")
             .ValidateOnStart();
         services.AddOptions<AiServiceOptions>()
             .Bind(configuration.GetSection("AIService"))
@@ -61,6 +70,7 @@ public static class DependencyInjection
         services.AddHostedService<DocumentProcessingWorker>();
         services.AddHostedService<AiJobWorker>();
         services.AddHostedService<TrashCleanupWorker>();
+        services.AddHostedService<EmailWorker>();
 
         // Repositories
         services.AddScoped(typeof(IRepository<>), typeof(GenericRepository<>));
@@ -80,6 +90,9 @@ public static class DependencyInjection
         // Workspace services
         services.AddScoped<IWorkspacePermissionService, InsightVault.API.Application.Services.Workspaces.WorkspacePermissionService>();
         services.AddScoped<IWorkspaceService, WorkspaceService>();
+
+        // Email services
+        services.AddScoped<IEmailService, MessagingEmailService>();
 
         return services;
     }

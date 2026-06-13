@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { workspaceApi } from '@/api/workspaceApi'
-import type { AddMemberData } from '@/api/workspaceApi'
+import type { AddMemberData, UpdateMemberData } from '@/api/workspaceApi'
 import type { WorkspaceMemberDto } from '@/types/api'
 import type { ApiError } from '@/api/http'
 
@@ -26,6 +26,28 @@ export function useAddWorkspaceMember(workspaceId: string) {
 
   return useMutation<WorkspaceMemberDto, ApiError, AddMemberData>({
     mutationFn: (data: AddMemberData) => workspaceApi.addMember(workspaceId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: workspaceKeys.members(workspaceId) })
+    },
+  })
+}
+
+export function useUpdateWorkspaceMember(workspaceId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation<WorkspaceMemberDto, ApiError, { memberId: string; data: UpdateMemberData }>({
+    mutationFn: ({ memberId, data }) => workspaceApi.updateMember(workspaceId, memberId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: workspaceKeys.members(workspaceId) })
+    },
+  })
+}
+
+export function useRemoveWorkspaceMember(workspaceId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation<void, ApiError, string>({
+    mutationFn: (memberId: string) => workspaceApi.removeMember(workspaceId, memberId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: workspaceKeys.members(workspaceId) })
     },
