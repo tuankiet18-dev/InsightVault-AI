@@ -1,35 +1,48 @@
 # Plan Backend Cho Thịnh
 
-Tài liệu này là kế hoạch riêng cho phần backend của Thịnh, được tổng hợp lại từ toàn bộ thư mục `docs/`. Mục tiêu là bám đúng scope dự án, đúng API contract với frontend, đúng ranh giới backend/AI service, và đúng phân công team.
+Tài liệu này là plan chính thức cho phần backend của Thịnh trong dự án
+InsightVault AI. Nội dung được tổng hợp từ `docs/`, code hiện tại trong
+`backend/InsightVault.API`, và test project, không chỉ copy lại docs cũ.
 
-## 1. Nguồn Đã Đọc
+Mục tiêu của file này:
 
-Các file đã được dùng để tổng hợp plan:
+- Làm rõ phần Thịnh đã làm.
+- Làm rõ task backend còn lại của Thịnh hoặc cần Thịnh review.
+- Ghi lại business rule quan trọng để tránh implement sai permission.
+- Ghi lại cấu trúc tổ chức code backend cần bám.
+- Ghi rõ điểm nào là kết luận từ việc đối chiếu code/docs bằng `^[inferred]`.
 
-- `docs/about-project/PROJECT_EXPLANATION.md`
+## 1. Nguồn Đã Đọc Và Đối Chiếu
+
+Nguồn docs chính:
+
+- `docs/about-project/CURRENT_PROJECT_CONTEXT_FOR_BUSINESS_RULE_REVIEW.md`
 - `docs/about-project/PROJECT_FEATURES_MVP.md`
 - `docs/about-project/PROJECT_PLAN_MVP_BUILD.md`
 - `docs/about-project/TEAM_EXECUTION_ARCHITECTURE_PLAN.md`
-- `docs/about-project/INSIGHTVAULT_AI_8_WEEK_PROJECT_PLAN.md`
 - `docs/backend/BACKEND_STRUCTURE_GUIDE.md`
-- `docs/backend/AI_SERVICE_BOUNDARY_REVIEW.md`
+- `docs/backend/BE_AI_BOUNDARY_CONTRACT.md`
+- `docs/backend/BACKEND_MVP_MANUAL_TEST_CHECKLIST.md`
 - `docs/frontend-docs/API_CONTRACT_MVP.md`
-- `docs/frontend-docs/UI_UX_SCREEN_SPEC_KNOWLEDGE_IDE.md`
-- `docs/AI-service/PROJECT_STATUS_AND_RISK_REPORT.md`
-- `docs/AI-service/AI_SERVICE_COMPLETION_REPORT.md`
 
-Nguồn chuẩn nhất cho phần backend/API là:
+Nguồn code đã đối chiếu:
 
-- `docs/backend/BACKEND_STRUCTURE_GUIDE.md`
-- `docs/frontend-docs/API_CONTRACT_MVP.md`
-- `docs/about-project/INSIGHTVAULT_AI_8_WEEK_PROJECT_PLAN.md`
-- `docs/about-project/TEAM_EXECUTION_ARCHITECTURE_PLAN.md`
+- `backend/InsightVault.API/Controllers`
+- `backend/InsightVault.API/Application/Services`
+- `backend/InsightVault.API/Application/Abstractions/Services`
+- `backend/InsightVault.API/Infrastructure/Auth`
+- `backend/InsightVault.API/Infrastructure/Ai`
+- `backend/InsightVault.API/Data`
+- `backend/InsightVault.API.Tests`
+
+Khi docs cũ và code hiện tại khác nhau, ưu tiên code hiện tại để xác định trạng
+thái đã/chưa làm, sau đó dùng docs mới nhất để xác định business rule.
 
 ## 2. Tổng Quan Dự Án
 
-InsightVault AI là một collaborative AI-powered knowledge workspace cho nhóm project.
+InsightVault AI là collaborative document intelligence workspace cho nhóm project.
 
-Luồng giá trị chính của MVP:
+Luồng giá trị MVP:
 
 ```text
 Login -> Shared workspace -> Invite member -> Upload documents
@@ -37,51 +50,57 @@ Login -> Shared workspace -> Invite member -> Upload documents
 -> Compare/gap detection -> Generate Markdown report -> Admin monitoring
 ```
 
-InsightVault AI không chỉ là nơi lưu file. Dự án có 3 lớp giá trị:
+Ba lớp giá trị chính:
 
-- Shared document workspace: workspace, folder, document, member roles.
-- AI document understanding: summary, RAG chat, semantic retrieval.
+- Shared document workspace: workspace, member, folder, document.
+- AI document understanding: extract, chunk, embed, summary, RAG.
 - Insight generation: compare, gap/conflict detection, Markdown report.
 
 Tech stack chính:
 
-- Frontend: React Vite + Tailwind.
+- Frontend: React/Vite.
 - Backend: ASP.NET Core Web API.
-- Auth: Google OAuth + JWT nội bộ.
 - Database: PostgreSQL + pgvector.
 - Storage: MinIO.
-- AI service: Python service.
-- AI provider: Gemini API.
-- Background jobs: `.NET BackgroundService + ai_jobs`; RabbitMQ chỉ là optional.
+- Queue/background: RabbitMQ + `.NET BackgroundService` + `ai_jobs`.
+- AI service: Python FastAPI.
+- AI provider: Gemini.
 
-## 3. Kiến Trúc Backend Cần Bám
+## 3. Backend Là System-Of-Record
 
-Backend là system-of-record của hệ thống.
+Backend là nơi sở hữu business state và permission.
 
 Backend chịu trách nhiệm:
 
-- API validation.
-- Authentication.
-- Authorization/permission.
+- Authentication và current user.
+- JWT authorization.
+- Workspace role và permission.
 - Workspace/member/folder/document metadata.
 - MinIO upload orchestration.
 - AI job lifecycle.
 - Chat/report persistence.
-- Gọi Python AI service nội bộ.
+- Resolve `@file` và `@folder` trước khi gọi AI.
+- Persist report và report version.
 
 AI service chịu trách nhiệm:
 
-- Extract text.
-- Clean text.
+- Text extraction.
 - Chunking.
 - Embedding.
 - Vector search.
-- Prompt logic.
-- Gemini calls.
+- Prompt/Gemini calls.
 - RAG answer.
 - Compare/report generation internals.
 
-Frontend chỉ gọi Backend API. Frontend không gọi trực tiếp AI service.
+Business boundary bắt buộc:
+
+- Frontend chỉ gọi Backend API.
+- Frontend không gọi AI service trực tiếp.
+- AI service không quyết định permission.
+- AI service không persist report.
+- Backend kiểm tra permission trước khi gọi AI.
+
+## 4. Cấu Trúc Code Backend Cần Bám
 
 Dependency direction:
 
@@ -94,55 +113,34 @@ Controllers
   -> DbContext
 ```
 
-Quy tắc tổ chức code:
+Quy tắc tổ chức:
 
-- `Controllers`: controller mỏng, chỉ nhận HTTP input, gọi service, trả response.
-- `DTOs`: API contract public giữa frontend và backend; không trả EF entity trực tiếp.
-- `Application/Abstractions/Services`: interface service theo feature.
+- `Controllers`: controller mỏng, nhận HTTP input, gọi service, trả response.
+- `DTOs`: public API contract giữa frontend và backend; không expose EF entity.
+- `Application/Abstractions/Services`: service interface theo feature.
 - `Application/Services`: business/use-case logic.
-- `Application/Abstractions/Repositories`: repository interfaces.
+- `Application/Abstractions/Repositories`: repository contracts.
 - `Infrastructure/Persistence/Repositories`: EF Core repository implementations.
-- `Infrastructure/Auth`: JWT, Google OAuth verification, current-user helper.
-- `Data`: EF Core DbContext, design-time factory, migrations.
-- `Common/Errors` hoặc `DTOs/Common`: error helpers/DTO dùng chung.
+- `Infrastructure/Auth`: JWT, Google OAuth, current user.
+- `Infrastructure/Ai`: HTTP client gọi Python AI service.
+- `Infrastructure/BackgroundJobs`: worker xử lý job dài.
+- `Data`: DbContext, migrations.
+- `Common/Errors`: `ApiException` và middleware/error helpers.
 
-Repository không gọi `SaveChangesAsync`; service là nơi commit một use case.
+Quy tắc implementation:
 
-## 4. Role Và Permission Theo Docs
+- Business rule không đặt trong controller nếu có thể đưa vào service.
+- Repository không gọi `SaveChangesAsync`; service commit một use case.
+- Permission phải dùng `IWorkspacePermissionService`.
+- Error expected nên dùng `ApiException`/`ApiErrorDto`.
+- Không thêm logic cho AI permission ở AI service.
 
-System role:
+## 5. Ownership Của Thịnh
 
-- `user`: người dùng chính của hệ thống.
-- `admin`: giám sát user, AI jobs, failed jobs, error logs.
-
-Workspace role:
-
-- `owner`: quản lý workspace, member, folder, document, AI features, report.
-- `editor`: tạo folder, upload document, hỏi AI, compare, tạo report.
-- `viewer`: xem workspace/folder/document/summary/report và hỏi AI trong phạm vi được phép đọc.
-
-Member status:
-
-- `invited`
-- `active`
-- `removed`
-
-Quy tắc bắt buộc:
-
-- Mọi business API cần JWT hợp lệ.
-- Mọi truy vấn workspace/folder/document/chunk/report phải kiểm tra membership.
-- Permission workspace dựa trên `workspace_members`, không chỉ dựa vào `workspaces.owner_id`.
-- Active member mới được đọc workspace.
-- Owner quản lý workspace/member.
-- Owner/editor được mutate folder/document/upload/compare/report.
-- Viewer read-only với content, nhưng được gửi RAG chat và xem AI answer/sources trong phạm vi được phép đọc.
-
-## 5. Phạm Vi Chính Của Thịnh
-
-Theo docs, Thịnh là backend owner cho:
+Phạm vi chính của Thịnh:
 
 - Auth.
-- User/current user.
+- Current user.
 - JWT.
 - Google OAuth.
 - User/admin role foundation.
@@ -150,7 +148,7 @@ Theo docs, Thịnh là backend owner cho:
 - Workspace member invite/list/update/remove.
 - Workspace role/permission service.
 
-Các folder chính Thịnh sở hữu:
+Các vùng code Thịnh sở hữu chính:
 
 ```text
 backend/InsightVault.API/Controllers/AuthController.cs
@@ -164,560 +162,437 @@ backend/InsightVault.API/Application/Services/Workspaces/
 backend/InsightVault.API/Infrastructure/Auth/
 ```
 
-Các file shared phải sửa cẩn thận:
+Phần Thịnh cần phối hợp/review:
+
+- Permission cho folder/document/upload/trash.
+- Permission cho AI jobs.
+- Permission cho compare/report.
+- Permission cho dashboard/admin để không lộ workspace content.
+- Contract chat/RAG nếu Thịnh nhận task Chat API.
+
+Phần không phải ownership chính của Thịnh:
+
+- MinIO storage internals.
+- Document processing worker.
+- RabbitMQ publisher/consumer internals.
+- Python AI service.
+- Chunking/embedding/vector search.
+- Prompt/Gemini internals.
+- Frontend UI.
+
+## 6. Business Rule Bắt Buộc
+
+### System Role
+
+- `User`: dùng các chức năng chính.
+- `Admin`: quản lý user/system/job monitoring.
+
+Admin rule:
+
+- System Admin không được truy cập workspace content.
+- Admin không được xem folder/document/chunks/chat/report content của user.
+- Admin API chỉ trả metadata cần cho monitoring.
+- Nếu admin cũng là workspace member thì vẫn không được dùng content API theo rule hiện tại.
+
+### Workspace Role
+
+- `Owner`: quản lý workspace, member, content, trash, report.
+- `Editor`: mutate content như folder/document/upload, được compare/generate report, nhưng không quản lý member.
+- `Viewer`: đọc workspace resources và được RAG chat, nhưng không upload, compare, generate report, delete, hard delete, restore hoặc download original file trong MVP.
+
+Member status:
+
+- `Invited`
+- `Active`
+- `Removed`
+
+Permission rule:
+
+- Business API cần JWT.
+- Workspace content access phải dựa trên active `workspace_members`.
+- Invited member chỉ thấy invitation/workspace shell, không thấy content.
+- Removed member không còn access.
+- Owner transfer để phase sau.
+
+### Folder Và Document
+
+- Folder chỉ là cách phân loại document trong workspace, không phải permission boundary riêng.
+- Folder permission vẫn theo workspace role.
+- Folder soft delete phải ẩn khỏi list thường.
+- Soft-deleted document vào Trash, chưa xóa MinIO object ngay.
+- Soft-deleted document/chunk phải bị loại khỏi normal list, mention resolution, compare/report source resolution, RAG retrieval.
+- Hard delete từ Trash mới xóa metadata, chunks và MinIO object.
+- Owner delete/restore/hard delete mọi document trong workspace.
+- Editor chỉ delete/restore/hard delete document do chính editor đó upload.
+- Viewer không delete/restore/hard delete.
+
+### Chat/RAG
+
+- Chat session thuộc workspace và private theo user.
+- Message không có context thì RAG trên toàn workspace readable documents.
+- `@file` resolve thành document IDs cụ thể.
+- `@folder` resolve folder và subfolders thành document IDs, mặc định include subfolders.
+- Chỉ document `Completed` và chưa soft delete mới dùng cho RAG.
+- Viewer được tạo chat session và hỏi RAG.
+- RAG chat không tạo `AiJob`.
+- Web search chưa thuộc MVP; contract có thể giữ placeholder nhưng backend/AI nên ignore/disable.
+
+### Compare/Report
+
+- Compare là user-triggered, không tự chạy sau upload.
+- Compare/report chạy async qua `ai_jobs`.
+- Owner/editor được compare và generate report.
+- Viewer chỉ đọc report đã có, không generate/delete report.
+- Chỉ owner được delete report.
+- Backend persist report và report version.
+- AI service không tự ghi bảng `reports`.
+
+## 7. Trạng Thái Code Hiện Tại
+
+Các controller hiện có trong code:
 
 ```text
-backend/InsightVault.API/Program.cs
-backend/InsightVault.API/Infrastructure/DependencyInjection.cs
-backend/InsightVault.API/Data/InsightVaultDbContext.cs
-backend/InsightVault.API/Data/Migrations/
+AdminController.cs
+AiJobsController.cs
+AuthController.cs
+DashboardController.cs
+DocumentsController.cs
+FoldersController.cs
+HealthController.cs
+MetaController.cs
+ReportsController.cs
+WorkspacesController.cs
 ```
 
-## 6. API Contract Bắt Buộc
+Điểm cần lưu ý:
 
-Nguồn chuẩn: `docs/frontend-docs/API_CONTRACT_MVP.md`.
+- Một số docs cũ từng ghi `AiJobsController`, `ReportsController`, `AdminController` chưa có.
+- Code hiện tại đã có các controller này, cộng thêm `DashboardController`.
+- Code hiện tại chưa có `ChatController`.
+- `Application/Services/Chat` và `Application/Abstractions/Services/Chat` hiện chỉ có `.gitkeep`.
+- DTO/domain/migration cho chat đã có, nhưng API layer/service/repository flow cho chat chưa có.
+- `AiServiceClient` hiện có `ProcessDocumentAsync`, `GenerateReportAsync`, `CompareDocumentsAsync`, nhưng chưa có `QueryRagAsync` gọi `/rag/query`.
 
-Global rules:
+Các điểm trên là kết luận từ đối chiếu code hiện tại với docs. ^[inferred]
 
-- Backend base route: `/api`.
-- Frontend base URL: `VITE_API_BASE_URL`, default theo docs là `http://localhost:5000/api`.
-- Auth header: `Authorization: Bearer <jwt>` cho mọi business API.
-- Public APIs:
-  - `GET /api/health`
-  - `GET /api/health/db`
-  - `GET /api/meta`
-  - `POST /api/auth/google`
-- IDs là UUID strings.
-- Dates là ISO-8601 strings.
-- Soft delete trả `204 No Content`.
-- Error response shape:
+## 8. Task Thịnh Đã Làm
 
-```json
-{
-  "errorCode": "workspace.not_found",
-  "message": "Workspace not found",
-  "details": {}
-}
-```
+### Auth APIs
 
-Enum public trả về lowercase:
-
-- `user`, `admin`
-- `owner`, `editor`, `viewer`
-- `invited`, `active`, `removed`
-
-## 7. Auth APIs Của Thịnh
-
-### `POST /api/auth/google`
-
-Auth: No.
-
-Request:
-
-```json
-{
-  "idToken": "google-id-token"
-}
-```
-
-Response:
-
-```json
-{
-  "accessToken": "jwt",
-  "expiresAt": "2026-05-27T10:15:00Z",
-  "user": {
-    "id": "uuid",
-    "email": "user@example.com",
-    "fullName": "User Name",
-    "avatarUrl": null,
-    "systemRole": "user",
-    "isActive": true,
-    "lastLoginAt": "2026-05-27T10:00:00Z"
-  }
-}
-```
-
-Backend xử lý:
-
-1. Verify Google `idToken` bằng `GoogleAuth:ClientId`.
-2. Lấy Google subject, email, full name, avatar URL.
-3. Upsert user theo Google subject hoặc email.
-4. Không lưu password.
-5. Nếu user inactive thì không cấp JWT.
-6. Update `last_login_at`.
-7. Activate invited memberships theo email nếu có.
-8. Phát hành JWT nội bộ.
-9. Trả `AuthResponse`.
-
-### `GET /api/auth/me`
-
-Auth: Yes.
-
-Request body: không có.
-
-Response: `UserDto`.
-
-Backend xử lý:
-
-- Đọc current user từ JWT.
-- Load user từ database.
-- User không tồn tại hoặc inactive thì trả `401/403`.
-
-### `POST /api/auth/logout`
-
-Auth: Yes.
-
-Request body: không có.
-
-Response: `204 No Content`.
-
-MVP dùng stateless JWT nên backend không xóa session trong database. Frontend xóa token ở client sau khi nhận `204`.
-
-## 8. Workspace APIs Của Thịnh
-
-### `GET /api/workspaces?q=`
-
-Auth: Yes.
-
-Request body: không có.
-
-Response: `WorkspaceDto[]`.
-
-Rules:
-
-- Chỉ list workspace mà current user là active member.
-- Hỗ trợ search cơ bản theo `q`.
-- `currentUserRole` phải đúng role của current user trong workspace.
-
-### `POST /api/workspaces`
-
-Auth: Yes.
-
-Request:
-
-```json
-{
-  "name": "InsightVault AI Project",
-  "description": "Project workspace"
-}
-```
-
-Response: `WorkspaceDto`.
-
-Rules:
-
-- `name` bắt buộc.
-- Creator tự động là `owner`.
-- Ghi creator vào `workspaces.owner_id`.
-- Tạo record `workspace_members` status `active`, role `owner`.
-
-### `GET /api/workspaces/{workspaceId}`
-
-Auth: Yes.
-
-Request body: không có.
-
-Response: `WorkspaceDto`.
-
-Rules:
-
-- Active member mới đọc được.
-- Workspace đã soft delete phải xem như không tồn tại.
-
-### `PATCH /api/workspaces/{workspaceId}`
-
-Auth: Yes.
-
-Request:
-
-```json
-{
-  "name": "New name",
-  "description": "New description",
-  "isArchived": false
-}
-```
-
-Response: `WorkspaceDto`.
-
-Rules:
-
-- Chỉ owner được update workspace.
-- Không cho `name` rỗng nếu client gửi `name`.
-
-### `DELETE /api/workspaces/{workspaceId}`
-
-Auth: Yes.
-
-Request body: không có.
-
-Response: `204 No Content`.
-
-Rules:
-
-- Chỉ owner được delete workspace.
-- Delete là soft delete bằng `deleted_at`.
-
-## 9. Workspace Member APIs Của Thịnh
-
-### `GET /api/workspaces/{workspaceId}/members`
-
-Auth: Yes.
-
-Request body: không có.
-
-Response: `WorkspaceMemberDto[]`.
-
-Rule theo plan hiện tại: chỉ owner được quản lý và xem danh sách member.
-
-### `POST /api/workspaces/{workspaceId}/members`
-
-Auth: Yes.
-
-Request:
-
-```json
-{
-  "email": "member@example.com",
-  "role": "editor"
-}
-```
-
-Response: `WorkspaceMemberDto`.
-
-Rules:
-
-- Chỉ owner được invite member.
-- `email` bắt buộc.
-- `role` bắt buộc, chỉ nhận `owner`, `editor`, `viewer`.
-- Normalize email bằng trim + lowercase.
-- Không tạo duplicate member cùng email trong workspace.
-- Nếu user đã tồn tại theo email: gán `userId`, status `active`, set `joinedAt`.
-- Nếu user chưa tồn tại: status `invited`, userId `null`.
-- Set `invitedById`, `invitedAt`.
-
-### `PATCH /api/workspaces/{workspaceId}/members/{memberId}`
-
-Auth: Yes.
-
-Request:
-
-```json
-{
-  "role": "viewer",
-  "status": "active"
-}
-```
-
-Response: `WorkspaceMemberDto`.
-
-Rules:
-
-- Chỉ owner được update member.
-- Không hạ role owner cuối cùng.
-- Không remove owner cuối cùng.
-- Không activate invited member chưa có user account; user cần login Google trước để backend gắn `userId`.
-
-### `DELETE /api/workspaces/{workspaceId}/members/{memberId}`
-
-Auth: Yes.
-
-Request body: không có.
-
-Response: `204 No Content`.
-
-Rules:
-
-- Chỉ owner được remove member.
-- Remove là soft remove: status `removed`, set `removedAt`.
-- Không remove owner cuối cùng.
-
-## 10. Permission Service Cần Dùng Chung
-
-Permission phải centralize bằng `IWorkspacePermissionService`.
-
-Service cần hỗ trợ:
-
-```csharp
-Task<WorkspaceRole?> GetUserRoleAsync(Guid workspaceId, Guid userId, CancellationToken cancellationToken = default);
-Task<bool> IsActiveMemberAsync(Guid workspaceId, Guid userId, CancellationToken cancellationToken = default);
-Task EnsureCanReadWorkspaceAsync(Guid workspaceId, Guid userId, CancellationToken cancellationToken = default);
-Task EnsureCanManageWorkspaceAsync(Guid workspaceId, Guid userId, CancellationToken cancellationToken = default);
-Task EnsureCanManageMembersAsync(Guid workspaceId, Guid userId, CancellationToken cancellationToken = default);
-Task EnsureCanMutateWorkspaceContentAsync(Guid workspaceId, Guid userId, CancellationToken cancellationToken = default);
-```
-
-Ý nghĩa:
-
-- `EnsureCanReadWorkspaceAsync`: owner/editor/viewer active.
-- `EnsureCanManageWorkspaceAsync`: owner.
-- `EnsureCanManageMembersAsync`: owner.
-- `EnsureCanMutateWorkspaceContentAsync`: owner/editor.
-
-Các module của Anh/Kiệt cần dùng service này:
-
-- Folder CRUD.
-- Document upload/list/detail/delete/retry.
-- AI jobs list/detail/retry.
-- Chat sessions/messages.
-- Compare.
-- Reports.
-- Dashboard/admin nếu truy cập dữ liệu workspace.
-
-## 11. Task Của Thịnh Theo Timeline 8 Tuần
-
-### Tuần 3 - Foundation
-
-- Khởi tạo ASP.NET Core Web API project.
-- Thiết kế database schema cho `users`, `workspaces`, `workspace_members`.
-- Dựng JWT auth structure.
-- Dựng Google OAuth callback/login flow ở mức skeleton.
-- Viết API contract ban đầu cho auth/workspace/member.
-
-### Tuần 4 - Auth + Workspace
-
-- Hoàn thiện Google OAuth login.
-- Hoàn thiện JWT nội bộ.
-- Hoàn thiện workspace CRUD.
-- Hoàn thiện invite/list/update/remove workspace member.
-- Implement permission guard cho `owner`, `editor`, `viewer`.
-
-### Tuần 5 - Permission Review Cho Folder/Document
-
-- Review permission cho folder/document APIs.
-- Đảm bảo user chỉ truy cập được document trong workspace mà họ là member.
-- Hỗ trợ Anh chuẩn hóa API response/error format.
-
-### Tuần 6 - Chat Permission Và Persistence
-
-Docs 8 tuần giao cho Thịnh:
-
-- Thiết kế và implement `chat_sessions`, `chat_messages` API.
-- Áp permission vào chat scope.
-- Lưu lịch sử hỏi đáp.
-- Lưu sources trả về từ AI service.
-
-Lưu ý phối hợp: backend structure guide chưa tách rõ owner cho `ChatController`, nên phần chat cần thống nhất với Anh/Kiệt trước khi code để tránh conflict.
-
-### Tuần 7 - Compare/Report Permission Review
-
-- Bổ sung API permission cho compare/report theo workspace role.
-- Review toàn bộ API auth/authorization.
-- Chuẩn hóa seed/demo user và workspace nếu cần.
-
-### Tuần 8 - Hardening
-
-- Hardening auth, role/permission, API validation.
-- Viết integration tests hoặc manual test checklist cho auth/workspace/member.
-- Chuẩn bị config môi trường production cho backend.
-
-### Tuần 9 - Deploy
-
-- Deploy backend API.
-- Cấu hình Google OAuth redirect URI cho môi trường deployed.
-- Kiểm tra CORS, JWT, environment variables và logs.
-
-### Tuần 10 - Final Polish
-
-- Chuẩn bị phần trình bày backend architecture: auth, workspace, member, permission.
-- Review API logs.
-- Fix bug blocker, không mở rộng scope.
-
-## 12. Trạng Thái Hiện Tại Trong Repo
-
-Đã có nền backend:
-
-- `Domain/Entities`
-- `Domain/Enums`
-- `DTOs`
-- EF Core DbContext và migration đầu tiên.
-- Repository nền.
-- `AuthController.cs`
-- `WorkspacesController.cs`
-- Auth service.
-- Workspace service.
-- Workspace permission service.
-- JWT issuer.
-- Google token verifier.
-- Current user helper.
-
-Các endpoint thuộc Sprint 1 của Thịnh hiện đã được implement:
+Đã có:
 
 - `POST /api/auth/google`
 - `GET /api/auth/me`
 - `POST /api/auth/logout`
+
+Auth internals đã có:
+
+- Google token verifier wiring.
+- JWT issuer/validation.
+- Current user service.
+- Inactive user bị chặn.
+- Login Google activate invited memberships theo email.
+- Stateless logout trả `204 No Content`.
+
+### Workspace APIs
+
+Đã có:
+
 - `GET /api/workspaces?q=`
 - `POST /api/workspaces`
 - `GET /api/workspaces/{workspaceId}`
 - `PATCH /api/workspaces/{workspaceId}`
 - `DELETE /api/workspaces/{workspaceId}`
+
+Workspace behavior đã có:
+
+- Creator trở thành owner.
+- Tạo owner membership active.
+- Workspace soft delete.
+- List workspace theo active membership.
+- Admin bị chặn tạo/truy cập workspace content qua service/permission path hiện tại.
+
+### Workspace Member APIs
+
+Đã có:
+
 - `GET /api/workspaces/{workspaceId}/members`
 - `POST /api/workspaces/{workspaceId}/members`
 - `PATCH /api/workspaces/{workspaceId}/members/{memberId}`
 - `DELETE /api/workspaces/{workspaceId}/members/{memberId}`
 
-Đã kiểm tra gần nhất:
+Member behavior đã có:
 
-- Backend build thành công.
-- API chạy được bằng profile `http`.
-- `/api/health` trả `200`.
-- `/openapi/v1.json` trả `200`.
-- Protected route không có JWT trả `401` JSON đúng format.
-- `POST /api/auth/google` thiếu `idToken` trả `400` validation đúng format.
+- Normalize email bằng trim/lowercase.
+- Existing user được add thành active member.
+- Unknown email được add thành invited member.
+- Removed member có thể invite lại.
+- Không hạ role owner cuối cùng.
+- Không remove owner cuối cùng.
+- Không activate invited member chưa có user account.
 
-## 13. Việc Còn Lại Của Thịnh
+### Permission Foundation
 
-Ưu tiên gần:
+Đã có `IWorkspacePermissionService` với các nhóm check chính:
 
-1. Test manual đầy đủ auth/workspace/member bằng Postman với JWT thật.
-2. Tạo checklist test có dữ liệu cụ thể cho owner/editor/viewer.
-3. Review lại OpenAPI/Postman collection để FE nhìn được request/response/required fields.
-4. Viết hoặc bổ sung integration tests nếu team có test project.
-5. Khi Anh làm folder/document/upload, review và bắt buộc dùng `IWorkspacePermissionService`.
-6. Khi chat/compare/report được làm, review permission theo docs.
+- Get role/current active membership.
+- Read/view workspace.
+- Manage workspace.
+- Manage members.
+- Mutate workspace content.
+- Manage folders.
+- Manage documents.
+- Delete document theo owner/editor uploaded-by rule.
 
-Ưu tiên theo timeline sau:
+Permission đã được dùng ở nhiều service khác:
 
-1. Chat sessions/messages API nếu team xác nhận Thịnh nhận phần này theo docs 8 tuần.
-2. Permission cho compare/report.
-3. Hardening CORS/JWT/env variables.
-4. Deploy backend config.
-5. Chuẩn bị demo explanation cho auth/workspace/member/permission.
+- Folder service.
+- Document service.
+- Report service.
+- AI job service. ^[inferred]
 
-## 14. Không Thuộc Phạm Vi Chính Của Thịnh
+### Backend Đã Mở Rộng Ngoài Phần Thịnh Ban Đầu
 
-Không phải phần chính của Thịnh:
+Codebase hiện đã có các phần sau:
 
-- MinIO storage implementation.
-- Presigned upload implementation.
-- Document upload pipeline.
-- Background worker xử lý `ai_jobs`.
-- Python AI service internals.
-- Chunking, embedding, pgvector search.
-- Prompt/Gemini implementation.
-- Compare/report AI generation internals.
-- Frontend UI.
+- Folder/document/upload/trash services/controllers.
+- AI job list/detail/retry service/controller.
+- Report/compare service/controller.
+- Dashboard service/controller.
+- Admin service/controller.
+- `DocumentProcessingWorker`, `AiJobWorker`, `TrashCleanupWorker`.
+- AI client cho process document, generate report, compare documents.
 
-Thịnh vẫn cần hỗ trợ bằng permission contract để các phần trên không bypass workspace authorization.
+Điều này nghĩa là plan cũ chỉ nói Auth/Workspace chưa còn đủ để phản ánh repo hiện tại. ^[inferred]
 
-## 15. Config Backend Cần Có
+## 9. Task Còn Lại Của Thịnh
 
-Local development có thể dùng `appsettings.Development.json` hoặc environment variables.
+### Ưu Tiên 1: Chat/RAG Backend API
 
-Các config quan trọng:
+Chat/RAG là gap backend rõ nhất hiện tại.
 
-```json
-{
-  "Jwt": {
-    "Issuer": "InsightVault.API",
-    "Audience": "InsightVault.Frontend",
-    "SigningKey": "development-only-long-secret-key",
-    "ExpiresMinutes": 120
-  },
-  "GoogleAuth": {
-    "ClientId": ""
-  }
-}
+Cần implement:
+
+- `ChatController`.
+- `IChatService`.
+- `ChatService`.
+- Repository/query cần thiết cho:
+  - `ChatSession`
+  - `ChatMessage`
+  - `ChatMessageContext`
+  - `ChatMessageSource`
+- `IAiServiceClient.QueryRagAsync`.
+- Mapping request/response tới AI endpoint `/rag/query`.
+
+Endpoints cần có:
+
+- `GET /api/workspaces/{workspaceId}/chat-sessions`
+- `POST /api/workspaces/{workspaceId}/chat-sessions`
+- `GET /api/chat-sessions/{sessionId}/messages`
+- `POST /api/chat-sessions/{sessionId}/messages`
+- `DELETE /api/chat-sessions/{sessionId}`
+
+Business rules phải enforce:
+
+- Session private theo `created_by_id`.
+- Owner/editor/viewer active đều được tạo và dùng chat.
+- Admin không được dùng chat content API.
+- Context `folder/document` phải thuộc cùng workspace với session.
+- Client labels/path chỉ là display hint; backend trust IDs sau permission check.
+- Folder context include subfolders mặc định.
+- Resolve context thành deduplicated explicit `document_ids`.
+- Chỉ resolve completed, non-deleted documents.
+- RAG chat không tạo `AiJob`.
+- Lưu user message.
+- Lưu assistant message.
+- Lưu message contexts.
+- Lưu citation sources.
+- Nếu source document bị hard delete sau này, historical source có thể trả `documentId = null`.
+
+### Ưu Tiên 2: Permission Hardening
+
+Cần review lại các service đã có để đảm bảo không bypass rule:
+
+- Folder/document/report/compare/admin/dashboard đều phải dùng workspace permission đúng chỗ.
+- Admin APIs không expose document content, chunks, snippets, report markdown, chat messages, user questions.
+- Viewer không upload, compare, generate report, delete, restore, hard delete hoặc download original file.
+- Editor không manage member.
+- Invited member không xem content.
+
+### Ưu Tiên 3: Test Coverage Cho Phần Thịnh
+
+Test hiện tại còn mỏng. Cần bổ sung integration tests hoặc manual test cases cho:
+
+- Login Google upsert user.
+- Inactive user không được cấp JWT.
+- `GET /api/auth/me`.
+- Create/list/get/update/delete workspace.
+- Creator là owner.
+- Owner invite editor/viewer.
+- Duplicate member bị chặn.
+- Removed member invite lại được.
+- Editor/viewer không manage member.
+- Last owner không bị remove/hạ role.
+- Admin không tạo/truy cập workspace content.
+- Invited member chưa active không xem content.
+
+### Ưu Tiên 4: Docs/API Contract Sync
+
+Cần đồng bộ `plan.md` với:
+
+- `docs/frontend-docs/API_CONTRACT_MVP.md`
+- `docs/backend/BE_AI_BOUNDARY_CONTRACT.md`
+- `docs/backend/BACKEND_MVP_MANUAL_TEST_CHECKLIST.md`
+
+Khi docs cũ nói khác code hiện tại, ghi rõ docs đó outdated ở phần trạng thái thay vì copy lại.
+
+## 10. Manual Checklist Cho Thịnh
+
+### Auth
+
+- [ ] User login Google nhận JWT.
+- [ ] JWT gọi được protected API.
+- [ ] `GET /api/auth/me` trả đúng current user.
+- [ ] User inactive bị từ chối.
+- [ ] Logout trả `204`.
+- [ ] Thiếu/invalid token trả error shape chuẩn.
+
+### Workspace
+
+- [ ] User tạo workspace được.
+- [ ] Creator thành owner.
+- [ ] User chỉ thấy workspace mà mình là active member.
+- [ ] Owner update/delete workspace được.
+- [ ] Editor/viewer không update/delete workspace.
+- [ ] Admin không tạo/truy cập workspace content.
+
+### Member
+
+- [ ] Owner invite member bằng email được.
+- [ ] Existing user thành active member.
+- [ ] Unknown email thành invited member.
+- [ ] Invited member login đúng email thì active membership.
+- [ ] Owner đổi role member được.
+- [ ] Owner remove member được.
+- [ ] Không duplicate active member email.
+- [ ] Removed member invite lại được.
+- [ ] Không remove/hạ role owner cuối cùng.
+- [ ] Editor/viewer không manage member.
+
+### Permission Review
+
+- [ ] Folder/document APIs dùng `IWorkspacePermissionService`.
+- [ ] Report/compare APIs chặn viewer mutate.
+- [ ] AI jobs retry cần owner/editor.
+- [ ] Dashboard/admin chỉ trả metadata phù hợp.
+- [ ] Admin không thấy workspace content.
+
+### Chat/RAG Khi Implement
+
+- [ ] Viewer tạo chat session được.
+- [ ] Chat session private theo user.
+- [ ] User không xem session của user khác trong cùng workspace.
+- [ ] Context document/folder cross-workspace bị chặn.
+- [ ] Folder context include subfolders.
+- [ ] Incomplete/deleted document không dùng cho RAG.
+- [ ] RAG không tạo `AiJob`.
+- [ ] User/assistant messages và sources được lưu.
+
+## 11. Verification Hiện Tại
+
+Đã chạy:
+
+```powershell
+dotnet test backend\InsightVault.API.Tests\InsightVault.API.Tests.csproj
 ```
 
-Khuyến nghị:
-
-- `GoogleAuth:ClientId` local có thể đặt bằng environment variable `GoogleAuth__ClientId`.
-- Không commit secret production.
-- Google Client ID không phải password, nhưng vẫn nên thống nhất qua env/config team.
-- JWT signing key production phải dùng environment variable/secret manager.
-
-Google OAuth flow đúng:
+Kết quả:
 
 ```text
-Frontend lấy Google idToken
--> Frontend gọi POST /api/auth/google
--> Backend verify idToken bằng GoogleAuth:ClientId
--> Backend phát JWT nội bộ
--> Frontend dùng JWT gọi protected APIs
+Passed: 5
+Failed: 0
+Skipped: 0
+Total: 5
 ```
 
-## 16. Test Plan Cho Phần Thịnh
+Lưu ý:
 
-Build:
+- Lần chạy đầu bị sandbox chặn network khi restore NuGet.
+- Sau khi cho phép restore từ NuGet, test pass.
+- Test hiện tại chủ yếu cover public endpoints và report versioning; chưa đủ cover Auth/Workspace/Member permission.
+
+## 12. Commands Hữu Ích
+
+Build backend:
 
 ```powershell
-dotnet build .\backend\InsightVault.API\InsightVault.API.csproj
+dotnet build backend\InsightVault.API\InsightVault.API.csproj
 ```
 
-Database:
+Run backend tests:
 
 ```powershell
-docker compose -f .\infra\docker-compose.dev.yml up -d postgres
-dotnet ef database update --project .\backend\InsightVault.API\InsightVault.API.csproj --startup-project .\backend\InsightVault.API\InsightVault.API.csproj
+dotnet test backend\InsightVault.API.Tests\InsightVault.API.Tests.csproj
 ```
 
-Run backend:
+Docker verification theo project docs:
 
 ```powershell
-dotnet run --project .\backend\InsightVault.API\InsightVault.API.csproj --launch-profile http
+docker compose -f infra\docker-compose.yml up -d --build
+docker compose -f infra\docker-compose.yml ps
+dotnet test backend\InsightVault.API.Tests\InsightVault.API.Tests.csproj
 ```
 
-Manual API flow:
-
-1. Login Google và nhận JWT.
-2. Gọi `GET /api/auth/me`.
-3. Tạo workspace.
-4. List workspace.
-5. Xem workspace detail.
-6. Update workspace.
-7. Invite member bằng email.
-8. List members.
-9. Update member role.
-10. Remove member.
-11. Test user ngoài workspace bị chặn.
-12. Test editor không được manage members.
-13. Test viewer không được manage members.
-14. Test viewer không được mutate content khi folder/document APIs có.
-15. Test owner cuối cùng không bị remove/hạ role.
-16. Test invited member login Google bằng đúng email thì membership chuyển sang active.
-
-Full check trước khi push:
+Không dùng lệnh sau trừ khi user muốn xóa local data volumes:
 
 ```powershell
-.\scripts\check.ps1
+docker compose down -v
 ```
 
-Lưu ý: `check.ps1` chạy cả frontend và AI service, nên cần `frontend/node_modules` và `ai-service/venv` đã sẵn sàng.
+## 13. Definition Of Done Cho Phần Thịnh
 
-## 17. Definition Of Done Cho Phần Thịnh
-
-Phần của Thịnh đạt yêu cầu khi:
+Phần Auth/Workspace/Permission của Thịnh đạt yêu cầu khi:
 
 - User login Google thành công.
 - Backend phát JWT nội bộ.
-- Frontend có thể dùng JWT gọi protected APIs.
+- Frontend dùng JWT gọi protected APIs được.
 - `/api/auth/me` trả đúng current user.
 - User inactive không dùng được API.
 - User tạo workspace được.
 - Creator trở thành owner.
 - User chỉ thấy workspace mà họ là active member.
-- Active member mới đọc được workspace.
 - Owner update/delete workspace được.
 - Non-owner không manage workspace/member được.
 - Owner invite/list/update/remove member được.
-- Không duplicate member email trong cùng workspace.
+- Không duplicate active member email.
+- Removed member invite lại được.
 - Không remove/hạ role owner cuối cùng.
-- Permission service dùng lại được cho folder/document/chat/report.
-- API response bám contract: route `/api`, UUID, ISO date, lowercase enum, `204` cho soft delete.
-- Error response bám shape `{ errorCode, message, details }`.
-- Backend build clean.
-- FE gọi được API qua CORS local/deploy.
+- Admin không truy cập workspace content.
+- `IWorkspacePermissionService` được dùng nhất quán bởi folder/document/chat/report/ai job.
+- Error response bám `{ errorCode, message, details }`.
+- Backend tests pass.
 
-## 18. Assumptions
+Nếu Thịnh nhận tiếp Chat/RAG API, DoD bổ sung:
 
-- Thịnh là BE1/backend lead theo docs.
+- Chat session list/create/delete hoạt động đúng.
+- Chat message send/list hoạt động đúng.
+- AI `/rag/query` được gọi qua backend.
+- Context `@file`/`@folder` được resolve ở backend.
+- Viewer chat được.
+- Admin không chat workspace content được.
+- RAG chat không tạo `AiJob`.
+- User/assistant messages, contexts, sources được persist.
+
+## 14. Assumptions
+
+- Thịnh là backend owner cho Auth/Workspace/Permission.
+- Thịnh có thể nhận tiếp Chat sessions/messages API nếu team chốt theo docs timeline cũ.
 - MVP không có password login.
 - MVP chưa cần refresh token phức tạp.
 - MVP chưa cần email invite thật; invite bằng email trong database là đủ.
-- MVP chưa cần realtime collaboration.
-- MVP chưa cần ownership transfer phức tạp.
-- `workspace_members` là nguồn phân quyền chính.
-- AI service không được expose trực tiếp cho browser.
+- MVP chưa làm folder/document-level permission.
+- MVP chưa làm owner transfer.
+- MVP chưa làm web search.
+- MVP chưa cho viewer download original file.
 - Backend phải enforce permission trước khi gọi AI service.
+- AI service không expose trực tiếp cho browser.
