@@ -9,4 +9,8 @@ public interface IMessagePublisher
     Task PublishAiJobAsync(
         Guid jobId,
         CancellationToken cancellationToken = default);
+
+    Task PublishEmailAsync(
+        EmailMessage message,
+        CancellationToken cancellationToken = default);
 }
