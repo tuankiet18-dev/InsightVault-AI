@@ -1,0 +1,80 @@
+using InsightVault.API.Application.Abstractions.Messaging;
+using InsightVault.API.Application.Abstractions.Services.Emails;
+
+namespace InsightVault.API.Infrastructure.Emails;
+
+public sealed class MessagingEmailService(
+    IMessagePublisher messagePublisher) : IEmailService
+{
+    public Task SendLoginNotificationAsync(
+        string email,
+        string fullName,
+        DateTimeOffset loginTime,
+        CancellationToken cancellationToken = default)
+    {
+        var subject = "New login to your InsightVault AI account";
+        var body = $@"
+            <h2>Hello {fullName},</h2>
+            <p>We noticed a new login to your InsightVault AI account.</p>
+            <p><strong>Time:</strong> {loginTime:yyyy-MM-dd HH:mm:ss} UTC</p>
+            <p>If this was you, you can safely ignore this email.</p>
+            <p>Thanks,<br/>The InsightVault AI Team</p>
+        ";
+
+        var message = new EmailMessage(email, subject, body);
+        return messagePublisher.PublishEmailAsync(message, cancellationToken);
+    }
+
+    public Task SendWorkspaceInviteAsync(
+        string email,
+        string inviterName,
+        string workspaceName,
+        string role,
+        CancellationToken cancellationToken = default)
+    {
+        var subject = $"You've been invited to join {workspaceName} on InsightVault AI";
+        var body = $@"
+            <h2>Hello!</h2>
+            <p><strong>{inviterName}</strong> has invited you to join the workspace <strong>{workspaceName}</strong> as a <strong>{role}</strong>.</p>
+            <p>Please log in to InsightVault AI using this email address to access the workspace.</p>
+            <p>Thanks,<br/>The InsightVault AI Team</p>
+        ";
+
+        var message = new EmailMessage(email, subject, body);
+        return messagePublisher.PublishEmailAsync(message, cancellationToken);
+    }
+
+    public Task SendRoleUpdatedAsync(
+        string email,
+        string workspaceName,
+        string newRole,
+        CancellationToken cancellationToken = default)
+    {
+        var subject = $"Your role in {workspaceName} has been updated";
+        var body = $@"
+            <h2>Hello!</h2>
+            <p>Your role in the workspace <strong>{workspaceName}</strong> has been updated to <strong>{newRole}</strong>.</p>
+            <p>Thanks,<br/>The InsightVault AI Team</p>
+        ";
+
+        var message = new EmailMessage(email, subject, body);
+        return messagePublisher.PublishEmailAsync(message, cancellationToken);
+    }
+
+    public Task SendRemovedFromWorkspaceAsync(
+        string email,
+        string workspaceName,
+        CancellationToken cancellationToken = default)
+    {
+        var subject = $"You have been removed from {workspaceName}";
+        var body = $@"
+            <h2>Hello,</h2>
+            <p>You have been removed from the workspace <strong>{workspaceName}</strong>.</p>
+            <p>If you think this is a mistake, please contact the workspace owner.</p>
+            <p>Thanks,<br/>The InsightVault AI Team</p>
+        ";
+
+        var message = new EmailMessage(email, subject, body);
+        return messagePublisher.PublishEmailAsync(message, cancellationToken);
+    }
+}

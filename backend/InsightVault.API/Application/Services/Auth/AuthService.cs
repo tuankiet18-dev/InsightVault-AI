@@ -3,6 +3,7 @@ using InsightVault.API.Application.Abstractions.Services.Auth;
 using InsightVault.API.Data;
 using InsightVault.API.Domain.Entities;
 using InsightVault.API.DTOs.Auth;
+using InsightVault.API.Application.Abstractions.Services.Emails;
 
 namespace InsightVault.API.Application.Services.Auth;
 
@@ -11,6 +12,7 @@ public sealed class AuthService(
     IJwtTokenService jwtTokenService,
     ICurrentUserService currentUserService,
     IUserRepository userRepository,
+    IEmailService emailService,
     InsightVaultDbContext db) : IAuthService
 {
     public async Task<AuthResponse> LoginWithGoogleAsync(
@@ -65,6 +67,8 @@ public sealed class AuthService(
         await db.SaveChangesAsync(cancellationToken);
 
         var token = jwtTokenService.GenerateToken(user);
+
+        await emailService.SendLoginNotificationAsync(user.Email, user.FullName, now, cancellationToken);
 
         return new AuthResponse(
             token.AccessToken,

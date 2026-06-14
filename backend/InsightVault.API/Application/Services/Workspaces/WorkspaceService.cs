@@ -5,6 +5,7 @@ using InsightVault.API.Data;
 using InsightVault.API.Domain.Entities;
 using InsightVault.API.Domain.Enums;
 using InsightVault.API.DTOs.Workspaces;
+using InsightVault.API.Application.Abstractions.Services.Emails;
 
 namespace InsightVault.API.Application.Services.Workspaces;
 
@@ -12,6 +13,7 @@ public sealed class WorkspaceService(
     IWorkspaceRepository workspaceRepository,
     IUserRepository userRepository,
     IWorkspacePermissionService permissionService,
+    IEmailService emailService,
     InsightVaultDbContext db) : IWorkspaceService
 {
     // ── Workspace CRUD ──────────────────────────────────────────────
@@ -232,6 +234,8 @@ public sealed class WorkspaceService(
         var targetRole = WorkspaceMapper.ToDomainRole(request.Role);
 
         var existingUser = await userRepository.GetByEmailAsync(normalizedEmail, cancellationToken);
+        var currentUser = await userRepository.GetByIdAsync(userId, cancellationToken);
+        var inviterName = currentUser?.FullName ?? "Someone";
 
         if (existing is not null)
         {
@@ -252,6 +256,8 @@ public sealed class WorkspaceService(
             db.WorkspaceMembers.Update(existing);
             await db.SaveChangesAsync(cancellationToken);
 
+            await emailService.SendWorkspaceInviteAsync(normalizedEmail, inviterName, workspace.Name, targetRole.ToString(), cancellationToken);
+
             return WorkspaceMapper.ToMemberDto(existing);
         }
 
@@ -271,6 +277,8 @@ public sealed class WorkspaceService(
 
         await db.WorkspaceMembers.AddAsync(member, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
+
+        await emailService.SendWorkspaceInviteAsync(normalizedEmail, inviterName, workspace.Name, targetRole.ToString(), cancellationToken);
 
         return WorkspaceMapper.ToMemberDto(member);
     }
@@ -301,11 +309,21 @@ public sealed class WorkspaceService(
             }
         }
 
+        bool roleChanged = false;
+        string newRoleString = string.Empty;
+
         if (request.Role.HasValue)
         {
-            member.Role = WorkspaceMapper.ToDomainRole(request.Role.Value);
+            var newRole = WorkspaceMapper.ToDomainRole(request.Role.Value);
+            if (member.Role != newRole)
+            {
+                roleChanged = true;
+                newRoleString = newRole.ToString();
+            }
+            member.Role = newRole;
         }
 
+        bool removed = false;
         if (request.Status.HasValue)
         {
             var newStatus = WorkspaceMapper.ToDomainStatus(request.Status.Value);
@@ -337,6 +355,7 @@ public sealed class WorkspaceService(
             member.Status = newStatus;
             if (newStatus == MemberStatus.Removed)
             {
+                removed = true;
                 member.RemovedAt = DateTimeOffset.UtcNow;
             }
         }
@@ -344,6 +363,22 @@ public sealed class WorkspaceService(
         member.UpdatedAt = DateTimeOffset.UtcNow;
         db.WorkspaceMembers.Update(member);
         await db.SaveChangesAsync(cancellationToken);
+
+        if (roleChanged || removed)
+        {
+            var workspace = await workspaceRepository.GetByIdAsync(workspaceId, cancellationToken);
+            if (workspace != null)
+            {
+                if (removed)
+                {
+                    await emailService.SendRemovedFromWorkspaceAsync(member.Email, workspace.Name, cancellationToken);
+                }
+                else if (roleChanged)
+                {
+                    await emailService.SendRoleUpdatedAsync(member.Email, workspace.Name, newRoleString, cancellationToken);
+                }
+            }
+        }
 
         return WorkspaceMapper.ToMemberDto(member);
     }
@@ -375,5 +410,11 @@ public sealed class WorkspaceService(
         member.UpdatedAt = DateTimeOffset.UtcNow;
         db.WorkspaceMembers.Update(member);
         await db.SaveChangesAsync(cancellationToken);
+
+        var workspace = await workspaceRepository.GetByIdAsync(workspaceId, cancellationToken);
+        if (workspace != null)
+        {
+            await emailService.SendRemovedFromWorkspaceAsync(member.Email, workspace.Name, cancellationToken);
+        }
     }
 }
