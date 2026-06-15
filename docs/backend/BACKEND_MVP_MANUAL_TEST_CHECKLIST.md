@@ -87,6 +87,14 @@ Expected result: deploy/runtime failures are visible before users hit feature AP
 
 - [ ] Owner can create/list/get/update/delete their workspace.
 - [ ] Owner can add editor/viewer members.
+- [ ] Owner can create a pending workspace invitation for an existing registered user.
+- [ ] Owner cannot invite an unknown email.
+- [ ] Pending invitation does not create an active workspace member until accepted.
+- [ ] Invited user can list their pending invitations.
+- [ ] Invited user can accept and become an active workspace member.
+- [ ] Invited user can decline without becoming a workspace member.
+- [ ] A different user cannot view, accept, or decline another user's invitation.
+- [ ] Expired invitation cannot be accepted.
 - [ ] Owner can update member role/status.
 - [ ] Owner cannot remove the last owner if the service rejects that business case.
 - [ ] Editor can view workspace shell and workspace resources.

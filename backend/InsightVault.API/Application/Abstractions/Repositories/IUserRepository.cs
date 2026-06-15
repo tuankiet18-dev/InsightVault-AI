@@ -12,7 +12,4 @@ public interface IUserRepository : IRepository<User>
         string email,
         CancellationToken cancellationToken = default);
 
-    Task ActivateInvitedMembershipsAsync(
-        User user,
-        CancellationToken cancellationToken = default);
 }

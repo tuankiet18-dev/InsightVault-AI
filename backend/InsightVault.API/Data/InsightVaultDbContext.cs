@@ -10,6 +10,7 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<Workspace> Workspaces => Set<Workspace>();
     public DbSet<WorkspaceMember> WorkspaceMembers => Set<WorkspaceMember>();
+    public DbSet<WorkspaceInvitation> WorkspaceInvitations => Set<WorkspaceInvitation>();
     public DbSet<Folder> Folders => Set<Folder>();
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<DocumentChunk> DocumentChunks => Set<DocumentChunk>();
@@ -22,15 +23,18 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        var isInMemoryProvider = Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory";
+
         modelBuilder.HasPostgresExtension("vector");
         modelBuilder.HasPostgresExtension("pgcrypto");
 
         ConfigureUsers(modelBuilder);
         ConfigureWorkspaces(modelBuilder);
         ConfigureWorkspaceMembers(modelBuilder);
+        ConfigureWorkspaceInvitations(modelBuilder);
         ConfigureFolders(modelBuilder);
         ConfigureDocuments(modelBuilder);
-        ConfigureDocumentChunks(modelBuilder);
+        ConfigureDocumentChunks(modelBuilder, isInMemoryProvider);
         ConfigureAiJobs(modelBuilder);
         ConfigureChatSessions(modelBuilder);
         ConfigureChatMessages(modelBuilder);
@@ -121,6 +125,51 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
             entity.HasIndex(x => x.Email);
             entity.HasIndex(x => x.Status);
             entity.HasIndex(x => x.RemovedAt);
+        });
+    }
+
+    private static void ConfigureWorkspaceInvitations(ModelBuilder modelBuilder)
+    {
+        var roleConverter = new EnumToStringConverter<WorkspaceRole>();
+        var statusConverter = new EnumToStringConverter<WorkspaceInvitationStatus>();
+
+        modelBuilder.Entity<WorkspaceInvitation>(entity =>
+        {
+            entity.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+            entity.Property(x => x.Email).HasMaxLength(255).IsRequired();
+            entity.Property(x => x.Role).HasConversion(roleConverter).HasMaxLength(50).IsRequired();
+            entity.Property(x => x.Status).HasConversion(statusConverter).HasMaxLength(50).IsRequired();
+            entity.Property(x => x.TokenHash).HasMaxLength(255);
+            entity.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(x => x.UpdatedAt).HasDefaultValueSql("now()");
+
+            entity.HasOne(x => x.Workspace)
+                .WithMany()
+                .HasForeignKey(x => x.WorkspaceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(x => x.InvitedUser)
+                .WithMany()
+                .HasForeignKey(x => x.InvitedUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.InvitedBy)
+                .WithMany()
+                .HasForeignKey(x => x.InvitedById)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(x => x.TokenHash)
+                .IsUnique()
+                .HasFilter("token_hash IS NOT NULL");
+            entity.HasIndex(x => x.WorkspaceId);
+            entity.HasIndex(x => x.InvitedUserId);
+            entity.HasIndex(x => x.InvitedById);
+            entity.HasIndex(x => x.Email);
+            entity.HasIndex(x => x.Status);
+            entity.HasIndex(x => x.ExpiresAt);
+            entity.HasIndex(x => new { x.WorkspaceId, x.InvitedUserId })
+                .IsUnique()
+                .HasFilter("status = 'Pending'");
         });
     }
 
@@ -218,14 +267,21 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
         });
     }
 
-    private static void ConfigureDocumentChunks(ModelBuilder modelBuilder)
+    private static void ConfigureDocumentChunks(ModelBuilder modelBuilder, bool isInMemoryProvider)
     {
         modelBuilder.Entity<DocumentChunk>(entity =>
         {
             entity.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.Property(x => x.Content).IsRequired();
             entity.Property(x => x.NormalizedContent).IsRequired().HasDefaultValue("");
-            entity.Property(x => x.Embedding).HasColumnType("vector(768)").IsRequired();
+            if (isInMemoryProvider)
+            {
+                entity.Ignore(x => x.Embedding);
+            }
+            else
+            {
+                entity.Property(x => x.Embedding).HasColumnType("vector(768)").IsRequired();
+            }
             entity.Property(x => x.EmbeddingModel).HasMaxLength(255).IsRequired();
             entity.Property(x => x.Metadata).HasColumnType("jsonb").HasDefaultValueSql("'{}'::jsonb");
             entity.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
@@ -249,9 +305,12 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
             entity.HasIndex(x => x.DocumentId);
             entity.HasIndex(x => x.WorkspaceId);
             entity.HasIndex(x => x.FolderId);
-            entity.HasIndex(x => x.Embedding)
-                .HasMethod("hnsw")
-                .HasOperators("vector_cosine_ops");
+            if (!isInMemoryProvider)
+            {
+                entity.HasIndex(x => x.Embedding)
+                    .HasMethod("hnsw")
+                    .HasOperators("vector_cosine_ops");
+            }
             entity.HasIndex(x => x.Metadata).HasMethod("gin");
         });
     }

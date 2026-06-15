@@ -30,13 +30,22 @@ public sealed class MessagingEmailService(
         string inviterName,
         string workspaceName,
         string role,
+        string viewInvitationUrl,
+        DateTimeOffset expiresAt,
         CancellationToken cancellationToken = default)
     {
         var subject = $"You've been invited to join {workspaceName} on InsightVault AI";
         var body = $@"
             <h2>Hello!</h2>
             <p><strong>{inviterName}</strong> has invited you to join the workspace <strong>{workspaceName}</strong> as a <strong>{role}</strong>.</p>
-            <p>Please log in to InsightVault AI using this email address to access the workspace.</p>
+            <p>This invitation was intended for <strong>{email}</strong> and expires on <strong>{expiresAt:yyyy-MM-dd HH:mm:ss} UTC</strong>.</p>
+            <p>
+                <a href=""{viewInvitationUrl}"" style=""display:inline-block;padding:10px 16px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;"">
+                    View invitation
+                </a>
+            </p>
+            <p>If the button does not work, copy and paste this link into your browser:</p>
+            <p><a href=""{viewInvitationUrl}"">{viewInvitationUrl}</a></p>
             <p>Thanks,<br/>The InsightVault AI Team</p>
         ";
 

@@ -38,6 +38,25 @@ public enum ApiMemberStatus
     Removed
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter<ApiWorkspaceInvitationStatus>))]
+public enum ApiWorkspaceInvitationStatus
+{
+    [JsonStringEnumMemberName("pending")]
+    Pending,
+
+    [JsonStringEnumMemberName("accepted")]
+    Accepted,
+
+    [JsonStringEnumMemberName("declined")]
+    Declined,
+
+    [JsonStringEnumMemberName("expired")]
+    Expired,
+
+    [JsonStringEnumMemberName("cancelled")]
+    Cancelled
+}
+
 [JsonConverter(typeof(JsonStringEnumConverter<ApiDocumentStatus>))]
 public enum ApiDocumentStatus
 {

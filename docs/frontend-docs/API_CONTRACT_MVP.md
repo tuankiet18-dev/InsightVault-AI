@@ -28,6 +28,7 @@ Status: contract for implementation. Frontend calls only Backend APIs. Backend c
 type SystemRole = "user" | "admin";
 type WorkspaceRole = "owner" | "editor" | "viewer";
 type MemberStatus = "invited" | "active" | "removed";
+type WorkspaceInvitationStatus = "pending" | "accepted" | "declined" | "expired" | "cancelled";
 type DocumentStatus = "pending_upload" | "uploaded" | "processing" | "completed" | "failed";
 type AiJobType =
   | "process_document"
@@ -185,7 +186,7 @@ Rules:
 | Method | Path | Auth | Request | Response |
 |---|---|---:|---|---|
 | GET | `/api/workspaces/{workspaceId}/members` | Yes | - | `WorkspaceMemberDto[]` |
-| POST | `/api/workspaces/{workspaceId}/members` | Yes | `{ email, role }` | `WorkspaceMemberDto` |
+| POST | `/api/workspaces/{workspaceId}/members` | Yes | `{ email, role }` | Deprecated: use `/api/workspaces/{workspaceId}/invitations` |
 | PATCH | `/api/workspaces/{workspaceId}/members/{memberId}` | Yes | `{ role?, status? }` | `WorkspaceMemberDto` |
 | DELETE | `/api/workspaces/{workspaceId}/members/{memberId}` | Yes | - | `204` |
 
@@ -200,6 +201,47 @@ type WorkspaceMemberDto = {
   invitedById?: string | null;
   invitedAt: string;
   joinedAt?: string | null;
+};
+```
+
+### Workspace Invitations
+
+GitHub-like invite flow:
+
+- Owner invites an existing registered user by email.
+- Backend sends email with `View invitation`.
+- FE opens `/invitations/{invitationId}`.
+- User must be logged in as the invited account before Accept/Decline.
+- Accept creates/reactivates active `workspace_members`.
+- Decline does not create membership.
+- Pending invitations expire after 7 days by default.
+
+| Method | Path | Auth | Request | Response |
+|---|---|---:|---|---|
+| POST | `/api/workspaces/{workspaceId}/invitations` | Yes | `{ email, role }` | `WorkspaceInvitationDto` |
+| GET | `/api/workspaces/{workspaceId}/invitations` | Yes | - | `WorkspaceInvitationDto[]` |
+| GET | `/api/me/workspace-invitations` | Yes | - | `WorkspaceInvitationDto[]` |
+| GET | `/api/me/workspace-invitations/{invitationId}` | Yes | - | `WorkspaceInvitationDto` |
+| POST | `/api/me/workspace-invitations/{invitationId}/accept` | Yes | - | `WorkspaceInvitationDto` |
+| POST | `/api/me/workspace-invitations/{invitationId}/decline` | Yes | - | `WorkspaceInvitationDto` |
+
+```ts
+type WorkspaceInvitationDto = {
+  id: string;
+  workspaceId: string;
+  workspaceName: string;
+  invitedUserId: string;
+  email: string;
+  role: WorkspaceRole;
+  status: WorkspaceInvitationStatus;
+  invitedById?: string | null;
+  invitedByName?: string | null;
+  expiresAt: string;
+  acceptedAt?: string | null;
+  declinedAt?: string | null;
+  cancelledAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
 };
 ```
 

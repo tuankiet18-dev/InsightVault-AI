@@ -1,6 +1,7 @@
 export type SystemRole = 'user' | 'admin'
 export type WorkspaceRole = 'owner' | 'editor' | 'viewer'
 export type MemberStatus = 'invited' | 'active' | 'removed'
+export type WorkspaceInvitationStatus = 'pending' | 'accepted' | 'declined' | 'expired' | 'cancelled'
 export type DocumentStatus =
   | 'pending_upload'
   | 'uploaded'
@@ -73,6 +74,24 @@ export type WorkspaceMemberDto = {
   invitedById?: string | null
   invitedAt: string
   joinedAt?: string | null
+}
+
+export type WorkspaceInvitationDto = {
+  id: string
+  workspaceId: string
+  workspaceName: string
+  invitedUserId: string
+  email: string
+  role: WorkspaceRole
+  status: WorkspaceInvitationStatus
+  invitedById?: string | null
+  invitedByName?: string | null
+  expiresAt: string
+  acceptedAt?: string | null
+  declinedAt?: string | null
+  cancelledAt?: string | null
+  createdAt: string
+  updatedAt: string
 }
 
 export type FolderDto = {

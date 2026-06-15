@@ -7,6 +7,8 @@ import { WorkspacePage } from '@/pages/WorkspacePage'
 import { UserDashboardPage } from '@/pages/UserDashboardPage'
 import { ChatPage } from '@/pages/ChatPage'
 import { ComparePage } from '@/pages/ComparePage'
+import { InvitationsPage } from '@/pages/InvitationsPage'
+import { InvitationDetailPage } from '@/pages/InvitationDetailPage'
 import { AdminUsersPage } from '@/pages/admin/AdminUsersPage'
 import { AdminJobsPage } from '@/pages/admin/AdminJobsPage'
 const AdminLayout = () => (
@@ -42,6 +44,14 @@ const router = createBrowserRouter([
   {
     path: '/dashboard',
     element: <ProtectedRoute><UserDashboardPage /></ProtectedRoute>,
+  },
+  {
+    path: '/invitations',
+    element: <ProtectedRoute><InvitationsPage /></ProtectedRoute>,
+  },
+  {
+    path: '/invitations/:invitationId',
+    element: <ProtectedRoute><InvitationDetailPage /></ProtectedRoute>,
   },
   {
     path: '/workspace',
