@@ -15,6 +15,14 @@ public interface IDocumentService
         Guid documentId,
         CancellationToken cancellationToken = default);
 
+    Task<DocumentOriginalAccessResponse> GetOriginalAccessAsync(
+        Guid documentId,
+        CancellationToken cancellationToken = default);
+
+    Task<DocumentOriginalTextResponse> GetOriginalTextAsync(
+        Guid documentId,
+        CancellationToken cancellationToken = default);
+
     Task<DocumentDto> UpdateAsync(
         Guid documentId,
         UpdateDocumentRequest request,

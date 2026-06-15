@@ -1,5 +1,6 @@
 using InsightVault.API.Application.Abstractions.Services.Auth;
 using InsightVault.API.Application.Abstractions.Services.Dashboard;
+using InsightVault.API.Application.Services.AiJobs;
 using InsightVault.API.Common.Errors;
 using InsightVault.API.Data;
 using InsightVault.API.Domain.Entities;
@@ -182,6 +183,7 @@ public sealed class DashboardService(
             job.Id,
             job.WorkspaceId,
             job.DocumentId,
+            AiJobOutputPayload.GetReportId(job),
             ToApiAiJobType(job.JobType),
             ToApiAiJobStatus(job.Status),
             job.RetryCount,

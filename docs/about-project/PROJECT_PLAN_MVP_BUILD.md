@@ -1,5 +1,13 @@
 # InsightVault AI - Project Plan, MVP Scope, and Build Roadmap
 
+Current status note, 2026-06-15: this roadmap is now partly historical. The
+live status anchor is `docs/about-project/CURRENT_PROJECT_STATUS.md`. The
+repository has already implemented most backend/infra MVP flows, including
+RabbitMQ workers, reports/compare, admin/dashboard, billing credits, PayOS
+checkout, and SMTP email queueing. The largest remaining gaps are backend
+Chat/RAG APIs and full manual E2E verification with real external credentials.
+Frontend billing UI now has a first implementation.
+
 ## 1. Product Direction
 
 ### 1.1. One-line pitch
@@ -114,7 +122,8 @@ Owner được xóa, khôi phục và xóa cứng mọi document trong workspace
 
 - Tạo AI job sau khi upload.
 - Worker xử lý document bất đồng bộ.
-- Mặc định dùng `.NET BackgroundService + ai_jobs`; RabbitMQ là optional nếu còn thời gian.
+- Current implementation uses `.NET BackgroundService + ai_jobs + RabbitMQ`
+  queues.
 - Lưu retry count và error message.
 
 #### AI document processing
@@ -177,6 +186,16 @@ Admin dashboard:
 - Failed jobs.
 - Error logs cơ bản. Admin dashboard chỉ hiển thị aggregate/job/user metadata, không hiển thị nội dung workspace/document/report của user.
 
+#### Billing and AI credits
+
+- Workspace-scoped monthly plans and credit top-ups.
+- Shared workspace credit balance consumed by active members.
+- Backend credit guard for expensive AI operations.
+- PayOS checkout and webhook-based provisioning.
+- Credit ledger for grants, debits, refunds, and idempotency.
+- Dedicated frontend billing UI is implemented for billing summary, plan
+  selection, top-ups, and checkout result pages.
+
 ---
 
 ## 3. MVP Non-goals
@@ -191,7 +210,6 @@ Những phần không làm trong MVP:
 - Export PDF/DOCX.
 - Knowledge graph nâng cao.
 - Version control phức tạp.
-- Billing/payment.
 - Fine-tuning model.
 - Obsidian plugin.
 
@@ -213,7 +231,7 @@ Các phần này có thể đưa vào future scope nếu còn thời gian hoặc
 | File Storage | MinIO |
 | AI Provider | Gemini API |
 | AI Service | Python service |
-| Background Job | .NET BackgroundService + ai_jobs; RabbitMQ optional |
+| Background Job | .NET BackgroundService + ai_jobs + RabbitMQ queues |
 
 ### 4.2. High-level flow
 
@@ -406,7 +424,7 @@ Main ownership:
 - Docker Compose.
 - PostgreSQL.
 - MinIO.
-- .NET BackgroundService + ai_jobs setup; RabbitMQ optional.
+- .NET BackgroundService + ai_jobs + RabbitMQ queues.
 - Document upload.
 - AI jobs.
 - Worker.

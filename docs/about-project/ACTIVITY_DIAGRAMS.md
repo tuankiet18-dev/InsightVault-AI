@@ -2,6 +2,11 @@
 
 Tài liệu này mô tả các Activity Diagrams cho các luồng quy trình (workflow) chính trong MVP của InsightVault AI, dựa trên file `PROJECT_FEATURES_MVP.md`. Các sơ đồ được vẽ bằng Mermaid.
 
+Update 2026-06-15: diagrams describe target/runtime workflows. For current
+implementation status and known gaps, use
+`docs/about-project/CURRENT_PROJECT_STATUS.md`. Billing/credit flows should be
+added here after the team finalizes the frontend billing UX.
+
 ## 1. Luồng Đăng nhập (Google OAuth Authentication Flow)
 
 Mô tả quá trình người dùng đăng nhập vào hệ thống sử dụng tài khoản Google.

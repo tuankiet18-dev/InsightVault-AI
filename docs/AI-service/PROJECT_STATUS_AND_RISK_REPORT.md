@@ -1,6 +1,13 @@
 # Báo Cáo Tiến Độ Dự Án & Phân Tích Rủi Ro (MVP)
 
-Ngày kiểm tra: 2026-05-26
+Ngày kiểm tra ban đầu: 2026-05-26
+
+Update 2026-06-15: this report is now historical. The current project status is
+tracked in `docs/about-project/CURRENT_PROJECT_STATUS.md`. Backend API,
+frontend routes, RabbitMQ workers, report/compare, admin/dashboard, billing,
+PayOS, and SMTP queueing have been added since this report was written. The
+main remaining backend gap is Chat/RAG session/message APIs, not the whole
+backend.
 
 Dựa trên kế hoạch `PROJECT_PLAN_MVP_BUILD.md` và `PROJECT_FEATURES_MVP.md`, dưới đây là đánh giá tổng quan về những việc đã hoàn thành, những phần còn thiếu, và các rủi ro hệ thống hiện tại.
 
@@ -25,10 +32,13 @@ Dựa trên kế hoạch `PROJECT_PLAN_MVP_BUILD.md` và `PROJECT_FEATURES_MVP.m
 
 ## 2. Những Task / Tính Năng Còn Thiếu (What's Missing)
 
-Tiến độ hiện tại đang bị **khuyết toàn bộ Backend API và Frontend UI** (Sprint 1, 2, 4, 5, 6).
+Tiến độ hiện tại không còn khuyết toàn bộ Backend API và Frontend UI. Phần này
+được giữ lại như lịch sử của ngày 2026-05-26; xem trạng thái mới trong
+`CURRENT_PROJECT_STATUS.md`.
 
 ### 2.1. Về phía Backend (.NET 10)
-- **Chưa có Controllers & Services**: Thư mục `Controllers` và `Services` hoàn toàn trống.
+- **Đã lỗi thời**: backend hiện có nhiều Controllers/Services. Gap còn lại là
+  Chat/RAG API layer.
 - **Sprint 1 (Auth & Workspace)**: Chưa có tích hợp Google OAuth 2.0, chưa có cơ chế cấp phát và xác thực JWT. Chưa có API CRUD cho Workspace/Member.
 - **Sprint 2 (MinIO Upload)**: Chưa có code AWS S3 SDK (MinIO client) để upload file từ FE lên MinIO.
 - **Sprint 3 (Background Worker)**: Chưa có `.NET BackgroundService` để đọc `AiJobs` từ database và gọi HTTP Request sang Python `ai-service`.

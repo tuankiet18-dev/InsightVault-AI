@@ -14,6 +14,7 @@ using InsightVault.API.DTOs.Common;
 using InsightVault.API.DTOs.Reports;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using InsightVault.API.Application.Services.AiJobs;
 using InsightVault.API.Application.Services.Billing;
 
 namespace InsightVault.API.Application.Services.Reports;
@@ -493,6 +494,7 @@ public sealed class ReportService(
             aiJob.Id,
             aiJob.WorkspaceId,
             aiJob.DocumentId,
+            AiJobOutputPayload.GetReportId(aiJob),
             ToApiAiJobType(aiJob.JobType),
             ToApiAiJobStatus(aiJob.Status),
             aiJob.RetryCount,

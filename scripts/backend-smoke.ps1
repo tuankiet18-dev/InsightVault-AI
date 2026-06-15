@@ -1,8 +1,8 @@
 param(
     [string]$BackendBaseUrl = "http://localhost:5126",
     [string]$AiServiceBaseUrl = "http://localhost:8000",
-    [int]$Retries = 5,
-    [int]$RetryDelaySeconds = 2,
+    [int]$Retries = 20,
+    [int]$RetryDelaySeconds = 3,
     [switch]$SkipReady
 )
 

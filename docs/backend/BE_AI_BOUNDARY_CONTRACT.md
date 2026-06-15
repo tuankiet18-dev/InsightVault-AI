@@ -2,6 +2,13 @@
 
 This document defines the agreed boundary between the ASP.NET Core backend and the Python AI service.
 
+Current status reference: `docs/about-project/CURRENT_PROJECT_STATUS.md`.
+
+Current implementation note: document processing, compare, and report
+orchestration are implemented through backend workers and the AI service.
+Backend Chat/RAG session/message APIs are still pending, so the RAG section
+below is the target contract rather than completed backend behavior.
+
 ## Final Ownership Decision
 
 Backend is the system-of-record owner.
@@ -135,6 +142,10 @@ Target persistence:
 - Vector chunk persistence may temporarily remain in AI for MVP.
 
 ### RAG Query
+
+Backend implementation status: pending. AI service supports `/rag/query`, but
+backend still needs `ChatController`/`ChatService` to authenticate, resolve
+mentions, call AI, and persist messages/sources.
 
 Backend calls AI only after checking chat workspace permission and message context ownership.
 Backend resolves any `@file` / `@folder` mentions before calling AI.

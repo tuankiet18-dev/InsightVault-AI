@@ -3,8 +3,8 @@ import type {
   ReportDto, 
   GenerateReportRequest, 
   CompareRequest, 
-  CompareResponse,
-  ReportType
+  ReportType,
+  AiJobDto
 } from '../types/api';
 
 export const reportApi = {
@@ -18,7 +18,7 @@ export const reportApi = {
   },
 
   generateReport: (workspaceId: string, data: GenerateReportRequest) => {
-    return http.post<ReportDto>(`/workspaces/${workspaceId}/reports/generate`, data);
+    return http.post<AiJobDto>(`/workspaces/${workspaceId}/reports/generate`, data);
   },
 
   deleteReport: (reportId: string) => {
@@ -27,6 +27,6 @@ export const reportApi = {
 
   // Compare
   compareDocuments: (workspaceId: string, data: CompareRequest) => {
-    return http.post<CompareResponse>(`/workspaces/${workspaceId}/compare`, data);
+    return http.post<AiJobDto>(`/workspaces/${workspaceId}/compare`, data);
   },
 };

@@ -8,5 +8,6 @@ public sealed class ObjectStorageOptions
     public string SecretKey { get; set; } = string.Empty;
     public string BucketName { get; set; } = "insightvault-documents";
     public int PresignedUploadMinutes { get; set; } = 10;
+    public int PresignedReadMinutes { get; set; } = 10;
     public bool UseSsl { get; set; }
 }

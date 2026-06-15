@@ -5,6 +5,8 @@ import { useThemeStore } from '@/stores/themeStore'
 import { useAuthStore } from '@/stores/authStore'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -25,7 +27,7 @@ export function Providers({ children }: { children: ReactNode }) {
   }, [fetchCurrentUser])
 
   return (
-    <GoogleOAuthProvider clientId="318569612593-fp37osbure916m27ufuh4v1lvrf9t8jm.apps.googleusercontent.com">
+    <GoogleOAuthProvider clientId={googleClientId}>
       <QueryClientProvider client={queryClient}>
         {children}
       </QueryClientProvider>

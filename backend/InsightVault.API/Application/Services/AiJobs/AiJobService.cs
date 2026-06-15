@@ -227,6 +227,7 @@ public sealed class AiJobService(
             job.Id,
             job.WorkspaceId,
             job.DocumentId,
+            AiJobOutputPayload.GetReportId(job),
             ToApiJobType(job.JobType),
             ToApiJobStatus(job.Status),
             job.RetryCount,

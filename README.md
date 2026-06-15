@@ -1,107 +1,121 @@
-# InsightVault AI (Lotus Bridge)
+# InsightVault AI
 
-InsightVault AI là hệ thống quản lý và phân tích tài liệu thông minh tích hợp trí tuệ nhân tạo. Dự án bao gồm các thành phần:
+InsightVault AI is a collaborative document intelligence workspace. The app is
+run as one Docker Compose stack: React/Vite frontend, ASP.NET Core backend,
+FastAPI AI service, PostgreSQL with pgvector, RabbitMQ, and MinIO.
 
-- **Frontend**: React, Vite, TypeScript
-- **Backend**: ASP.NET Core 10 Web API
-- **AI Service**: Python 3, FastAPI, Gemini API
-- **Infrastructure**: PostgreSQL (pgvector), MinIO (chạy qua Docker)
+Current project status is tracked in
+`docs/about-project/CURRENT_PROJECT_STATUS.md`.
 
-## 📌 Yêu cầu hệ thống (Prerequisites)
+## Docker-Only Rule
 
-Để chạy dự án trên máy local, bạn cần cài đặt:
-1. **Docker Desktop** (bắt buộc phải bật Docker Desktop trước khi chạy)
-2. **Node.js** (v18+ cho Frontend)
-3. **.NET 10 SDK** (cho Backend)
-4. **Python 3.10+** (cho AI Service)
-5. **Git**
+All normal setup, development, verification, and smoke testing must run through
+Docker. Do not run the frontend, backend, or AI service as separate local
+processes unless a maintainer explicitly asks for a one-off debugging session.
 
-## 🚀 Hướng dẫn chạy dự án (Local Development)
+Required local tooling:
 
-### Bước 1: Khởi động Infrastructure (Database & Storage)
+- Docker Desktop
+- Git
 
-Mở terminal (PowerShell) tại thư mục `insightvault-ai` và chạy:
+Node.js, .NET SDK, and Python are not required on the host for the standard
+workflow. They are installed inside the project containers.
+
+## Environment Files
+
+Create local env files if they do not exist:
 
 ```powershell
-cd insightvault-ai
+Copy-Item infra\.env.example infra\.env
+Copy-Item ai-service\.env.example ai-service\.env
+```
+
+For local development, `infra\.env` must include non-empty values for:
+
+- `POSTGRES_PASSWORD`
+- `MINIO_ROOT_PASSWORD`
+- `RABBITMQ_DEFAULT_PASS`
+- `JWT_SIGNING_KEY`
+- `GOOGLE_CLIENT_ID`
+
+Optional integrations can stay disabled until credentials are available:
+
+- `SMTP_ENABLED=false`
+- `PAYOS_ENABLED=false`
+
+The AI service needs `GEMINI_API_KEY` in `ai-service\.env` before live document
+processing, embeddings, RAG, compare, or report generation can call Gemini.
+
+## Setup
+
+Build and validate the Docker stack:
+
+```powershell
+.\scripts\setup.ps1
+```
+
+Bash equivalent:
+
+```bash
+./scripts/setup.sh
+```
+
+## Start
+
+Fast start without rebuilding images:
+
+```powershell
+.\scripts\start-docker-fast.ps1
+```
+
+Start and rebuild:
+
+```powershell
 .\scripts\start-docker.ps1
 ```
-*Script này sẽ tự động khởi chạy PostgreSQL (có pgvector) và MinIO thông qua Docker Compose.*
 
-- **MinIO Console**: `http://localhost:9001` (admin / password123)
-- **PostgreSQL**: `localhost:5432` (admin / password123 / DB: insightvault)
+Bash equivalent:
 
-### Bước 2: Chạy Backend (.NET Core)
-
-Mở một terminal mới:
-
-```powershell
-cd insightvault-ai\backend\InsightVault.API
-dotnet run
+```bash
+./scripts/start-docker.sh
 ```
-*Backend Swagger UI sẽ có sẵn tại: `http://localhost:5000/swagger` (hoặc cổng cấu hình trong `launchSettings.json`).*
 
-### Bước 3: Chạy AI Service (Python FastAPI)
+Local URLs:
 
-Mở một terminal mới:
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:5126`
+- Backend OpenAPI: `http://localhost:5126/openapi/v1.json`
+- AI service docs: `http://localhost:8000/docs`
+- MinIO console: `http://localhost:9001`
+- RabbitMQ management: `http://localhost:15672`
 
-```powershell
-cd insightvault-ai\ai-service
+## Verify
 
-# 1. Tạo môi trường ảo (chỉ làm lần đầu)
-python -m venv venv
-
-# 2. Kích hoạt môi trường ảo
-.\venv\Scripts\activate
-
-# 3. Cài đặt dependencies (chỉ làm lần đầu hoặc khi có thay đổi)
-pip install -r requirements.txt
-
-# 4. Copy file cấu hình môi trường
-cp .env.example .env
-
-# 5. Cấu hình Gemini API Key
-# Mở file .env và điền GEMINI_API_KEY của bạn vào
-
-# 6. Khởi chạy AI Service
-python main.py
-```
-*AI Service Docs (Swagger) sẽ có sẵn tại: `http://127.0.0.1:8000/docs`.*
-
-### Bước 4: Chạy Frontend (React/Vite)
-
-Mở một terminal mới:
+Run Docker-based checks:
 
 ```powershell
-cd insightvault-ai\frontend
-
-# 1. Cài đặt dependencies (chỉ làm lần đầu)
-npm install
-
-# 2. Khởi chạy giao diện
-npm run dev
-```
-*Frontend sẽ chạy tại: `http://localhost:5173`.*
-
----
-
-## 🛠 Hướng dẫn làm việc (Workflow cho Teammate)
-
-### 1. Kiểm tra code trước khi commit (Pre-commit check)
-Dự án có sẵn script để tự động format, lint và build thử nghiệm để đảm bảo code của bạn không gây lỗi CI/CD.
-Trước khi `git commit` hoặc tạo Pull Request, hãy luôn chạy:
-
-```powershell
-cd insightvault-ai
 .\scripts\check.ps1
 ```
 
-### 2. Quản lý AI Service Models
-Trong `ai-service/.env`, project đang dùng:
-- Embedding: `gemini-embedding-001`
-- Chat/Report: `gemini-2.5-flash`
+This validates Compose config, builds images, runs frontend lint/build inside
+the frontend container, runs backend tests inside a .NET SDK container, checks
+AI service imports inside the AI container, starts the stack, and runs health
+smoke checks.
 
-*Lưu ý: Nếu bạn gặp lỗi 429 Quota Exceeded khi test AI Service, nguyên nhân là do Free Tier của Gemini API Key bị giới hạn số lượng request. Hãy thay API Key khác hoặc đợi để test tiếp.*
+For a quick health-only pass against an already running stack:
 
-### 3. Tài liệu thiết kế
-Các tài liệu quan trọng của dự án (ERD, Architecture, Kế hoạch MVP) được lưu trữ trong thư mục `docs/`. Hãy đọc các tài liệu này nếu bạn làm việc với database schema hoặc system architecture.
+```powershell
+.\scripts\backend-smoke.ps1
+```
+
+## Clean
+
+Remove generated build/test artifacts without deleting Docker volumes or env
+files:
+
+```powershell
+.\scripts\clean.ps1
+```
+
+Use Docker volume deletion only when you intentionally want to reset local data.
+Do not run `docker compose down -v` casually.

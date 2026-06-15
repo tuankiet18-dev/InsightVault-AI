@@ -6,7 +6,9 @@ import type {
   ConfirmUploadRequest, 
   ConfirmUploadResponse,
   AiJobDto,
-  PresignUploadRequest
+  PresignUploadRequest,
+  DocumentOriginalAccessResponse,
+  DocumentOriginalTextResponse
 } from '../types/api';
 
 export interface GetDocumentsParams {
@@ -28,6 +30,14 @@ export const documentApi = {
 
   getDocument: (documentId: string) => {
     return http.get<DocumentDto>(`/documents/${documentId}`);
+  },
+
+  getOriginalAccess: (documentId: string) => {
+    return http.get<DocumentOriginalAccessResponse>(`/documents/${documentId}/original/access`);
+  },
+
+  getOriginalText: (documentId: string) => {
+    return http.get<DocumentOriginalTextResponse>(`/documents/${documentId}/original/text`);
   },
 
   updateDocument: (documentId: string, data: UpdateDocumentData) => {

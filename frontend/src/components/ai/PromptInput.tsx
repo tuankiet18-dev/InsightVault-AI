@@ -22,7 +22,22 @@ export function PromptInput() {
     const documentIds = selectedDocumentId ? [selectedDocumentId] : []
     const folderId = selectedFolderId
 
+    if (mode === 'Ask') {
+      setAnswer('Workspace chat is designed for the right inspector, but backend Chat/RAG session APIs are not implemented yet.')
+      setSuggestions(['Use Compare for async document comparison', 'Use Report mode to queue a report job'])
+      setIsLoading(false)
+      setPrompt('')
+      return
+    }
+
     if (mode === 'Compare') {
+      if (documentIds.length < 2) {
+        setAnswer('Open the Compare tab from the left rail to select 2 to 5 completed documents.')
+        setSuggestions(['Compare needs at least two completed documents'])
+        setIsLoading(false)
+        return
+      }
+
       compareMutation.mutate(
         { 
           workspaceId: activeWorkspaceId, 
@@ -30,8 +45,8 @@ export function PromptInput() {
         },
         {
           onSuccess: (res) => {
-            setAnswer(res.rawMarkdown || 'Comparison complete.')
-            setSuggestions(res.recommendations || [])
+            setAnswer(`Compare job queued. Job status: ${res.status}. Open the Compare tab or Reports after the job completes.`)
+            setSuggestions(['Compare runs asynchronously', 'Completed results are stored as reports'])
             setIsLoading(false)
             setPrompt('')
           },
@@ -48,9 +63,8 @@ export function PromptInput() {
         },
         {
           onSuccess: (res) => {
-            // Because our MSW generateReport doesn't return the exact same shape as compare,
-            // we handle it here loosely. The mock just returns a report object.
-            setAnswer((res as import('@/types/api').ReportDto)?.markdownContent || 'Report generated.')
+            setAnswer(`Report job queued. Job status: ${res.status}. Open Reports after the job completes.`)
+            setSuggestions(['Report generation runs asynchronously', 'Refresh Reports to view stored output'])
             setIsLoading(false)
             setPrompt('')
           },
@@ -77,7 +91,7 @@ export function PromptInput() {
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Hỏi AI về tài liệu trong workspace..."
+          placeholder="Ask AI about documents in this workspace..."
           className="min-h-[60px] w-full resize-none rounded-lg border border-border bg-card p-3 pr-11 text-sm focus:outline-none focus:ring-2 focus:ring-ai/40"
         />
         <button
@@ -98,7 +112,9 @@ export function PromptInput() {
           )}
         </button>
       </div>
-      <p className="mt-1 px-1 text-[10px] text-muted-foreground">Câu trả lời sẽ kèm trích nguồn từ tài liệu.</p>
+      <p className="mt-1 px-1 text-[10px] text-muted-foreground">
+        Ask needs backend Chat/RAG APIs; compare and report actions create AI jobs.
+      </p>
     </div>
   )
 }

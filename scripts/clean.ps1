@@ -1,14 +1,20 @@
 $ErrorActionPreference = "Stop"
 
-$Root = Resolve-Path (Join-Path $PSScriptRoot "..")
+$Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Set-Location $Root
 
 $targets = @(
     "frontend\dist",
+    "frontend\.vite",
     "backend\InsightVault.API\bin",
     "backend\InsightVault.API\obj",
+    "backend\InsightVault.API.Tests\bin",
+    "backend\InsightVault.API.Tests\obj",
     "ai-service\__pycache__",
-    "ai-service\notebooks\.ipynb_checkpoints"
+    "ai-service\.pytest_cache",
+    "ai-service\notebooks\.ipynb_checkpoints",
+    ".pytest_cache",
+    "test-artifacts"
 )
 
 foreach ($target in $targets) {

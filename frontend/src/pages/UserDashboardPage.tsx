@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import type { UserDashboardDto } from '@/types/api'
-import { Folder, FileText, Settings, LogOut, Plus, ChevronRight, Activity, CheckCircle, AlertTriangle, Clock, Mail} from 'lucide-react'
+import { Folder, FileText, Settings, LogOut, Plus, ChevronRight, Activity, CheckCircle, AlertTriangle, Clock, CreditCard, Mail } from 'lucide-react'
 import { useUiStore } from '@/stores/uiStore'
 import { CreateWorkspaceModal } from '@/components/workspace/CreateWorkspaceModal'
 import { useWorkspaces } from '@/hooks/useWorkspaces'
@@ -100,8 +100,8 @@ export function UserDashboardPage() {
   return (
     <div className="min-h-screen bg-[var(--color-background)] text-[var(--color-foreground)]">
       {/* Header */}
-      <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-background)]/80 px-6 backdrop-blur-md">
-        <div className="flex items-center gap-4">
+      <header className="sticky top-0 z-10 flex min-h-16 flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-background)]/80 px-6 py-3 backdrop-blur-md">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-md bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-ai)] font-bold text-white shadow-sm">
             IV
           </div>
@@ -129,6 +129,10 @@ export function UserDashboardPage() {
               </span>
             )}
           </Link>
+          <Link to="/billing" className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/10">
+            <CreditCard className="h-4 w-4" />
+            Billing
+          </Link>
           <button onClick={logout} className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-red-500 transition-colors hover:bg-red-500/10">
             <LogOut className="h-4 w-4" />
             Sign out
@@ -139,7 +143,9 @@ export function UserDashboardPage() {
       {/* Main Content */}
       <main className="mx-auto max-w-5xl px-6 py-12 animate-in fade-in zoom-in-95 duration-500">
         <h1 className="mb-2 text-3xl font-bold tracking-tight">Welcome back, {user?.fullName?.split(' ')[0] || 'User'}</h1>
-        <p className="mb-8 text-[var(--color-muted-foreground)]">Select a workspace to continue working or create a new one.</p>
+        <p className="mb-8 text-[var(--color-muted-foreground)]">
+          Select a workspace, check AI credit capacity, or create a new team space.
+        </p>
 
         {/* Quick Stats */}
         <section className="mb-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-sm">

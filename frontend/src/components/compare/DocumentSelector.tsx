@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { File, Search, CheckCircle2 } from 'lucide-react'
+import { Check, File, Search } from 'lucide-react'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useDocuments } from '@/hooks/useDocuments'
 import { cn, getFileTypeColor } from '@/lib/utils'
@@ -56,20 +56,21 @@ export function DocumentSelector({
                 onClick={() => toggleDocument(doc.id)}
                 className={cn(
                   "flex items-center gap-3 w-full p-2.5 rounded-lg text-left transition-colors group",
-                  isSelected ? "bg-primary-50 hover:bg-primary-100" : "hover:bg-surface-100"
+                  isSelected ? "bg-primary/10 ring-1 ring-primary/30 hover:bg-primary/15" : "hover:bg-surface-100"
                 )}
+                aria-pressed={isSelected}
               >
                 <div className={cn(
                   "w-5 h-5 rounded-full flex items-center justify-center shrink-0 border transition-colors",
-                  isSelected ? "bg-primary-500 border-primary-500 text-white" : "border-surface-300 bg-surface-0 group-hover:border-primary-400"
+                  isSelected ? "bg-primary border-primary text-primary-foreground" : "border-surface-300 bg-surface-0 group-hover:border-primary"
                 )}>
-                  {isSelected && <CheckCircle2 className="w-3.5 h-3.5" />}
+                  {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                 </div>
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
                     <File className={cn("w-3.5 h-3.5 shrink-0", getFileTypeColor(doc.fileType))} />
-                    <span className={cn("text-sm font-medium truncate", isSelected ? "text-primary-900" : "text-surface-700")}>
+                    <span className={cn("text-sm font-medium truncate", isSelected ? "text-foreground" : "text-surface-700")}>
                       {doc.originalFileName}
                     </span>
                   </div>

@@ -1,38 +1,78 @@
-import { useState } from 'react'
-import { GitCompare, Sparkles, FileText } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { ArrowRight, CheckCircle2, Clock, FileText, GitCompare, Sparkles, XCircle } from 'lucide-react'
 import { DocumentSelector } from './DocumentSelector'
-import { CompareResult } from './CompareResult'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useDocuments } from '@/hooks/useDocuments'
 import { useCompareDocuments } from '@/hooks/useReports'
-import type { CompareResponse } from '@/types/api'
+import { useAiJob } from '@/hooks/useAiJobs'
+import { useTabStore } from '@/stores/tabStore'
+import type { AiJobDto } from '@/types/api'
 
 export function ComparePanel() {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [result, setResult] = useState<CompareResponse | null>(null)
+  const [queuedJob, setQueuedJob] = useState<AiJobDto | null>(null)
   const { activeWorkspaceId } = useWorkspaceStore()
   const { data: documents = [] } = useDocuments(activeWorkspaceId)
   const compareMutation = useCompareDocuments()
+  const { openTab } = useTabStore()
+  const { data: latestJob } = useAiJob(queuedJob?.id ?? null)
+  const openedReportIdRef = useRef<string | null>(null)
+  const activeJob = latestJob ?? queuedJob
+  const isAnalyzing = activeJob?.status === 'queued' || activeJob?.status === 'processing' || compareMutation.isPending
+
+  const openReports = useCallback(() => {
+    openTab({
+      id: 'reports-workspace',
+      label: 'Reports',
+      type: 'reports',
+      closable: true,
+    })
+  }, [openTab])
+
+  const openGeneratedReport = useCallback((reportId: string) => {
+    openTab({
+      id: `report-${reportId}`,
+      label: 'Comparison report',
+      type: 'report',
+      reportId,
+      closable: true,
+    })
+  }, [openTab])
+
+  useEffect(() => {
+    if (activeJob?.status !== 'completed' || !activeJob.reportId) {
+      return
+    }
+
+    if (openedReportIdRef.current === activeJob.reportId) {
+      return
+    }
+
+    openedReportIdRef.current = activeJob.reportId
+    openGeneratedReport(activeJob.reportId)
+  }, [activeJob?.reportId, activeJob?.status, openGeneratedReport])
 
   const handleCompare = () => {
     if (selectedIds.length < 2 || !activeWorkspaceId) return
     
-    setIsAnalyzing(true)
-    setResult(null)
+    setQueuedJob(null)
+    openedReportIdRef.current = null
     
     compareMutation.mutate(
       { workspaceId: activeWorkspaceId, data: { documentIds: selectedIds } },
       {
-        onSuccess: (res) => {
-          setResult(res)
-          setIsAnalyzing(false)
-        },
-        onError: () => {
-          setIsAnalyzing(false)
-        }
+        onSuccess: (job) => setQueuedJob(job),
       }
     )
+  }
+
+  const openComparisonReport = () => {
+    if (activeJob?.reportId) {
+      openGeneratedReport(activeJob.reportId)
+      return
+    }
+
+    openReports()
   }
 
   const selectedDocs = documents.filter(d => selectedIds.includes(d.id))
@@ -53,11 +93,12 @@ export function ComparePanel() {
           
           <div className="flex items-center gap-3">
             <button 
-              disabled={!result}
+              disabled={activeJob?.status !== 'completed'}
+              onClick={openComparisonReport}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-border bg-surface-0 hover:bg-surface-50 transition-colors disabled:opacity-50 shadow-sm"
             >
               <FileText className="w-4 h-4 text-surface-500" />
-              Save as Report
+              Open Report
             </button>
             <button
               onClick={handleCompare}
@@ -91,27 +132,27 @@ export function ComparePanel() {
 
         {/* Main Content: Results */}
         <main className="flex-1 overflow-y-auto p-6 lg:p-8 relative scroll-smooth">
-          {result ? (
-            <div className="max-w-5xl mx-auto pb-12">
-              <div className="flex flex-wrap items-center gap-2 mb-8 p-4 bg-surface-0 border border-border rounded-xl shadow-sm">
-                <span className="text-sm font-medium text-surface-500 mr-2">Comparing:</span>
+          {isAnalyzing ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface-50/80 backdrop-blur-sm z-10">
+              <div className="w-16 h-16 border-4 border-surface-200 border-t-ai-500 rounded-full animate-spin mb-6" />
+              <h2 className="text-xl font-bold text-surface-900 mb-2">
+                {compareMutation.isPending ? 'Starting comparison...' : 'Analyzing documents...'}
+              </h2>
+              <p className="text-surface-500 text-center max-w-sm">
+                The backend queued a compare job. Keep this tab open or check Reports after the job completes.
+              </p>
+            </div>
+          ) : activeJob ? (
+            <div className="mx-auto flex h-full max-w-xl flex-col items-center justify-center text-center">
+              <JobStatusCard job={activeJob} onOpenReport={openComparisonReport} />
+              <div className="mt-8 flex flex-wrap justify-center gap-2">
                 {selectedDocs.map((doc, idx) => (
-                  <div key={doc.id} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-100 border border-surface-200 text-sm">
-                    <span className="font-semibold text-primary-600">Doc {idx + 1}:</span>
-                    <span className="truncate max-w-[150px]">{doc.originalFileName}</span>
+                  <div key={doc.id} className="flex max-w-[220px] items-center gap-1.5 rounded-md border border-border bg-surface-0 px-2.5 py-1.5 text-sm">
+                    <span className="font-semibold text-primary">Doc {idx + 1}</span>
+                    <span className="truncate">{doc.originalFileName}</span>
                   </div>
                 ))}
               </div>
-              
-              <CompareResult result={result} />
-            </div>
-          ) : isAnalyzing ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface-50/80 backdrop-blur-sm z-10">
-              <div className="w-16 h-16 border-4 border-surface-200 border-t-ai-500 rounded-full animate-spin mb-6" />
-              <h2 className="text-xl font-bold text-surface-900 mb-2">Analyzing documents...</h2>
-              <p className="text-surface-500 text-center max-w-sm">
-                AI is reading the selected documents, finding semantic overlaps, and identifying contradictions.
-              </p>
             </div>
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto">
@@ -144,5 +185,47 @@ export function ComparePanel() {
         </main>
       </div>
     </div>
+  )
+}
+
+function JobStatusCard({ job, onOpenReport }: { job: AiJobDto; onOpenReport: () => void }) {
+  const isCompleted = job.status === 'completed'
+  const isFailed = job.status === 'failed' || job.status === 'cancelled'
+
+  return (
+    <section className="w-full rounded-lg border border-border bg-surface-0 p-6 shadow-sm">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+        {isCompleted ? (
+          <CheckCircle2 className="h-6 w-6 text-success-600" />
+        ) : isFailed ? (
+          <XCircle className="h-6 w-6 text-danger-600" />
+        ) : (
+          <Clock className="h-6 w-6 text-warning-600" />
+        )}
+      </div>
+      <h2 className="mt-4 text-xl font-semibold text-surface-900">
+        {isCompleted ? 'Comparison complete' : isFailed ? 'Comparison failed' : 'Comparison queued'}
+      </h2>
+      <p className="mt-2 text-sm leading-6 text-surface-600">
+        {isCompleted
+          ? 'The result is persisted as a comparison report. Open the generated report to review it in the workspace.'
+          : isFailed
+            ? job.errorMessage || 'The compare job failed. Check AI Jobs or retry after reviewing source documents.'
+            : 'AI is comparing the selected documents asynchronously. This view will update as the job status changes.'}
+      </p>
+      <div className="mt-4 rounded-md border border-border bg-surface-50 px-3 py-2 text-xs text-surface-500">
+        Job status: <span className="font-semibold capitalize text-surface-700">{job.status}</span>
+      </div>
+      {isCompleted && (
+        <button
+          type="button"
+          onClick={onOpenReport}
+          className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground"
+        >
+          Open Report
+          <ArrowRight className="h-4 w-4" />
+        </button>
+      )}
+    </section>
   )
 }

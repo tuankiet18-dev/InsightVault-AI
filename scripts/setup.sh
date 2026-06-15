@@ -4,22 +4,14 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-require_command() {
-  if ! command -v "$1" >/dev/null 2>&1; then
-    echo "Missing required command: $1" >&2
-    exit 1
-  fi
-}
-
-require_command node
-require_command npm
-require_command dotnet
-require_command python3
-require_command docker
+if ! command -v docker >/dev/null 2>&1; then
+  echo "Missing required command: docker" >&2
+  exit 1
+fi
 
 if [ ! -f ai-service/.env ]; then
   cp ai-service/.env.example ai-service/.env
-  echo "Created ai-service/.env from example. Set GEMINI_API_KEY before using Gemini features."
+  echo "Created ai-service/.env from example. Set GEMINI_API_KEY before using AI features."
 fi
 
 if [ ! -f infra/.env ]; then
@@ -27,26 +19,9 @@ if [ ! -f infra/.env ]; then
   echo "Created infra/.env from example."
 fi
 
-if [ ! -x ai-service/venv/bin/python ]; then
-  python3 -m venv ai-service/venv
-fi
-
-ai-service/venv/bin/python -m pip install --upgrade pip
-ai-service/venv/bin/python -m pip install -r ai-service/requirements.txt
-
-(cd frontend && npm install)
-dotnet restore backend/InsightVault.API/InsightVault.API.csproj
-
-mkdir -p .vscode
-cat > .vscode/settings.json <<'JSON'
-{
-  "python.defaultInterpreterPath": "${workspaceFolder}/ai-service/venv/bin/python",
-  "python.analysis.extraPaths": [
-    "${workspaceFolder}/ai-service"
-  ]
-}
-JSON
+docker compose --env-file infra/.env -f infra/docker-compose.yml config --quiet
+docker compose --env-file infra/.env -f infra/docker-compose.yml build
 
 echo
-echo "Setup complete."
-echo "Next: update ai-service/.env, then run ./scripts/start-dev.sh"
+echo "Docker setup complete."
+echo "Next: update infra/.env and ai-service/.env, then run ./scripts/start-docker.sh"

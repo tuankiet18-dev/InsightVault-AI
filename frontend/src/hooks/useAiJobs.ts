@@ -25,6 +25,10 @@ export const useAiJob = (jobId: string | null) => {
     queryKey: aiJobKeys.detail(jobId!),
     queryFn: () => aiJobApi.getJob(jobId!),
     enabled: !!jobId,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status === 'queued' || status === 'processing' ? 3000 : false;
+    },
   });
 };
 

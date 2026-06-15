@@ -131,6 +131,7 @@ export interface AiJobDto {
   id: string;
   workspaceId?: string | null;
   documentId?: string | null;
+  reportId?: string | null;
   jobType: AiJobType;
   status: AiJobStatus;
   retryCount: number;
@@ -290,6 +291,67 @@ export interface ReportDto {
   modelName?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export type DocumentOriginalPreviewKind = "pdf" | "text" | "download";
+
+export interface DocumentOriginalAccessResponse {
+  fileName: string;
+  contentType: string;
+  previewKind: DocumentOriginalPreviewKind;
+  canPreviewInline: boolean;
+  downloadUrl: string;
+  expiresAt: string;
+}
+
+export interface DocumentOriginalTextResponse {
+  fileName: string;
+  contentType: string;
+  content: string;
+}
+
+// Billing
+export interface BillingPlanDto {
+  code: string;
+  name: string;
+  description: string;
+  priceVnd: number;
+  billingPeriodMonths: number;
+  includedCredits: number;
+  maxMembers: number;
+  storageLimitBytes: number;
+}
+
+export interface CreditPackageDto {
+  code: string;
+  name: string;
+  priceVnd: number;
+  credits: number;
+}
+
+export interface BillingSummaryDto {
+  workspaceId: string;
+  plan: BillingPlanDto;
+  status: string;
+  recurringCreditsRemaining: number;
+  topUpCreditsRemaining: number;
+  totalCreditsRemaining: number;
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  cancelAtPeriodEnd: boolean;
+}
+
+export interface CreateCheckoutRequest {
+  productCode: string;
+}
+
+export interface CheckoutSessionDto {
+  paymentOrderId: string;
+  orderCode: number;
+  productCode: string;
+  amountVnd: number;
+  checkoutUrl: string;
+  expiresAt?: string | null;
 }
 
 // Dashboard
