@@ -63,6 +63,5 @@ docker-compose.dev.yml
 #backend
 launchSettings.json
 backend/InsightVault.API/appsettings.Development.json
-appsettings.json
 #ai-service
 .env.example

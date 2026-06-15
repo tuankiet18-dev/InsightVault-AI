@@ -3,6 +3,7 @@ using InsightVault.API.Application.Abstractions.Messaging;
 using InsightVault.API.Application.Abstractions.Repositories;
 using InsightVault.API.Application.Abstractions.Services.Auth;
 using InsightVault.API.Application.Abstractions.Services.Documents;
+using InsightVault.API.Application.Abstractions.Services.Billing;
 using InsightVault.API.Application.Abstractions.Services.Workspaces;
 using InsightVault.API.Application.Abstractions.Storage;
 using InsightVault.API.Common.Errors;
@@ -13,6 +14,8 @@ using InsightVault.API.DTOs.AiJobs;
 using InsightVault.API.DTOs.Common;
 using InsightVault.API.DTOs.Documents;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using InsightVault.API.Application.Services.Billing;
 
 namespace InsightVault.API.Application.Services.Documents;
 
@@ -24,7 +27,10 @@ public sealed class DocumentService(
     IFolderRepository folderRepository,
     IAiJobRepository aiJobRepository,
     IObjectStorageService objectStorageService,
-    IMessagePublisher messagePublisher) : IDocumentService
+    IMessagePublisher messagePublisher,
+    ICreditService creditService,
+    IWorkspaceEntitlementService entitlementService,
+    IOptions<BillingOptions> billingOptions) : IDocumentService
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private static readonly IReadOnlyDictionary<string, string> SupportedContentTypes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -146,6 +152,10 @@ public sealed class DocumentService(
         var originalFileName = NormalizeFileName(request.FileName);
         var fileExtension = ValidateSupportedFile(originalFileName, request.ContentType);
         ValidateFileSize(request.FileSizeBytes);
+        await entitlementService.EnsureCanStoreAsync(
+            workspaceId,
+            request.FileSizeBytes,
+            cancellationToken);
 
         if (request.FolderId.HasValue)
         {
@@ -232,7 +242,14 @@ public sealed class DocumentService(
         document.UpdatedAt = DateTimeOffset.UtcNow;
 
         var aiJob = CreateProcessDocumentJob(document, userId);
+        var credits = BillingCreditCosts.ForDocument(document.FileSizeBytes, billingOptions.Value);
         await aiJobRepository.AddAsync(aiJob, cancellationToken);
+        await creditService.ConsumeAsync(
+            document.WorkspaceId,
+            aiJob.Id,
+            credits,
+            "process_document",
+            cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         await PublishProcessingJobAsync(document, aiJob, cancellationToken);
 
@@ -580,6 +597,11 @@ public sealed class DocumentService(
         }
         catch (Exception exception)
         {
+            await creditService.RefundAsync(
+                document.WorkspaceId,
+                aiJob.Id,
+                "process_document_queue_failure",
+                CancellationToken.None);
             var now = DateTimeOffset.UtcNow;
             aiJob.Status = AiJobStatus.Failed;
             aiJob.ErrorMessage = $"Failed to publish processing job: {exception.Message}";
@@ -619,6 +641,7 @@ public sealed class DocumentService(
 
         return new AiJob
         {
+            Id = Guid.NewGuid(),
             WorkspaceId = document.WorkspaceId,
             DocumentId = document.Id,
             CreatedById = userId,

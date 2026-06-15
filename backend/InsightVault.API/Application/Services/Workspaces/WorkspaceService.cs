@@ -6,6 +6,7 @@ using InsightVault.API.Domain.Entities;
 using InsightVault.API.Domain.Enums;
 using InsightVault.API.DTOs.Workspaces;
 using InsightVault.API.Application.Abstractions.Services.Emails;
+using InsightVault.API.Application.Abstractions.Services.Billing;
 
 namespace InsightVault.API.Application.Services.Workspaces;
 
@@ -14,6 +15,7 @@ public sealed class WorkspaceService(
     IUserRepository userRepository,
     IWorkspacePermissionService permissionService,
     IEmailService emailService,
+    IWorkspaceEntitlementService entitlementService,
     InsightVaultDbContext db) : IWorkspaceService
 {
     // ── Workspace CRUD ──────────────────────────────────────────────
@@ -237,13 +239,15 @@ public sealed class WorkspaceService(
         var currentUser = await userRepository.GetByIdAsync(userId, cancellationToken);
         var inviterName = currentUser?.FullName ?? "Someone";
 
+        if (existing is { Status: not MemberStatus.Removed })
+        {
+            throw new InvalidOperationException("A member with this email already exists in the workspace.");
+        }
+
+        await entitlementService.EnsureCanAddMemberAsync(workspaceId, cancellationToken);
+
         if (existing is not null)
         {
-            if (existing.Status != MemberStatus.Removed)
-            {
-                throw new InvalidOperationException("A member with this email already exists in the workspace.");
-            }
-
             existing.UserId = existingUser?.Id;
             existing.Role = targetRole;
             existing.Status = existingUser is not null ? MemberStatus.Active : MemberStatus.Invited;
