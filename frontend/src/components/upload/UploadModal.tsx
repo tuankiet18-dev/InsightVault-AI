@@ -26,6 +26,7 @@ export function UploadModal() {
   useEffect(() => {
     if (uploadModalOpen) {
       if (uploadTargetFolderId) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelectedFolderId(uploadTargetFolderId)
       } else if (folders.length === 1) {
         setSelectedFolderId(folders[0].id)
