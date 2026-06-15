@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useThemeStore } from '@/stores/themeStore'
 import { useAuthStore } from '@/stores/authStore'
 import { GoogleOAuthProvider } from '@react-oauth/google'
+import { Toaster } from '@/components/ui/sonner'
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
@@ -30,6 +31,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <GoogleOAuthProvider clientId={googleClientId}>
       <QueryClientProvider client={queryClient}>
         {children}
+        <Toaster position="bottom-right" richColors />
       </QueryClientProvider>
     </GoogleOAuthProvider>
   )

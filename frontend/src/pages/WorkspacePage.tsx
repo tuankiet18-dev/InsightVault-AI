@@ -224,7 +224,7 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-surface-50">
       <div className="mx-auto flex w-full max-w-[1180px] flex-1 flex-col gap-4 px-4 py-4 lg:px-5">
         <section className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="rounded-lg border border-border bg-white p-5">
+          <div className="rounded-lg border border-border bg-surface-0 p-5">
             <div className="flex flex-col gap-4">
               <div className="min-w-0">
                 <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
@@ -263,7 +263,7 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
             </div>
           </div>
 
-          <div className="rounded-lg border border-border bg-white p-5">
+          <div className="rounded-lg border border-border bg-surface-0 p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-sm font-semibold text-foreground">AI workflow</h2>
@@ -295,7 +295,7 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
         </section>
 
         <section className="grid min-h-[360px] gap-4 2xl:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="rounded-lg border border-border bg-white">
+          <div className="rounded-lg border border-border bg-surface-0">
             <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
               <div>
                 <h2 className="text-sm font-semibold text-foreground">Recent documents</h2>
@@ -358,7 +358,7 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
             )}
           </div>
 
-          <div className="rounded-lg border border-border bg-white p-5">
+          <div className="rounded-lg border border-border bg-surface-0 p-5">
             <div className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-muted-foreground" />
               <h2 className="text-sm font-semibold text-foreground">Workspace health</h2>

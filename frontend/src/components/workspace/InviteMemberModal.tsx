@@ -4,6 +4,8 @@ import { useState, useMemo } from 'react'
 import { useWorkspaceMembers, useUpdateWorkspaceMember, useRemoveWorkspaceMember } from '@/hooks/useWorkspaceMembers'
 import { useCreateWorkspaceInvitation } from '@/hooks/useWorkspaceInvitations'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import type { WorkspaceRole } from '@/types/api'
 
 export function InviteMemberModal() {
@@ -15,6 +17,7 @@ export function InviteMemberModal() {
   const [successMsg, setSuccessMsg] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
+  const [memberToRemove, setMemberToRemove] = useState<string | null>(null)
   const itemsPerPage = 5
   
   const { data: members = [], isLoading } = useWorkspaceMembers(inviteModalOpen ? activeWorkspaceId : undefined)
@@ -118,16 +121,16 @@ export function InviteMemberModal() {
                   <label htmlFor="invite-role" className="block text-sm font-medium text-card-foreground mb-1.5">
                     Role
                   </label>
-                  <select
-                    id="invite-role"
-                    value={role}
-                    onChange={(e) => setRole(e.target.value as WorkspaceRole)}
-                    className="w-full h-10 px-3 rounded-lg border border-border bg-card text-card-foreground focus:outline-none focus:ring-2 focus:ring-ring appearance-none"
-                  >
-                    <option value="viewer">Viewer</option>
-                    <option value="editor">Editor</option>
-                    <option value="owner">Owner</option>
-                  </select>
+                  <Select value={role} onValueChange={(v) => setRole(v as WorkspaceRole)}>
+                    <SelectTrigger id="invite-role" className="w-full h-10">
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="viewer">Viewer</SelectItem>
+                      <SelectItem value="editor">Editor</SelectItem>
+                      <SelectItem value="owner">Owner</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -193,26 +196,26 @@ export function InviteMemberModal() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <select
+                      <Select
                         value={member.role}
-                        disabled={updateMemberMutation.isPending || member.status === 'removed' || member.role === 'owner'}
-                        onChange={(e) => updateMemberMutation.mutate({ memberId: member.id, data: { role: e.target.value as WorkspaceRole } })}
-                        className="h-8 text-xs px-2 py-1 rounded-md border border-border bg-card text-card-foreground focus:outline-none focus:ring-1 focus:ring-ring appearance-none capitalize disabled:opacity-50"
+                        disabled={updateMemberMutation.isPending || member.status === 'removed'}
+                        onValueChange={(value) => updateMemberMutation.mutate({ memberId: member.id, data: { role: value as WorkspaceRole } })}
                       >
-                        <option value="viewer">Viewer</option>
-                        <option value="editor">Editor</option>
-                        <option value="owner">Owner</option>
-                      </select>
+                        <SelectTrigger className="h-8 w-[100px] text-xs capitalize">
+                          <SelectValue placeholder="Role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="viewer">Viewer</SelectItem>
+                          <SelectItem value="editor">Editor</SelectItem>
+                          <SelectItem value="owner">Owner</SelectItem>
+                        </SelectContent>
+                      </Select>
                       
-                      {member.status !== 'removed' && member.role !== 'owner' && (
+                      {member.status !== 'removed' && (
                         <button
                           type="button"
                           disabled={removeMemberMutation.isPending}
-                          onClick={() => {
-                            if (window.confirm('Are you sure you want to remove this member?')) {
-                              removeMemberMutation.mutate(member.id)
-                            }
-                          }}
+                          onClick={() => setMemberToRemove(member.id)}
                           className="p-1.5 text-danger-500 hover:bg-danger-50 rounded-md transition-colors disabled:opacity-50"
                           title="Remove member"
                         >
@@ -253,6 +256,23 @@ export function InviteMemberModal() {
           </div>
         </div>
       </div>
+      
+      <ConfirmModal
+        isOpen={!!memberToRemove}
+        onClose={() => setMemberToRemove(null)}
+        onConfirm={() => {
+          if (memberToRemove) {
+            removeMemberMutation.mutate(memberToRemove, {
+              onSettled: () => setMemberToRemove(null)
+            })
+          }
+        }}
+        title="Remove Member"
+        description="Are you sure you want to remove this member? They will lose access to all workspace documents immediately."
+        confirmText="Remove"
+        isDestructive={true}
+        isLoading={removeMemberMutation.isPending}
+      />
     </div>
   )
 }
