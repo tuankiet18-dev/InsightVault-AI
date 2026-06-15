@@ -14,6 +14,9 @@ using Pgvector.EntityFrameworkCore;
 using System.Text;
 using System.Text.Json;
 using Scalar.AspNetCore;
+using DotNetEnv;
+
+Env.TraversePath().Load();
 
 var builder = WebApplication.CreateBuilder(args);
 const string CorsPolicyName = "Frontend";

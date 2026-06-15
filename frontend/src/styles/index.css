@@ -90,6 +90,7 @@
   --color-ai-100: oklch(0.9 0.05 295);
   --color-ai-500: var(--ai);
   --color-ai-600: var(--ai);
+  --color-ai-700: oklch(0.4 0.15 295);
 }
 
 :root {
@@ -203,6 +204,26 @@
   --sidebar-accent-foreground: oklch(0.96 0.008 247);
   --sidebar-border: oklch(0.27 0.03 260);
   --sidebar-ring: oklch(0.65 0.19 258);
+
+  /* Compatibility aliases dark mode overrides */
+  --color-surface-300: oklch(0.45 0.03 260);
+  --color-surface-400: oklch(0.65 0.03 260);
+  --color-surface-600: oklch(0.85 0.02 260);
+  --color-surface-800: oklch(0.92 0.01 260);
+
+  --color-ai-50: oklch(0.2 0.05 295);
+  --color-ai-100: oklch(0.25 0.05 295);
+  --color-ai-700: oklch(0.85 0.1 295);
+
+  --status-uploaded: oklch(0.2 0.02 255);
+  --status-processing: oklch(0.2 0.05 85);
+  --status-completed: oklch(0.2 0.05 160);
+  --status-failed: oklch(0.2 0.05 25);
+  
+  --status-uploaded-foreground: oklch(0.82 0.02 257);
+  --status-processing-foreground: oklch(0.8 0.1 85);
+  --status-completed-foreground: oklch(0.8 0.1 160);
+  --status-failed-foreground: oklch(0.85 0.1 27);
 }
 
 @layer base {

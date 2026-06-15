@@ -5,7 +5,7 @@ import { StatusBar } from "./StatusBar";
 import { ExplorerPanel } from "./ExplorerPanel";
 import { Workbench } from "./Workbench";
 import { AIInspector } from "./AIInspector";
-import { UploadModal } from "./UploadModal";
+
 import { CreateWorkspaceModal } from "./CreateWorkspaceModal";
 import { CreateFolderModal } from "./CreateFolderModal";
 import { InviteMemberModal } from "./InviteMemberModal";
@@ -16,7 +16,6 @@ export function AppShell() {
   const [activeRail, setActiveRail] = useState("explorer");
   const [explorerOpen, setExplorerOpen] = useState(true);
   const [inspectorOpen, setInspectorOpen] = useState(true);
-  const [uploadOpen, setUploadOpen] = useState(false);
 
   // Auto collapse on narrow screens
   useEffect(() => {
@@ -37,7 +36,6 @@ export function AppShell() {
           <LeftRail activeId={activeRail} onSelect={setActiveRail} />
           <div className="flex min-w-0 flex-1 flex-col">
             <Topbar
-              onOpenUpload={() => setUploadOpen(true)}
               explorerOpen={explorerOpen}
               inspectorOpen={inspectorOpen}
               onToggleExplorer={() => setExplorerOpen((v) => !v)}
@@ -65,7 +63,6 @@ export function AppShell() {
             <StatusBar />
           </div>
         </div>
-        <UploadModal open={uploadOpen} onOpenChange={setUploadOpen} />
         <CreateWorkspaceModal />
         <CreateFolderModal />
         <InviteMemberModal />

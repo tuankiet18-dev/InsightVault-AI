@@ -38,7 +38,7 @@ export function DocumentSummary({ document }: { document: DocumentDto }) {
         <button
           onClick={() => retryMutation.mutate(document.id)}
           disabled={retryMutation.isPending}
-          className="self-start px-4 py-2 bg-white text-danger-700 border border-danger-200 rounded-lg text-sm font-medium shadow-sm hover:bg-danger-50 transition-colors flex items-center gap-2 disabled:opacity-50"
+          className="self-start px-4 py-2 bg-surface-0 text-danger-700 border border-danger-200 rounded-lg text-sm font-medium shadow-sm hover:bg-danger-50 transition-colors flex items-center gap-2 disabled:opacity-50"
         >
           {retryMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
           {retryMutation.isPending ? 'Retrying...' : 'Retry Processing'}
@@ -104,7 +104,7 @@ export function DocumentSummary({ document }: { document: DocumentDto }) {
           </h2>
           <div className="grid gap-4 md:grid-cols-2">
             {insightGroups.map((group) => (
-              <div key={group.id} className="border border-border rounded-lg p-4 bg-white">
+              <div key={group.id} className="border border-border rounded-lg p-4 bg-surface-0">
                 <h3 className="text-sm font-semibold text-surface-900 mb-2">{group.title}</h3>
                 <ul className="space-y-2">
                   {group.items.map((item, i) => (
@@ -126,8 +126,8 @@ export function DocumentSummary({ document }: { document: DocumentDto }) {
           </h2>
           <div className="flex flex-wrap gap-2">
             {document.keywords.map((kw, i) => (
-              <span key={i} className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-surface-100 text-surface-600 text-[11px] font-medium border border-surface-200">
-                <Tag className="w-3 h-3 text-surface-400" />
+              <span key={i} className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-surface-100 text-surface-600 dark:text-surface-300 text-[11px] font-medium border border-surface-200">
+                <Tag className="w-3 h-3 text-surface-400 dark:text-surface-500" />
                 {kw}
               </span>
             ))}

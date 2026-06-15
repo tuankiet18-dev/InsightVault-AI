@@ -3,6 +3,7 @@ import { workspaceApi } from '@/api/workspaceApi'
 import type { AddMemberData, UpdateMemberData } from '@/api/workspaceApi'
 import type { WorkspaceInvitationDto, WorkspaceMemberDto } from '@/types/api'
 import type { ApiError } from '@/api/http'
+import { toast } from 'sonner'
 
 export const workspaceKeys = {
   all: ['workspaces'] as const,
@@ -28,7 +29,11 @@ export function useAddWorkspaceMember(workspaceId: string) {
     mutationFn: (data: AddMemberData) => workspaceApi.addMember(workspaceId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: workspaceKeys.members(workspaceId) })
+      toast.success('Invitation sent successfully')
     },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to send invitation')
+    }
   })
 }
 
@@ -39,7 +44,11 @@ export function useUpdateWorkspaceMember(workspaceId: string) {
     mutationFn: ({ memberId, data }) => workspaceApi.updateMember(workspaceId, memberId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: workspaceKeys.members(workspaceId) })
+      toast.success('Member role updated')
     },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to update member role')
+    }
   })
 }
 
@@ -50,6 +59,10 @@ export function useRemoveWorkspaceMember(workspaceId: string) {
     mutationFn: (memberId: string) => workspaceApi.removeMember(workspaceId, memberId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: workspaceKeys.members(workspaceId) })
+      toast.success('Member removed from workspace')
     },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to remove member')
+    }
   })
 }

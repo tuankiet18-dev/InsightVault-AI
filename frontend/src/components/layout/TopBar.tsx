@@ -7,7 +7,6 @@ import {
   Search,
   Settings as SettingsIcon,
   Trash2,
-  Upload,
   UserPlus,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -30,7 +29,6 @@ export function TopBar() {
     inspectorOpen,
     toggleExplorer,
     toggleInspector,
-    openUploadModal,
     setCommandPaletteOpen,
     setInviteModalOpen,
   } = useUiStore()
@@ -40,7 +38,7 @@ export function TopBar() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isDeleteWsModalOpen, setIsDeleteWsModalOpen] = useState(false)
   const role = activeWs?.currentUserRole
-  const canUpload = role === 'owner' || role === 'editor'
+
   const isOwner = role === 'owner'
 
   const handleDeleteWorkspace = () => {
@@ -106,12 +104,7 @@ export function TopBar() {
           Invite
         </Button>
       )}
-      {canUpload && (
-        <Button size="sm" onClick={() => openUploadModal()} className="hidden sm:inline-flex">
-          <Upload className="h-4 w-4" />
-          Upload
-        </Button>
-      )}
+
       <Button
         variant="ghost"
         size="icon"
