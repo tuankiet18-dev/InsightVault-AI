@@ -65,3 +65,9 @@ launchSettings.json
 backend/InsightVault.API/appsettings.Development.json
 #ai-service
 .env.example
+
+# Root doc files (ignored local docs)
+plan.md
+task.md
+TASK_INVITE_ACCEPT_DENY.md
+WORKSPACE_INVITATION_ACCEPT_DENY_PROPOSAL.md
