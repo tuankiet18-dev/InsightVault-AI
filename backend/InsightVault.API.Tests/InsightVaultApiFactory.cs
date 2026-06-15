@@ -2,6 +2,7 @@ using InsightVault.API.Data;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -31,7 +32,10 @@ public sealed class InsightVaultApiFactory : WebApplicationFactory<Program>
         SetRequiredEnvironment("RabbitMQ__Password", "test-password");
         SetRequiredEnvironment("RabbitMQ__DocumentProcessingQueue", "document-processing-test");
         SetRequiredEnvironment("RabbitMQ__AiJobsQueue", "ai-jobs-test");
+        SetRequiredEnvironment("RabbitMQ__EmailQueue", "emails-test");
         SetRequiredEnvironment("AIService__BaseUrl", "http://localhost:8000");
+        SetRequiredEnvironment("Smtp__Enabled", "false");
+        SetRequiredEnvironment("PayOS__Enabled", "false");
         SetRequiredEnvironment("TrashCleanup__Enabled", "false");
         SetRequiredEnvironment("TrashCleanup__DocumentRetentionDays", "30");
         SetRequiredEnvironment("TrashCleanup__IntervalHours", "24");
@@ -63,7 +67,10 @@ public sealed class InsightVaultApiFactory : WebApplicationFactory<Program>
                 ["RabbitMQ:Password"] = "test-password",
                 ["RabbitMQ:DocumentProcessingQueue"] = "document-processing-test",
                 ["RabbitMQ:AiJobsQueue"] = "ai-jobs-test",
+                ["RabbitMQ:EmailQueue"] = "emails-test",
                 ["AIService:BaseUrl"] = "http://localhost:8000",
+                ["Smtp:Enabled"] = "false",
+                ["PayOS:Enabled"] = "false",
                 ["TrashCleanup:Enabled"] = "false",
                 ["TrashCleanup:DocumentRetentionDays"] = "30",
                 ["TrashCleanup:IntervalHours"] = "24",
@@ -75,6 +82,7 @@ public sealed class InsightVaultApiFactory : WebApplicationFactory<Program>
         {
             services.RemoveAll<IHostedService>();
             services.RemoveAll<DbContextOptions<InsightVaultDbContext>>();
+            services.RemoveAll<IDbContextOptionsConfiguration<InsightVaultDbContext>>();
             services.AddDbContext<InsightVaultDbContext>(options =>
                 options.UseInMemoryDatabase($"insightvault-tests-{Guid.NewGuid()}"));
         });

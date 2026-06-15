@@ -5,15 +5,18 @@ using InsightVault.API.Application.Services.Auth;
 using InsightVault.API.Application.Services.Workspaces;
 using InsightVault.API.Application.Abstractions.Ai;
 using InsightVault.API.Application.Abstractions.Messaging;
+using InsightVault.API.Application.Abstractions.Payments;
 using InsightVault.API.Application.Abstractions.Storage;
 using InsightVault.API.Infrastructure.Ai;
 using InsightVault.API.Infrastructure.Auth;
 using InsightVault.API.Infrastructure.BackgroundJobs;
 using InsightVault.API.Infrastructure.Messaging;
+using InsightVault.API.Infrastructure.Payments;
 using InsightVault.API.Infrastructure.Persistence.Repositories;
 using InsightVault.API.Infrastructure.Storage;
 using InsightVault.API.Application.Abstractions.Services.Emails;
 using InsightVault.API.Infrastructure.Emails;
+using InsightVault.API.Application.Services.Billing;
 
 namespace InsightVault.API.Infrastructure;
 
@@ -43,9 +46,9 @@ public static class DependencyInjection
             .ValidateOnStart();
         services.AddOptions<SmtpOptions>()
             .Bind(configuration.GetSection("Smtp"))
-            .Validate(options => !string.IsNullOrWhiteSpace(options.Host), "Smtp:Host is required.")
-            .Validate(options => options.Port > 0, "Smtp:Port must be greater than zero.")
-            .Validate(options => !string.IsNullOrWhiteSpace(options.SenderEmail), "Smtp:SenderEmail is required.")
+            .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.Host), "Smtp:Host is required when email is enabled.")
+            .Validate(options => !options.Enabled || options.Port > 0, "Smtp:Port must be greater than zero.")
+            .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.SenderEmail), "Smtp:SenderEmail is required when email is enabled.")
             .ValidateOnStart();
         services.AddOptions<AiServiceOptions>()
             .Bind(configuration.GetSection("AIService"))
@@ -57,7 +60,24 @@ public static class DependencyInjection
             .Validate(options => options.IntervalHours > 0, "TrashCleanup:IntervalHours must be greater than zero.")
             .Validate(options => options.BatchSize is > 0 and <= 500, "TrashCleanup:BatchSize must be between 1 and 500.")
             .ValidateOnStart();
+        services.AddOptions<BillingOptions>()
+            .Bind(configuration.GetSection("Billing"))
+            .Validate(options => options.DocumentCreditsPerFiveMb > 0, "Billing:DocumentCreditsPerFiveMb must be greater than zero.")
+            .Validate(options => options.GenerateReportBaseCredits > 0, "Billing:GenerateReportBaseCredits must be greater than zero.")
+            .Validate(options => options.CompareBaseCredits > 0, "Billing:CompareBaseCredits must be greater than zero.")
+            .Validate(options => options.CompareAdditionalDocumentCredits >= 0, "Billing:CompareAdditionalDocumentCredits cannot be negative.")
+            .ValidateOnStart();
+        services.AddOptions<PayOsOptions>()
+            .Bind(configuration.GetSection("PayOS"))
+            .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.ClientId), "PayOS:ClientId is required when payOS is enabled.")
+            .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.ApiKey), "PayOS:ApiKey is required when payOS is enabled.")
+            .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.ChecksumKey), "PayOS:ChecksumKey is required when payOS is enabled.")
+            .Validate(options => !options.Enabled || Uri.TryCreate(options.ReturnUrl, UriKind.Absolute, out _), "PayOS:ReturnUrl must be an absolute URI.")
+            .Validate(options => !options.Enabled || Uri.TryCreate(options.CancelUrl, UriKind.Absolute, out _), "PayOS:CancelUrl must be an absolute URI.")
+            .Validate(options => options.CheckoutExpiryMinutes is >= 5 and <= 60, "PayOS:CheckoutExpiryMinutes must be between 5 and 60.")
+            .ValidateOnStart();
         services.AddScoped<IObjectStorageService, ConfiguredObjectStorageService>();
+        services.AddSingleton<IPaymentGateway, PayOsPaymentGateway>();
         services.AddSingleton<IMessagePublisher, RabbitMqMessagePublisher>();
         services.AddHttpClient<IAiServiceClient, AiServiceClient>((serviceProvider, client) =>
         {

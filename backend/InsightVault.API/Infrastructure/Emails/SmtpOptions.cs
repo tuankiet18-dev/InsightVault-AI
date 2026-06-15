@@ -2,6 +2,7 @@ namespace InsightVault.API.Infrastructure.Emails;
 
 public sealed class SmtpOptions
 {
+    public bool Enabled { get; set; }
     public string Host { get; set; } = string.Empty;
     public int Port { get; set; } = 587;
     public string Username { get; set; } = string.Empty;
