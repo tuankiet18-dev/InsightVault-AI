@@ -58,12 +58,11 @@ services:
       Smtp__SenderName: ${SMTP_SENDER_NAME:-InsightVault AI}
       Smtp__SenderEmail: ${SMTP_SENDER_EMAIL:-}
       Smtp__UseSsl: ${SMTP_USE_SSL:-true}
-      PayOS__Enabled: ${PAYOS_ENABLED:-false}
-      PayOS__ClientId: ${PAYOS_CLIENT_ID:-}
-      PayOS__ApiKey: ${PAYOS_API_KEY:-}
-      PayOS__ChecksumKey: ${PAYOS_CHECKSUM_KEY:-}
-      PayOS__ReturnUrl: ${PAYOS_RETURN_URL:-http://localhost:5173/billing/success}
-      PayOS__CancelUrl: ${PAYOS_CANCEL_URL:-http://localhost:5173/billing/cancel}
+      VnPay__Enabled: ${VNPAY_ENABLED:-false}
+      VnPay__PaymentUrl: ${VNPAY_PAYMENT_URL:-https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
+      VnPay__TmnCode: ${VNPAY_TMN_CODE:-}
+      VnPay__HashSecret: ${VNPAY_HASH_SECRET:-}
+      VnPay__ReturnUrl: ${VNPAY_RETURN_URL:-http://localhost:5173/billing/return}
     ports:
       - "5126:8080"
     healthcheck:

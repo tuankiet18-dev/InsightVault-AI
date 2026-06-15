@@ -1,4 +1,3 @@
-using System.Text.Json;
 using InsightVault.API.Application.Abstractions.Payments;
 using InsightVault.API.Application.Abstractions.Services.Auth;
 using InsightVault.API.Application.Abstractions.Services.Billing;
@@ -20,7 +19,7 @@ public sealed class BillingService(
     IWorkspacePermissionService workspacePermissionService,
     ICreditService creditService,
     IPaymentGateway paymentGateway,
-    IOptions<PayOsOptions> payOsOptions) : IBillingService
+    IOptions<VnPayOptions> vnPayOptions) : IBillingService
 {
     public async Task<IReadOnlyList<BillingPlanDto>> ListPlansAsync(
         CancellationToken cancellationToken = default)
@@ -67,6 +66,7 @@ public sealed class BillingService(
     public async Task<CheckoutSessionDto> CreateCheckoutAsync(
         Guid workspaceId,
         CreateCheckoutRequest request,
+        string clientIp,
         CancellationToken cancellationToken = default)
     {
         var userId = GetRequiredUserId();
@@ -110,7 +110,7 @@ public sealed class BillingService(
                 "This product does not require checkout.");
         }
 
-        if (!payOsOptions.Value.Enabled)
+        if (!vnPayOptions.Value.Enabled)
         {
             throw new ApiException(
                 StatusCodes.Status503ServiceUnavailable,
@@ -122,7 +122,7 @@ public sealed class BillingService(
             candidate => candidate.Id == userId,
             cancellationToken);
         var now = DateTimeOffset.UtcNow;
-        var expiresAt = now.AddMinutes(payOsOptions.Value.CheckoutExpiryMinutes);
+        var expiresAt = now.AddMinutes(vnPayOptions.Value.CheckoutExpiryMinutes);
         var orderCode = CreateOrderCode();
         var order = new PaymentOrder
         {
@@ -154,8 +154,8 @@ public sealed class BillingService(
                     $"IV{orderCode % 10_000_000:0000000}",
                     user.FullName,
                     user.Email,
-                    payOsOptions.Value.ReturnUrl,
-                    payOsOptions.Value.CancelUrl,
+                    clientIp,
+                    now,
                     expiresAt),
                 cancellationToken);
 
@@ -181,14 +181,21 @@ public sealed class BillingService(
         }
     }
 
-    public async Task<bool> HandleWebhookAsync(
-        JsonElement payload,
+    public async Task<PaymentNotificationOutcome> HandlePaymentNotificationAsync(
+        IReadOnlyDictionary<string, string> parameters,
         CancellationToken cancellationToken = default)
     {
-        var verifiedPayment = await paymentGateway.VerifyWebhookAsync(payload, cancellationToken);
-        if (!verifiedPayment.IsSuccessful)
+        var verifiedPayment = await paymentGateway.VerifyNotificationAsync(
+            parameters,
+            cancellationToken);
+        if (!verifiedPayment.IsSignatureValid)
         {
-            return false;
+            return PaymentNotificationOutcome.InvalidSignature;
+        }
+
+        if (verifiedPayment.OrderCode <= 0)
+        {
+            return PaymentNotificationOutcome.InvalidData;
         }
 
         await using var transaction = db.Database.IsRelational()
@@ -201,7 +208,6 @@ public sealed class BillingService(
             verifiedPayment.OrderCode,
             cancellationToken);
 
-        // payOS sends a signed sample payload while registering the webhook.
         if (order is null)
         {
             if (transaction is not null)
@@ -209,7 +215,7 @@ public sealed class BillingService(
                 await transaction.CommitAsync(cancellationToken);
             }
 
-            return false;
+            return PaymentNotificationOutcome.OrderNotFound;
         }
 
         if (order.Status == PaymentOrderStatus.Paid)
@@ -219,15 +225,33 @@ public sealed class BillingService(
                 await transaction.CommitAsync(cancellationToken);
             }
 
-            return false;
+            return PaymentNotificationOutcome.AlreadyProcessed;
         }
 
         if (order.AmountVnd != verifiedPayment.AmountVnd)
         {
-            throw new ApiException(
-                StatusCodes.Status400BadRequest,
-                "billing.payment_amount_mismatch",
-                "Payment amount does not match the order.");
+            if (transaction is not null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
+
+            return PaymentNotificationOutcome.InvalidAmount;
+        }
+
+        if (!verifiedPayment.IsSuccessful)
+        {
+            order.Status = PaymentOrderStatus.Failed;
+            order.ProviderPaymentLinkId ??= verifiedPayment.PaymentLinkId;
+            order.ProviderReference = verifiedPayment.Reference;
+            order.UpdatedAt = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync(cancellationToken);
+
+            if (transaction is not null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
+
+            return PaymentNotificationOutcome.Acknowledged;
         }
 
         await LockWorkspaceAsync(order.WorkspaceId, cancellationToken);
@@ -286,7 +310,7 @@ public sealed class BillingService(
             await transaction.CommitAsync(cancellationToken);
         }
 
-        return true;
+        return PaymentNotificationOutcome.Applied;
     }
 
     private async Task<PaymentOrder?> GetLockedPaymentOrderAsync(

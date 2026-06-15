@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import type { UserDashboardDto } from '@/types/api'
-import { Folder, FileText, Settings, LogOut, Plus, ChevronRight, Activity, CheckCircle, AlertTriangle, Clock} from 'lucide-react'
+import { Folder, FileText, Settings, LogOut, Plus, ChevronRight, Activity, CheckCircle, AlertTriangle, Clock, WalletCards} from 'lucide-react'
 import { useUiStore } from '@/stores/uiStore'
 import { CreateWorkspaceModal } from '@/components/workspace/CreateWorkspaceModal'
 import { useWorkspaces } from '@/hooks/useWorkspaces'
@@ -206,12 +206,12 @@ export function UserDashboardPage() {
               </div>
             ) : (
               workspaces.map(ws => (
-                <Link
+                <article
                   key={ws.id}
-                  to={`/workspaces/${ws.id}`}
                   className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-sm transition-all hover:border-[var(--color-primary)] hover:shadow-md"
                 >
-                  <div>
+                  <Link to={`/workspaces/${ws.id}`} className="absolute inset-0" aria-label={`Open ${ws.name}`} />
+                  <div className="pointer-events-none relative">
                     <div className="mb-2 flex items-center justify-between">
                       <h3 className="text-lg font-semibold">{ws.name}</h3>
                       <span className="rounded-full bg-[var(--color-secondary)] px-2.5 py-0.5 text-xs font-medium capitalize text-[var(--color-foreground)]">
@@ -222,10 +222,19 @@ export function UserDashboardPage() {
                       {ws.description || 'No description provided.'}
                     </p>
                   </div>
-                  <div className="mt-6 flex items-center text-sm font-medium text-[var(--color-primary)] opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="pointer-events-none relative mt-6 flex items-center text-sm font-medium text-[var(--color-primary)] opacity-0 transition-opacity group-hover:opacity-100">
                     Open workspace <ChevronRight className="ml-1 h-4 w-4" />
                   </div>
-                </Link>
+                  {ws.currentUserRole === 'owner' && (
+                    <Link
+                      to={`/workspaces/${ws.id}/billing`}
+                      className="relative z-10 mt-4 flex w-fit items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-muted-foreground)] transition-colors hover:text-[var(--color-primary)]"
+                    >
+                      <WalletCards className="h-3.5 w-3.5" />
+                      Billing
+                    </Link>
+                  )}
+                </article>
               ))
             )}
           </div>

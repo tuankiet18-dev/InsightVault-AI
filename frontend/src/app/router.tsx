@@ -9,6 +9,8 @@ import { ChatPage } from '@/pages/ChatPage'
 import { ComparePage } from '@/pages/ComparePage'
 import { AdminUsersPage } from '@/pages/admin/AdminUsersPage'
 import { AdminJobsPage } from '@/pages/admin/AdminJobsPage'
+import { BillingPage } from '@/pages/BillingPage'
+import { BillingReturnPage } from '@/pages/BillingReturnPage'
 const AdminLayout = () => (
   <div className="min-h-screen bg-background text-foreground">
     <header className="flex h-14 items-center gap-6 border-b border-border bg-card px-6">
@@ -50,6 +52,14 @@ const router = createBrowserRouter([
   {
     path: '/workspaces/:workspaceId',
     element: <ProtectedRoute><WorkspacePage /></ProtectedRoute>,
+  },
+  {
+    path: '/workspaces/:workspaceId/billing',
+    element: <ProtectedRoute><BillingPage /></ProtectedRoute>,
+  },
+  {
+    path: '/billing/return',
+    element: <BillingReturnPage />,
   },
   {
   path: '/chat',

@@ -1,4 +1,3 @@
-using System.Text.Json;
 using InsightVault.API.DTOs.Billing;
 
 namespace InsightVault.API.Application.Abstractions.Services.Billing;
@@ -18,9 +17,21 @@ public interface IBillingService
     Task<CheckoutSessionDto> CreateCheckoutAsync(
         Guid workspaceId,
         CreateCheckoutRequest request,
+        string clientIp,
         CancellationToken cancellationToken = default);
 
-    Task<bool> HandleWebhookAsync(
-        JsonElement payload,
+    Task<PaymentNotificationOutcome> HandlePaymentNotificationAsync(
+        IReadOnlyDictionary<string, string> parameters,
         CancellationToken cancellationToken = default);
+}
+
+public enum PaymentNotificationOutcome
+{
+    Applied,
+    Acknowledged,
+    AlreadyProcessed,
+    OrderNotFound,
+    InvalidAmount,
+    InvalidSignature,
+    InvalidData
 }
