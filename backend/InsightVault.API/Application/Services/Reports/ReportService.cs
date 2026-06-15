@@ -3,6 +3,7 @@ using InsightVault.API.Application.Abstractions.Messaging;
 using InsightVault.API.Application.Abstractions.Repositories;
 using InsightVault.API.Application.Abstractions.Services.Auth;
 using InsightVault.API.Application.Abstractions.Services.Reports;
+using InsightVault.API.Application.Abstractions.Services.Billing;
 using InsightVault.API.Application.Abstractions.Services.Workspaces;
 using InsightVault.API.Common.Errors;
 using InsightVault.API.Data;
@@ -12,6 +13,8 @@ using InsightVault.API.DTOs.AiJobs;
 using InsightVault.API.DTOs.Common;
 using InsightVault.API.DTOs.Reports;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using InsightVault.API.Application.Services.Billing;
 
 namespace InsightVault.API.Application.Services.Reports;
 
@@ -22,7 +25,9 @@ public sealed class ReportService(
     IReportRepository reportRepository,
     IDocumentRepository documentRepository,
     IFolderRepository folderRepository,
-    IMessagePublisher messagePublisher) : IReportService
+    IMessagePublisher messagePublisher,
+    ICreditService creditService,
+    IOptions<BillingOptions> billingOptions) : IReportService
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -78,6 +83,7 @@ public sealed class ReportService(
         var now = DateTimeOffset.UtcNow;
         var job = new AiJob
         {
+            Id = Guid.NewGuid(),
             WorkspaceId = workspaceId,
             CreatedById = userId,
             JobType = AiJobType.GenerateReport,
@@ -99,8 +105,14 @@ public sealed class ReportService(
         };
 
         await db.AiJobs.AddAsync(job, cancellationToken);
+        await creditService.ConsumeAsync(
+            workspaceId,
+            job.Id,
+            BillingCreditCosts.ForReport(billingOptions.Value),
+            "generate_report",
+            cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
-        await messagePublisher.PublishAiJobAsync(job.Id, cancellationToken);
+        await PublishAiJobAsync(job, "generate_report", cancellationToken);
 
         return ToAiJobDto(job);
     }
@@ -128,6 +140,7 @@ public sealed class ReportService(
         var now = DateTimeOffset.UtcNow;
         var job = new AiJob
         {
+            Id = Guid.NewGuid(),
             WorkspaceId = workspaceId,
             CreatedById = userId,
             JobType = AiJobType.CompareDocuments,
@@ -149,8 +162,14 @@ public sealed class ReportService(
         };
 
         await db.AiJobs.AddAsync(job, cancellationToken);
+        await creditService.ConsumeAsync(
+            workspaceId,
+            job.Id,
+            BillingCreditCosts.ForCompare(sources.Count, billingOptions.Value),
+            "compare_documents",
+            cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
-        await messagePublisher.PublishAiJobAsync(job.Id, cancellationToken);
+        await PublishAiJobAsync(job, "compare_documents", cancellationToken);
 
         return ToAiJobDto(job);
     }
@@ -335,6 +354,37 @@ public sealed class ReportService(
                 StatusCodes.Status401Unauthorized,
                 "auth.unauthorized",
                 "A valid authenticated user is required.");
+    }
+
+    private async Task PublishAiJobAsync(
+        AiJob job,
+        string usageType,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await messagePublisher.PublishAiJobAsync(job.Id, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            await creditService.RefundAsync(
+                job.WorkspaceId!.Value,
+                job.Id,
+                $"{usageType}_queue_failure",
+                CancellationToken.None);
+
+            var now = DateTimeOffset.UtcNow;
+            job.Status = AiJobStatus.Failed;
+            job.ErrorMessage = $"Failed to publish AI job: {exception.Message}";
+            job.CompletedAt = now;
+            job.UpdatedAt = now;
+            await db.SaveChangesAsync(CancellationToken.None);
+
+            throw new ApiException(
+                StatusCodes.Status503ServiceUnavailable,
+                "ai_job.queue_unavailable",
+                "The AI request could not be queued. Please try again later.");
+        }
     }
 
     private static string? NormalizeOptionalText(string? value)

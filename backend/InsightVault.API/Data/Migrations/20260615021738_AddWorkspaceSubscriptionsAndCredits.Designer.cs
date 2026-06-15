@@ -3,6 +3,7 @@ using System;
 using InsightVault.API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -12,9 +13,11 @@ using Pgvector;
 namespace InsightVault.API.Data.Migrations
 {
     [DbContext(typeof(InsightVaultDbContext))]
-    partial class InsightVaultDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260615021738_AddWorkspaceSubscriptionsAndCredits")]
+    partial class AddWorkspaceSubscriptionsAndCredits
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1481,111 +1484,6 @@ namespace InsightVault.API.Data.Migrations
                     b.ToTable("workspaces", (string)null);
                 });
 
-            modelBuilder.Entity("InsightVault.API.Domain.Entities.WorkspaceInvitation", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("gen_random_uuid()");
-
-                    b.Property<DateTimeOffset?>("AcceptedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("accepted_at");
-
-                    b.Property<DateTimeOffset?>("CancelledAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("cancelled_at");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<DateTimeOffset?>("DeclinedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("declined_at");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("email");
-
-                    b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("expires_at");
-
-                    b.Property<Guid?>("InvitedById")
-                        .HasColumnType("uuid")
-                        .HasColumnName("invited_by_id");
-
-                    b.Property<Guid>("InvitedUserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("invited_user_id");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("role");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("status");
-
-                    b.Property<string>("TokenHash")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("token_hash");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<Guid>("WorkspaceId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("workspace_id");
-
-                    b.HasKey("Id")
-                        .HasName("pk_workspace_invitations");
-
-                    b.HasIndex("Email")
-                        .HasDatabaseName("ix_workspace_invitations_email");
-
-                    b.HasIndex("ExpiresAt")
-                        .HasDatabaseName("ix_workspace_invitations_expires_at");
-
-                    b.HasIndex("InvitedById")
-                        .HasDatabaseName("ix_workspace_invitations_invited_by_id");
-
-                    b.HasIndex("InvitedUserId")
-                        .HasDatabaseName("ix_workspace_invitations_invited_user_id");
-
-                    b.HasIndex("Status")
-                        .HasDatabaseName("ix_workspace_invitations_status");
-
-                    b.HasIndex("TokenHash")
-                        .IsUnique()
-                        .HasDatabaseName("ix_workspace_invitations_token_hash")
-                        .HasFilter("token_hash IS NOT NULL");
-
-                    b.HasIndex("WorkspaceId")
-                        .HasDatabaseName("ix_workspace_invitations_workspace_id");
-
-                    b.HasIndex("WorkspaceId", "InvitedUserId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_workspace_invitations_workspace_id_invited_user_id")
-                        .HasFilter("status = 'Pending'");
-
-                    b.ToTable("workspace_invitations", (string)null);
-                });
-
             modelBuilder.Entity("InsightVault.API.Domain.Entities.WorkspaceMember", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2076,35 +1974,6 @@ namespace InsightVault.API.Data.Migrations
                         .HasConstraintName("fk_workspaces_users_owner_id");
 
                     b.Navigation("Owner");
-                });
-
-            modelBuilder.Entity("InsightVault.API.Domain.Entities.WorkspaceInvitation", b =>
-                {
-                    b.HasOne("InsightVault.API.Domain.Entities.User", "InvitedBy")
-                        .WithMany()
-                        .HasForeignKey("InvitedById")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_workspace_invitations_users_invited_by_id");
-
-                    b.HasOne("InsightVault.API.Domain.Entities.User", "InvitedUser")
-                        .WithMany()
-                        .HasForeignKey("InvitedUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_workspace_invitations_users_invited_user_id");
-
-                    b.HasOne("InsightVault.API.Domain.Entities.Workspace", "Workspace")
-                        .WithMany()
-                        .HasForeignKey("WorkspaceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_workspace_invitations_workspaces_workspace_id");
-
-                    b.Navigation("InvitedBy");
-
-                    b.Navigation("InvitedUser");
-
-                    b.Navigation("Workspace");
                 });
 
             modelBuilder.Entity("InsightVault.API.Domain.Entities.WorkspaceMember", b =>

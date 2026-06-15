@@ -21,8 +21,14 @@ public sealed class EmailWorker(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        if (!smtpOptions.Value.Enabled)
+        {
+            logger.LogInformation("Email worker is disabled.");
+            return;
+        }
+
         var mqOptions = rabbitMqOptions.Value;
-        
+
         try
         {
             var factory = new ConnectionFactory
@@ -98,13 +104,13 @@ public sealed class EmailWorker(
         mimeMessage.Body = new TextPart(TextFormat.Html) { Text = message.HtmlBody };
 
         using var client = new SmtpClient();
-        
-        var secureSocketOptions = smtp.UseSsl 
-            ? SecureSocketOptions.StartTls 
+
+        var secureSocketOptions = smtp.UseSsl
+            ? SecureSocketOptions.StartTls
             : SecureSocketOptions.Auto;
 
         await client.ConnectAsync(smtp.Host, smtp.Port, secureSocketOptions, cancellationToken);
-        
+
         if (!string.IsNullOrEmpty(smtp.Username))
         {
             await client.AuthenticateAsync(smtp.Username, smtp.Password, cancellationToken);

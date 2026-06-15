@@ -149,9 +149,43 @@ public sealed class WorkspaceInvitationTests(InsightVaultApiFactory factory)
             UpdatedAt = now
         };
 
+        var plan = new SubscriptionPlan
+        {
+            Id = Guid.NewGuid(),
+            Code = $"invitation-test-{workspaceId:N}",
+            Name = "Invitation Test",
+            Description = "Plan for invitation integration tests",
+            PriceVnd = 0,
+            BillingPeriodMonths = 1,
+            IncludedCredits = 100,
+            MaxMembers = 5,
+            StorageLimitBytes = 1024L * 1024 * 1024,
+            IsActive = true,
+            DisplayOrder = 99,
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+
+        var subscription = new WorkspaceSubscription
+        {
+            Id = Guid.NewGuid(),
+            WorkspaceId = workspaceId,
+            PlanId = plan.Id,
+            Plan = plan,
+            Status = SubscriptionStatus.Active,
+            RecurringCreditsRemaining = plan.IncludedCredits,
+            TopUpCreditsRemaining = 0,
+            CurrentPeriodStart = now,
+            CurrentPeriodEnd = now.AddMonths(1),
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+
         db.Users.AddRange(owner, invitedUser, otherUser);
         db.Workspaces.Add(workspace);
         db.WorkspaceMembers.Add(ownerMember);
+        db.SubscriptionPlans.Add(plan);
+        db.WorkspaceSubscriptions.Add(subscription);
         await db.SaveChangesAsync();
 
         var tokenService = scope.ServiceProvider.GetRequiredService<IJwtTokenService>();

@@ -2,6 +2,18 @@
 
 This document describes the current PostgreSQL schema and the intended data ownership rules for the backend.
 
+## Billing tables
+
+- `subscription_plans`: product catalog for monthly workspace plans.
+- `credit_packages`: one-time AI credit top-up catalog.
+- `workspace_subscriptions`: current plan, period, and recurring/top-up balances.
+- `credit_ledger_entries`: immutable grants, debits, refunds, and adjustments.
+- `payment_orders`: provider-neutral checkout and verified payment state.
+
+Billing foreign keys are workspace-scoped. Payment provider identifiers and
+ledger idempotency keys are unique. A payment order references exactly one
+product: either a subscription plan or a credit package.
+
 ## Design Principles
 
 - `Workspace` is the top-level tenant boundary.

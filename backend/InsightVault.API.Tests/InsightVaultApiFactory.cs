@@ -33,7 +33,10 @@ public sealed class InsightVaultApiFactory : WebApplicationFactory<Program>
         SetRequiredEnvironment("RabbitMQ__Password", "test-password");
         SetRequiredEnvironment("RabbitMQ__DocumentProcessingQueue", "document-processing-test");
         SetRequiredEnvironment("RabbitMQ__AiJobsQueue", "ai-jobs-test");
+        SetRequiredEnvironment("RabbitMQ__EmailQueue", "emails-test");
         SetRequiredEnvironment("AIService__BaseUrl", "http://localhost:8000");
+        SetRequiredEnvironment("Smtp__Enabled", "false");
+        SetRequiredEnvironment("PayOS__Enabled", "false");
         SetRequiredEnvironment("TrashCleanup__Enabled", "false");
         SetRequiredEnvironment("TrashCleanup__DocumentRetentionDays", "30");
         SetRequiredEnvironment("TrashCleanup__IntervalHours", "24");
@@ -67,7 +70,10 @@ public sealed class InsightVaultApiFactory : WebApplicationFactory<Program>
                 ["RabbitMQ:Password"] = "test-password",
                 ["RabbitMQ:DocumentProcessingQueue"] = "document-processing-test",
                 ["RabbitMQ:AiJobsQueue"] = "ai-jobs-test",
+                ["RabbitMQ:EmailQueue"] = "emails-test",
                 ["AIService:BaseUrl"] = "http://localhost:8000",
+                ["Smtp:Enabled"] = "false",
+                ["PayOS:Enabled"] = "false",
                 ["TrashCleanup:Enabled"] = "false",
                 ["TrashCleanup:DocumentRetentionDays"] = "30",
                 ["TrashCleanup:IntervalHours"] = "24",

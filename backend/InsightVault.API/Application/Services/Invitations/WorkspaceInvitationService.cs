@@ -1,5 +1,6 @@
 using InsightVault.API.Application.Abstractions.Repositories;
 using InsightVault.API.Application.Abstractions.Services.Auth;
+using InsightVault.API.Application.Abstractions.Services.Billing;
 using InsightVault.API.Application.Abstractions.Services.Emails;
 using InsightVault.API.Application.Abstractions.Services.Invitations;
 using InsightVault.API.Application.Abstractions.Services.Workspaces;
@@ -19,6 +20,7 @@ public sealed class WorkspaceInvitationService(
     IUserRepository userRepository,
     IWorkspacePermissionService permissionService,
     ICurrentUserService currentUserService,
+    IWorkspaceEntitlementService entitlementService,
     IEmailService emailService,
     IOptions<WorkspaceInvitationOptions> options,
     InsightVaultDbContext db) : IWorkspaceInvitationService
@@ -101,6 +103,8 @@ public sealed class WorkspaceInvitationService(
                 "invitation.pending_exists",
                 "A pending invitation already exists for this user.");
         }
+
+        await entitlementService.EnsureCanAddMemberAsync(workspaceId, cancellationToken);
 
         var now = DateTimeOffset.UtcNow;
         var targetRole = WorkspaceMapper.ToDomainRole(request.Role);
@@ -202,6 +206,11 @@ public sealed class WorkspaceInvitationService(
             invitation.WorkspaceId,
             invitation.Email,
             cancellationToken);
+
+        if (existingMember is null || existingMember.Status == MemberStatus.Removed)
+        {
+            await entitlementService.EnsureCanAddMemberAsync(invitation.WorkspaceId, cancellationToken);
+        }
 
         if (existingMember is null)
         {

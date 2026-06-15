@@ -20,6 +20,11 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
     public DbSet<ChatMessageContext> ChatMessageContexts => Set<ChatMessageContext>();
     public DbSet<ChatMessageSource> ChatMessageSources => Set<ChatMessageSource>();
     public DbSet<Report> Reports => Set<Report>();
+    public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();
+    public DbSet<CreditPackage> CreditPackages => Set<CreditPackage>();
+    public DbSet<WorkspaceSubscription> WorkspaceSubscriptions => Set<WorkspaceSubscription>();
+    public DbSet<CreditLedgerEntry> CreditLedgerEntries => Set<CreditLedgerEntry>();
+    public DbSet<PaymentOrder> PaymentOrders => Set<PaymentOrder>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -34,13 +39,20 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
         ConfigureWorkspaceInvitations(modelBuilder);
         ConfigureFolders(modelBuilder);
         ConfigureDocuments(modelBuilder);
-        ConfigureDocumentChunks(modelBuilder, isInMemoryProvider);
+        ConfigureDocumentChunks(
+            modelBuilder,
+            Database.ProviderName != "Microsoft.EntityFrameworkCore.InMemory");
         ConfigureAiJobs(modelBuilder);
         ConfigureChatSessions(modelBuilder);
         ConfigureChatMessages(modelBuilder);
         ConfigureChatMessageContexts(modelBuilder);
         ConfigureChatMessageSources(modelBuilder);
         ConfigureReports(modelBuilder);
+        ConfigureSubscriptionPlans(modelBuilder);
+        ConfigureCreditPackages(modelBuilder);
+        ConfigureWorkspaceSubscriptions(modelBuilder);
+        ConfigureCreditLedgerEntries(modelBuilder);
+        ConfigurePaymentOrders(modelBuilder);
     }
 
     private static void ConfigureUsers(ModelBuilder modelBuilder)
@@ -267,20 +279,20 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
         });
     }
 
-    private static void ConfigureDocumentChunks(ModelBuilder modelBuilder, bool isInMemoryProvider)
+    private static void ConfigureDocumentChunks(ModelBuilder modelBuilder, bool supportsVector)
     {
         modelBuilder.Entity<DocumentChunk>(entity =>
         {
             entity.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.Property(x => x.Content).IsRequired();
             entity.Property(x => x.NormalizedContent).IsRequired().HasDefaultValue("");
-            if (isInMemoryProvider)
+            if (supportsVector)
             {
-                entity.Ignore(x => x.Embedding);
+                entity.Property(x => x.Embedding).HasColumnType("vector(768)").IsRequired();
             }
             else
             {
-                entity.Property(x => x.Embedding).HasColumnType("vector(768)").IsRequired();
+                entity.Ignore(x => x.Embedding);
             }
             entity.Property(x => x.EmbeddingModel).HasMaxLength(255).IsRequired();
             entity.Property(x => x.Metadata).HasColumnType("jsonb").HasDefaultValueSql("'{}'::jsonb");
@@ -305,7 +317,7 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
             entity.HasIndex(x => x.DocumentId);
             entity.HasIndex(x => x.WorkspaceId);
             entity.HasIndex(x => x.FolderId);
-            if (!isInMemoryProvider)
+            if (supportsVector)
             {
                 entity.HasIndex(x => x.Embedding)
                     .HasMethod("hnsw")
@@ -532,6 +544,256 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
             entity.HasIndex(x => x.DeletedAt);
             entity.HasIndex(x => x.SourceDocuments).HasMethod("gin");
             entity.HasIndex(x => x.StructuredResult).HasMethod("gin");
+        });
+    }
+
+    private static void ConfigureSubscriptionPlans(ModelBuilder modelBuilder)
+    {
+        var seededAt = new DateTimeOffset(2026, 6, 15, 0, 0, 0, TimeSpan.Zero);
+
+        modelBuilder.Entity<SubscriptionPlan>(entity =>
+        {
+            entity.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+            entity.Property(x => x.Code).HasMaxLength(50).IsRequired();
+            entity.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.Description).HasMaxLength(500).IsRequired();
+            entity.Property(x => x.BillingPeriodMonths).HasDefaultValue(1);
+            entity.Property(x => x.IsActive).HasDefaultValue(true);
+            entity.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(x => x.UpdatedAt).HasDefaultValueSql("now()");
+
+            entity.HasIndex(x => x.Code).IsUnique();
+            entity.HasIndex(x => new { x.IsActive, x.DisplayOrder });
+
+            entity.HasData(
+                new SubscriptionPlan
+                {
+                    Id = Guid.Parse("10000000-0000-0000-0000-000000000001"),
+                    Code = "free",
+                    Name = "Free",
+                    Description = "For trying the core document intelligence workflow.",
+                    PriceVnd = 0,
+                    BillingPeriodMonths = 1,
+                    IncludedCredits = 100,
+                    MaxMembers = 1,
+                    StorageLimitBytes = 500L * 1024 * 1024,
+                    IsActive = true,
+                    DisplayOrder = 1,
+                    CreatedAt = seededAt,
+                    UpdatedAt = seededAt
+                },
+                new SubscriptionPlan
+                {
+                    Id = Guid.Parse("10000000-0000-0000-0000-000000000002"),
+                    Code = "pro",
+                    Name = "Pro",
+                    Description = "For students and small teams using AI regularly.",
+                    PriceVnd = 99_000,
+                    BillingPeriodMonths = 1,
+                    IncludedCredits = 1_500,
+                    MaxMembers = 5,
+                    StorageLimitBytes = 5L * 1024 * 1024 * 1024,
+                    IsActive = true,
+                    DisplayOrder = 2,
+                    CreatedAt = seededAt,
+                    UpdatedAt = seededAt
+                },
+                new SubscriptionPlan
+                {
+                    Id = Guid.Parse("10000000-0000-0000-0000-000000000003"),
+                    Code = "team",
+                    Name = "Team",
+                    Description = "For larger collaborative workspaces with heavier AI usage.",
+                    PriceVnd = 249_000,
+                    BillingPeriodMonths = 1,
+                    IncludedCredits = 5_000,
+                    MaxMembers = 15,
+                    StorageLimitBytes = 20L * 1024 * 1024 * 1024,
+                    IsActive = true,
+                    DisplayOrder = 3,
+                    CreatedAt = seededAt,
+                    UpdatedAt = seededAt
+                });
+        });
+    }
+
+    private static void ConfigureCreditPackages(ModelBuilder modelBuilder)
+    {
+        var seededAt = new DateTimeOffset(2026, 6, 15, 0, 0, 0, TimeSpan.Zero);
+
+        modelBuilder.Entity<CreditPackage>(entity =>
+        {
+            entity.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+            entity.Property(x => x.Code).HasMaxLength(50).IsRequired();
+            entity.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.IsActive).HasDefaultValue(true);
+            entity.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(x => x.UpdatedAt).HasDefaultValueSql("now()");
+
+            entity.HasIndex(x => x.Code).IsUnique();
+            entity.HasIndex(x => new { x.IsActive, x.DisplayOrder });
+
+            entity.HasData(
+                new CreditPackage
+                {
+                    Id = Guid.Parse("20000000-0000-0000-0000-000000000001"),
+                    Code = "topup_500",
+                    Name = "500 AI Credits",
+                    PriceVnd = 39_000,
+                    Credits = 500,
+                    IsActive = true,
+                    DisplayOrder = 1,
+                    CreatedAt = seededAt,
+                    UpdatedAt = seededAt
+                },
+                new CreditPackage
+                {
+                    Id = Guid.Parse("20000000-0000-0000-0000-000000000002"),
+                    Code = "topup_2000",
+                    Name = "2,000 AI Credits",
+                    PriceVnd = 129_000,
+                    Credits = 2_000,
+                    IsActive = true,
+                    DisplayOrder = 2,
+                    CreatedAt = seededAt,
+                    UpdatedAt = seededAt
+                },
+                new CreditPackage
+                {
+                    Id = Guid.Parse("20000000-0000-0000-0000-000000000003"),
+                    Code = "topup_5000",
+                    Name = "5,000 AI Credits",
+                    PriceVnd = 279_000,
+                    Credits = 5_000,
+                    IsActive = true,
+                    DisplayOrder = 3,
+                    CreatedAt = seededAt,
+                    UpdatedAt = seededAt
+                });
+        });
+    }
+
+    private static void ConfigureWorkspaceSubscriptions(ModelBuilder modelBuilder)
+    {
+        var statusConverter = new EnumToStringConverter<SubscriptionStatus>();
+
+        modelBuilder.Entity<WorkspaceSubscription>(entity =>
+        {
+            entity.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+            entity.Property(x => x.Status).HasConversion(statusConverter).HasMaxLength(50).IsRequired();
+            entity.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(x => x.UpdatedAt).HasDefaultValueSql("now()");
+
+            entity.HasOne(x => x.Workspace)
+                .WithOne(x => x.Subscription)
+                .HasForeignKey<WorkspaceSubscription>(x => x.WorkspaceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(x => x.Plan)
+                .WithMany(x => x.WorkspaceSubscriptions)
+                .HasForeignKey(x => x.PlanId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(x => x.WorkspaceId).IsUnique();
+            entity.HasIndex(x => x.PlanId);
+            entity.HasIndex(x => x.Status);
+            entity.HasIndex(x => x.CurrentPeriodEnd);
+        });
+    }
+
+    private static void ConfigureCreditLedgerEntries(ModelBuilder modelBuilder)
+    {
+        var entryTypeConverter = new EnumToStringConverter<CreditEntryType>();
+        var bucketConverter = new EnumToStringConverter<CreditBucket>();
+
+        modelBuilder.Entity<CreditLedgerEntry>(entity =>
+        {
+            entity.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+            entity.Property(x => x.EntryType).HasConversion(entryTypeConverter).HasMaxLength(50).IsRequired();
+            entity.Property(x => x.Bucket).HasConversion(bucketConverter).HasMaxLength(50).IsRequired();
+            entity.Property(x => x.UsageType).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.IdempotencyKey).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Description).HasMaxLength(500);
+            entity.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
+
+            entity.HasOne(x => x.WorkspaceSubscription)
+                .WithMany(x => x.CreditLedgerEntries)
+                .HasForeignKey(x => x.WorkspaceSubscriptionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(x => x.Workspace)
+                .WithMany(x => x.CreditLedgerEntries)
+                .HasForeignKey(x => x.WorkspaceId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.AiJob)
+                .WithMany(x => x.CreditLedgerEntries)
+                .HasForeignKey(x => x.AiJobId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(x => x.PaymentOrder)
+                .WithMany(x => x.CreditLedgerEntries)
+                .HasForeignKey(x => x.PaymentOrderId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(x => x.IdempotencyKey).IsUnique();
+            entity.HasIndex(x => new { x.WorkspaceId, x.CreatedAt });
+            entity.HasIndex(x => x.AiJobId);
+            entity.HasIndex(x => x.PaymentOrderId);
+        });
+    }
+
+    private static void ConfigurePaymentOrders(ModelBuilder modelBuilder)
+    {
+        var purchaseTypeConverter = new EnumToStringConverter<PaymentPurchaseType>();
+        var statusConverter = new EnumToStringConverter<PaymentOrderStatus>();
+
+        modelBuilder.Entity<PaymentOrder>(entity =>
+        {
+            entity.ToTable(table => table.HasCheckConstraint(
+                "ck_payment_orders_product_shape",
+                "(purchase_type = 'Subscription' AND plan_id IS NOT NULL AND credit_package_id IS NULL) OR " +
+                "(purchase_type = 'CreditTopUp' AND plan_id IS NULL AND credit_package_id IS NOT NULL)"));
+
+            entity.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+            entity.Property(x => x.PurchaseType).HasConversion(purchaseTypeConverter).HasMaxLength(50).IsRequired();
+            entity.Property(x => x.Status).HasConversion(statusConverter).HasMaxLength(50).IsRequired();
+            entity.Property(x => x.Provider).HasMaxLength(50).IsRequired();
+            entity.Property(x => x.ProviderPaymentLinkId).HasMaxLength(255);
+            entity.Property(x => x.ProviderReference).HasMaxLength(255);
+            entity.Property(x => x.CheckoutUrl).HasMaxLength(2000);
+            entity.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(x => x.UpdatedAt).HasDefaultValueSql("now()");
+
+            entity.HasOne(x => x.Workspace)
+                .WithMany(x => x.PaymentOrders)
+                .HasForeignKey(x => x.WorkspaceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(x => x.CreatedBy)
+                .WithMany(x => x.PaymentOrders)
+                .HasForeignKey(x => x.CreatedById)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.Plan)
+                .WithMany(x => x.PaymentOrders)
+                .HasForeignKey(x => x.PlanId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.CreditPackage)
+                .WithMany(x => x.PaymentOrders)
+                .HasForeignKey(x => x.CreditPackageId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(x => x.ProviderOrderCode).IsUnique();
+            entity.HasIndex(x => x.ProviderPaymentLinkId)
+                .IsUnique()
+                .HasFilter("provider_payment_link_id IS NOT NULL");
+            entity.HasIndex(x => x.ProviderReference)
+                .IsUnique()
+                .HasFilter("provider_reference IS NOT NULL");
+            entity.HasIndex(x => new { x.WorkspaceId, x.CreatedAt });
+            entity.HasIndex(x => x.Status);
         });
     }
 }

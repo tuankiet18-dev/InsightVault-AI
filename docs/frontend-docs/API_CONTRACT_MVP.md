@@ -2,6 +2,40 @@
 
 Status: contract for implementation. Frontend calls only Backend APIs. Backend calls AI Service internally. AI Service is not exposed directly to browsers.
 
+## Billing and AI credits
+
+Billing is workspace-scoped. The workspace owner purchases a monthly plan or
+credit top-up, while all active members consume the shared workspace balance.
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/api/billing/plans` | No | List active subscription plans |
+| GET | `/api/billing/credit-packages` | No | List active top-up packages |
+| GET | `/api/workspaces/{workspaceId}/billing` | Yes | Get plan and remaining credits |
+| POST | `/api/workspaces/{workspaceId}/billing/checkout` | Owner | Create payOS checkout |
+| POST | `/api/billing/payos/webhook` | payOS signature | Apply verified payment |
+
+Checkout request:
+
+```json
+{
+  "productCode": "topup_500"
+}
+```
+
+Expensive AI operations may return HTTP `402 Payment Required`:
+
+```json
+{
+  "code": "billing.insufficient_credits",
+  "message": "This workspace does not have enough AI credits.",
+  "details": {
+    "requiredCredits": 5,
+    "availableCredits": 2
+  }
+}
+```
+
 ## Global Rules
 
 - FE base URL: `VITE_API_BASE_URL`, default `http://localhost:5000/api`.

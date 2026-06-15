@@ -23,4 +23,5 @@ public sealed class AiJob
     public Document? Document { get; set; }
     public User? CreatedBy { get; set; }
     public List<Report> Reports { get; set; } = [];
+    public List<CreditLedgerEntry> CreditLedgerEntries { get; set; } = [];
 }
