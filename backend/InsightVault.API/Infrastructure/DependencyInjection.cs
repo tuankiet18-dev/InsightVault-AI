@@ -74,17 +74,16 @@ public static class DependencyInjection
             .Validate(options => options.CompareBaseCredits > 0, "Billing:CompareBaseCredits must be greater than zero.")
             .Validate(options => options.CompareAdditionalDocumentCredits >= 0, "Billing:CompareAdditionalDocumentCredits cannot be negative.")
             .ValidateOnStart();
-        services.AddOptions<PayOsOptions>()
-            .Bind(configuration.GetSection("PayOS"))
-            .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.ClientId), "PayOS:ClientId is required when payOS is enabled.")
-            .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.ApiKey), "PayOS:ApiKey is required when payOS is enabled.")
-            .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.ChecksumKey), "PayOS:ChecksumKey is required when payOS is enabled.")
-            .Validate(options => !options.Enabled || Uri.TryCreate(options.ReturnUrl, UriKind.Absolute, out _), "PayOS:ReturnUrl must be an absolute URI.")
-            .Validate(options => !options.Enabled || Uri.TryCreate(options.CancelUrl, UriKind.Absolute, out _), "PayOS:CancelUrl must be an absolute URI.")
-            .Validate(options => options.CheckoutExpiryMinutes is >= 5 and <= 60, "PayOS:CheckoutExpiryMinutes must be between 5 and 60.")
+        services.AddOptions<VnPayOptions>()
+            .Bind(configuration.GetSection("VnPay"))
+            .Validate(options => !options.Enabled || Uri.TryCreate(options.PaymentUrl, UriKind.Absolute, out _), "VnPay:PaymentUrl must be an absolute URI.")
+            .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.TmnCode), "VnPay:TmnCode is required when VNPay is enabled.")
+            .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.HashSecret), "VnPay:HashSecret is required when VNPay is enabled.")
+            .Validate(options => !options.Enabled || Uri.TryCreate(options.ReturnUrl, UriKind.Absolute, out _), "VnPay:ReturnUrl must be an absolute URI.")
+            .Validate(options => options.CheckoutExpiryMinutes is >= 5 and <= 60, "VnPay:CheckoutExpiryMinutes must be between 5 and 60.")
             .ValidateOnStart();
         services.AddScoped<IObjectStorageService, ConfiguredObjectStorageService>();
-        services.AddSingleton<IPaymentGateway, PayOsPaymentGateway>();
+        services.AddSingleton<IPaymentGateway, VnPayPaymentGateway>();
         services.AddSingleton<IMessagePublisher, RabbitMqMessagePublisher>();
         services.AddHttpClient<IAiServiceClient, AiServiceClient>((serviceProvider, client) =>
         {

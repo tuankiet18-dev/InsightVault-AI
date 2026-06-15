@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 namespace InsightVault.API.Application.Abstractions.Payments;
 
 public interface IPaymentGateway
@@ -10,8 +8,8 @@ public interface IPaymentGateway
         PaymentCheckoutRequest request,
         CancellationToken cancellationToken = default);
 
-    Task<VerifiedPayment> VerifyWebhookAsync(
-        JsonElement payload,
+    Task<VerifiedPayment> VerifyNotificationAsync(
+        IReadOnlyDictionary<string, string> parameters,
         CancellationToken cancellationToken = default);
 }
 
@@ -21,8 +19,8 @@ public sealed record PaymentCheckoutRequest(
     string Description,
     string BuyerName,
     string BuyerEmail,
-    string ReturnUrl,
-    string CancelUrl,
+    string ClientIp,
+    DateTimeOffset CreatedAt,
     DateTimeOffset ExpiresAt);
 
 public sealed record PaymentCheckoutResult(
@@ -34,4 +32,24 @@ public sealed record VerifiedPayment(
     long AmountVnd,
     string? PaymentLinkId,
     string? Reference,
+    bool IsSignatureValid,
     bool IsSuccessful);
+
+public static class VerifiedPayments
+{
+    public static VerifiedPayment InvalidSignature => new(
+        0,
+        0,
+        null,
+        null,
+        IsSignatureValid: false,
+        IsSuccessful: false);
+
+    public static VerifiedPayment InvalidData => new(
+        0,
+        0,
+        null,
+        null,
+        IsSignatureValid: true,
+        IsSuccessful: false);
+}

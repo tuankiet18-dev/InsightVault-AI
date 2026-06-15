@@ -10,10 +10,10 @@ import { ComparePage } from '@/pages/ComparePage'
 import { InvitationsPage } from '@/pages/InvitationsPage'
 import { InvitationDetailPage } from '@/pages/InvitationDetailPage'
 import { BillingPage } from '@/pages/BillingPage'
-import { BillingResultPage } from '@/pages/BillingResultPage'
+
 import { AdminUsersPage } from '@/pages/admin/AdminUsersPage'
 import { AdminJobsPage } from '@/pages/admin/AdminJobsPage'
-
+import { BillingReturnPage } from '@/pages/BillingReturnPage'
 const AdminLayout = () => (
   <div className="min-h-screen bg-background text-foreground">
     <header className="flex h-14 items-center gap-6 border-b border-border bg-card px-6">
@@ -65,24 +65,20 @@ const router = createBrowserRouter([
     element: <ProtectedRoute><WorkspacePage /></ProtectedRoute>,
   },
   {
-    path: '/chat',
-    element: <ProtectedRoute><ChatPage /></ProtectedRoute>,
-  },
-  {
-    path: '/compare',
-    element: <ProtectedRoute><ComparePage /></ProtectedRoute>,
-  },
-  {
-    path: '/billing',
+    path: '/workspaces/:workspaceId/billing',
     element: <ProtectedRoute><BillingPage /></ProtectedRoute>,
   },
   {
-    path: '/billing/success',
-    element: <ProtectedRoute><BillingResultPage status="success" /></ProtectedRoute>,
+    path: '/billing/return',
+    element: <BillingReturnPage />,
   },
   {
-    path: '/billing/cancel',
-    element: <ProtectedRoute><BillingResultPage status="cancel" /></ProtectedRoute>,
+    path: '/chat',
+    element: (<ProtectedRoute> <ChatPage /> </ProtectedRoute>),
+  },
+  {
+    path: '/compare',
+    element: (<ProtectedRoute><ComparePage /></ProtectedRoute>),
   },
   {
     path: '/admin',

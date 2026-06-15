@@ -8,8 +8,10 @@ import {
   Settings as SettingsIcon,
   Trash2,
   UserPlus,
+  WalletCards,
 } from 'lucide-react'
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useWorkspace, useWorkspaces, useDeleteWorkspace } from '@/hooks/useWorkspaces'
 import { useUiStore } from '@/stores/uiStore'
@@ -21,6 +23,7 @@ import { Button } from '../ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 
 export function TopBar() {
+  const navigate = useNavigate()
   const { activeWorkspaceId, setActiveWorkspace } = useWorkspaceStore()
   const { data: activeWs } = useWorkspace(activeWorkspaceId)
   const { data: workspaces } = useWorkspaces()
@@ -99,10 +102,21 @@ export function TopBar() {
         </span>
       )}
       {isOwner && (
-        <Button variant="ghost" size="sm" className="hidden sm:inline-flex" onClick={() => setInviteModalOpen(true)}>
-          <UserPlus className="h-4 w-4" />
-          Invite
-        </Button>
+        <>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="hidden sm:inline-flex"
+            onClick={() => navigate(`/workspaces/${activeWorkspaceId}/billing`)}
+          >
+            <WalletCards className="h-4 w-4" />
+            Billing
+          </Button>
+          <Button variant="ghost" size="sm" className="hidden sm:inline-flex" onClick={() => setInviteModalOpen(true)}>
+            <UserPlus className="h-4 w-4" />
+            Invite
+          </Button>
+        </>
       )}
 
       <Button

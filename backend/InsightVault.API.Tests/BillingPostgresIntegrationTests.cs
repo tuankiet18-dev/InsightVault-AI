@@ -1,6 +1,6 @@
-using System.Text.Json;
 using InsightVault.API.Application.Abstractions.Payments;
 using InsightVault.API.Application.Abstractions.Services.Auth;
+using InsightVault.API.Application.Abstractions.Services.Billing;
 using InsightVault.API.Application.Abstractions.Services.Workspaces;
 using InsightVault.API.Application.Services.Billing;
 using InsightVault.API.Data;
@@ -137,7 +137,7 @@ public sealed class BillingPostgresIntegrationTests
                     CreditPackageId = packageId,
                     PurchaseType = PaymentPurchaseType.CreditTopUp,
                     Status = PaymentOrderStatus.Pending,
-                    Provider = "payos",
+                    Provider = "vnpay",
                     ProviderOrderCode = orderCode,
                     AmountVnd = 39_000,
                     CreatedAt = DateTimeOffset.UtcNow,
@@ -152,6 +152,7 @@ public sealed class BillingPostgresIntegrationTests
                     39_000,
                     $"test-payment-link-{orderId:N}",
                     $"test-reference-{orderId:N}",
+                    true,
                     true));
 
             var results = await Task.WhenAll(Enumerable.Range(0, 2).Select(async _ =>
@@ -163,10 +164,10 @@ public sealed class BillingPostgresIntegrationTests
                     new StubWorkspacePermissionService(),
                     CreateCreditService(db),
                     gateway,
-                    Options.Create(new PayOsOptions { Enabled = true }));
+                    Options.Create(new VnPayOptions { Enabled = true }));
 
-                return await service.HandleWebhookAsync(
-                    JsonDocument.Parse("{}").RootElement);
+                return await service.HandlePaymentNotificationAsync(
+                    new Dictionary<string, string>());
             }));
 
             await using var verificationDb = CreateDbContext(connectionString);
@@ -177,7 +178,8 @@ public sealed class BillingPostgresIntegrationTests
                 entry => entry.PaymentOrderId == orderId
                     && entry.EntryType == CreditEntryType.Grant);
 
-            Assert.Single(results, applied => applied);
+            Assert.Single(results, outcome => outcome == PaymentNotificationOutcome.Applied);
+            Assert.Single(results, outcome => outcome == PaymentNotificationOutcome.AlreadyProcessed);
             Assert.Equal(500, subscription.TopUpCreditsRemaining);
             Assert.Equal(1, grantCount);
         }
@@ -303,7 +305,7 @@ public sealed class BillingPostgresIntegrationTests
 
     private sealed class StubPaymentGateway(VerifiedPayment payment) : IPaymentGateway
     {
-        public string ProviderName => "payos";
+        public string ProviderName => "vnpay";
 
         public Task<PaymentCheckoutResult> CreateCheckoutAsync(
             PaymentCheckoutRequest request,
@@ -312,8 +314,8 @@ public sealed class BillingPostgresIntegrationTests
             throw new NotSupportedException();
         }
 
-        public Task<VerifiedPayment> VerifyWebhookAsync(
-            JsonElement payload,
+        public Task<VerifiedPayment> VerifyNotificationAsync(
+            IReadOnlyDictionary<string, string> parameters,
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(payment);
