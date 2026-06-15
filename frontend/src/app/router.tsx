@@ -10,15 +10,10 @@ import { ComparePage } from '@/pages/ComparePage'
 import { InvitationsPage } from '@/pages/InvitationsPage'
 import { InvitationDetailPage } from '@/pages/InvitationDetailPage'
 import { BillingPage } from '@/pages/BillingPage'
-import { BillingResultPage } from '@/pages/BillingResultPage'
+
 import { AdminUsersPage } from '@/pages/admin/AdminUsersPage'
 import { AdminJobsPage } from '@/pages/admin/AdminJobsPage'
-<<<<<<< HEAD
-import { BillingPage } from '@/pages/BillingPage'
 import { BillingReturnPage } from '@/pages/BillingReturnPage'
-=======
-
->>>>>>> main
 const AdminLayout = () => (
   <div className="min-h-screen bg-background text-foreground">
     <header className="flex h-14 items-center gap-6 border-b border-border bg-card px-6">

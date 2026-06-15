@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { Link, Navigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -348,5 +347,4 @@ function formatStorage(bytes: number) {
   return gigabytes >= 1
     ? `${Number.isInteger(gigabytes) ? gigabytes : gigabytes.toFixed(1)} GB`
     : `${Math.round(bytes / (1024 ** 2))} MB`
-}
 }
