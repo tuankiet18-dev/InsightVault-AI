@@ -15,6 +15,8 @@ using InsightVault.API.Infrastructure.Payments;
 using InsightVault.API.Infrastructure.Persistence.Repositories;
 using InsightVault.API.Infrastructure.Storage;
 using InsightVault.API.Application.Abstractions.Services.Emails;
+using InsightVault.API.Application.Abstractions.Services.Invitations;
+using InsightVault.API.Application.Services.Invitations;
 using InsightVault.API.Infrastructure.Emails;
 using InsightVault.API.Application.Services.Billing;
 
@@ -60,6 +62,11 @@ public static class DependencyInjection
             .Validate(options => options.IntervalHours > 0, "TrashCleanup:IntervalHours must be greater than zero.")
             .Validate(options => options.BatchSize is > 0 and <= 500, "TrashCleanup:BatchSize must be between 1 and 500.")
             .ValidateOnStart();
+        services.AddOptions<WorkspaceInvitationOptions>()
+            .Bind(configuration.GetSection("WorkspaceInvitation"))
+            .Validate(options => Uri.TryCreate(options.FrontendBaseUrl, UriKind.Absolute, out _), "WorkspaceInvitation:FrontendBaseUrl must be an absolute URI.")
+            .Validate(options => options.ExpiresDays > 0, "WorkspaceInvitation:ExpiresDays must be greater than zero.")
+            .ValidateOnStart();
         services.AddOptions<BillingOptions>()
             .Bind(configuration.GetSection("Billing"))
             .Validate(options => options.DocumentCreditsPerFiveMb > 0, "Billing:DocumentCreditsPerFiveMb must be greater than zero.")
@@ -96,6 +103,7 @@ public static class DependencyInjection
         services.AddScoped(typeof(IRepository<>), typeof(GenericRepository<>));
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IWorkspaceRepository, WorkspaceRepository>();
+        services.AddScoped<IWorkspaceInvitationRepository, WorkspaceInvitationRepository>();
         services.AddScoped<IFolderRepository, FolderRepository>();
         services.AddScoped<IDocumentRepository, DocumentRepository>();
         services.AddScoped<IAiJobRepository, AiJobRepository>();
@@ -110,6 +118,7 @@ public static class DependencyInjection
         // Workspace services
         services.AddScoped<IWorkspacePermissionService, InsightVault.API.Application.Services.Workspaces.WorkspacePermissionService>();
         services.AddScoped<IWorkspaceService, WorkspaceService>();
+        services.AddScoped<IWorkspaceInvitationService, WorkspaceInvitationService>();
 
         // Email services
         services.AddScoped<IEmailService, MessagingEmailService>();

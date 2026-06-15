@@ -13,6 +13,8 @@ public interface IEmailService
         string inviterName,
         string workspaceName,
         string role,
+        string viewInvitationUrl,
+        DateTimeOffset expiresAt,
         CancellationToken cancellationToken = default);
 
     Task SendRoleUpdatedAsync(

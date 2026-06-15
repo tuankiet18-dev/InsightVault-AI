@@ -3,6 +3,7 @@ using System;
 using InsightVault.API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -12,9 +13,11 @@ using Pgvector;
 namespace InsightVault.API.Data.Migrations
 {
     [DbContext(typeof(InsightVaultDbContext))]
-    partial class InsightVaultDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260615081731_WorkspaceInvitations")]
+    partial class WorkspaceInvitations
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -420,192 +423,6 @@ namespace InsightVault.API.Data.Migrations
                     b.ToTable("chat_sessions", (string)null);
                 });
 
-            modelBuilder.Entity("InsightVault.API.Domain.Entities.CreditLedgerEntry", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("gen_random_uuid()");
-
-                    b.Property<Guid?>("AiJobId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("ai_job_id");
-
-                    b.Property<string>("Bucket")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("bucket");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<int>("Credits")
-                        .HasColumnType("integer")
-                        .HasColumnName("credits");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("description");
-
-                    b.Property<string>("EntryType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("entry_type");
-
-                    b.Property<string>("IdempotencyKey")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("idempotency_key");
-
-                    b.Property<Guid?>("PaymentOrderId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("payment_order_id");
-
-                    b.Property<string>("UsageType")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("usage_type");
-
-                    b.Property<Guid>("WorkspaceId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("workspace_id");
-
-                    b.Property<Guid>("WorkspaceSubscriptionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("workspace_subscription_id");
-
-                    b.HasKey("Id")
-                        .HasName("pk_credit_ledger_entries");
-
-                    b.HasIndex("AiJobId")
-                        .HasDatabaseName("ix_credit_ledger_entries_ai_job_id");
-
-                    b.HasIndex("IdempotencyKey")
-                        .IsUnique()
-                        .HasDatabaseName("ix_credit_ledger_entries_idempotency_key");
-
-                    b.HasIndex("PaymentOrderId")
-                        .HasDatabaseName("ix_credit_ledger_entries_payment_order_id");
-
-                    b.HasIndex("WorkspaceSubscriptionId")
-                        .HasDatabaseName("ix_credit_ledger_entries_workspace_subscription_id");
-
-                    b.HasIndex("WorkspaceId", "CreatedAt")
-                        .HasDatabaseName("ix_credit_ledger_entries_workspace_id_created_at");
-
-                    b.ToTable("credit_ledger_entries", (string)null);
-                });
-
-            modelBuilder.Entity("InsightVault.API.Domain.Entities.CreditPackage", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("gen_random_uuid()");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("code");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<int>("Credits")
-                        .HasColumnType("integer")
-                        .HasColumnName("credits");
-
-                    b.Property<int>("DisplayOrder")
-                        .HasColumnType("integer")
-                        .HasColumnName("display_order");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true)
-                        .HasColumnName("is_active");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("name");
-
-                    b.Property<long>("PriceVnd")
-                        .HasColumnType("bigint")
-                        .HasColumnName("price_vnd");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.HasKey("Id")
-                        .HasName("pk_credit_packages");
-
-                    b.HasIndex("Code")
-                        .IsUnique()
-                        .HasDatabaseName("ix_credit_packages_code");
-
-                    b.HasIndex("IsActive", "DisplayOrder")
-                        .HasDatabaseName("ix_credit_packages_is_active_display_order");
-
-                    b.ToTable("credit_packages", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("20000000-0000-0000-0000-000000000001"),
-                            Code = "topup_500",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Credits = 500,
-                            DisplayOrder = 1,
-                            IsActive = true,
-                            Name = "500 AI Credits",
-                            PriceVnd = 39000L,
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 6, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
-                        },
-                        new
-                        {
-                            Id = new Guid("20000000-0000-0000-0000-000000000002"),
-                            Code = "topup_2000",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Credits = 2000,
-                            DisplayOrder = 2,
-                            IsActive = true,
-                            Name = "2,000 AI Credits",
-                            PriceVnd = 129000L,
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 6, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
-                        },
-                        new
-                        {
-                            Id = new Guid("20000000-0000-0000-0000-000000000003"),
-                            Code = "topup_5000",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Credits = 5000,
-                            DisplayOrder = 3,
-                            IsActive = true,
-                            Name = "5,000 AI Credits",
-                            PriceVnd = 279000L,
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 6, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
-                        });
-                });
-
             modelBuilder.Entity("InsightVault.API.Domain.Entities.Document", b =>
                 {
                     b.Property<Guid>("Id")
@@ -962,129 +779,6 @@ namespace InsightVault.API.Data.Migrations
                     b.ToTable("folders", (string)null);
                 });
 
-            modelBuilder.Entity("InsightVault.API.Domain.Entities.PaymentOrder", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("gen_random_uuid()");
-
-                    b.Property<long>("AmountVnd")
-                        .HasColumnType("bigint")
-                        .HasColumnName("amount_vnd");
-
-                    b.Property<string>("CheckoutUrl")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)")
-                        .HasColumnName("checkout_url");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<Guid>("CreatedById")
-                        .HasColumnType("uuid")
-                        .HasColumnName("created_by_id");
-
-                    b.Property<Guid?>("CreditPackageId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("credit_package_id");
-
-                    b.Property<DateTimeOffset?>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("expires_at");
-
-                    b.Property<DateTimeOffset?>("PaidAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("paid_at");
-
-                    b.Property<Guid?>("PlanId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("plan_id");
-
-                    b.Property<string>("Provider")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("provider");
-
-                    b.Property<long>("ProviderOrderCode")
-                        .HasColumnType("bigint")
-                        .HasColumnName("provider_order_code");
-
-                    b.Property<string>("ProviderPaymentLinkId")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("provider_payment_link_id");
-
-                    b.Property<string>("ProviderReference")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("provider_reference");
-
-                    b.Property<string>("PurchaseType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("purchase_type");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("status");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<Guid>("WorkspaceId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("workspace_id");
-
-                    b.HasKey("Id")
-                        .HasName("pk_payment_orders");
-
-                    b.HasIndex("CreatedById")
-                        .HasDatabaseName("ix_payment_orders_created_by_id");
-
-                    b.HasIndex("CreditPackageId")
-                        .HasDatabaseName("ix_payment_orders_credit_package_id");
-
-                    b.HasIndex("PlanId")
-                        .HasDatabaseName("ix_payment_orders_plan_id");
-
-                    b.HasIndex("ProviderOrderCode")
-                        .IsUnique()
-                        .HasDatabaseName("ix_payment_orders_provider_order_code");
-
-                    b.HasIndex("ProviderPaymentLinkId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_payment_orders_provider_payment_link_id")
-                        .HasFilter("provider_payment_link_id IS NOT NULL");
-
-                    b.HasIndex("ProviderReference")
-                        .IsUnique()
-                        .HasDatabaseName("ix_payment_orders_provider_reference")
-                        .HasFilter("provider_reference IS NOT NULL");
-
-                    b.HasIndex("Status")
-                        .HasDatabaseName("ix_payment_orders_status");
-
-                    b.HasIndex("WorkspaceId", "CreatedAt")
-                        .HasDatabaseName("ix_payment_orders_workspace_id_created_at");
-
-                    b.ToTable("payment_orders", null, t =>
-                        {
-                            t.HasCheckConstraint("ck_payment_orders_product_shape", "(purchase_type = 'Subscription' AND plan_id IS NOT NULL AND credit_package_id IS NULL) OR (purchase_type = 'CreditTopUp' AND plan_id IS NULL AND credit_package_id IS NOT NULL)");
-                        });
-                });
-
             modelBuilder.Entity("InsightVault.API.Domain.Entities.Report", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1215,139 +909,6 @@ namespace InsightVault.API.Data.Migrations
                         .HasDatabaseName("ix_reports_workspace_id_report_group_id_version_number");
 
                     b.ToTable("reports", (string)null);
-                });
-
-            modelBuilder.Entity("InsightVault.API.Domain.Entities.SubscriptionPlan", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("gen_random_uuid()");
-
-                    b.Property<int>("BillingPeriodMonths")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(1)
-                        .HasColumnName("billing_period_months");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("code");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("description");
-
-                    b.Property<int>("DisplayOrder")
-                        .HasColumnType("integer")
-                        .HasColumnName("display_order");
-
-                    b.Property<int>("IncludedCredits")
-                        .HasColumnType("integer")
-                        .HasColumnName("included_credits");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true)
-                        .HasColumnName("is_active");
-
-                    b.Property<int>("MaxMembers")
-                        .HasColumnType("integer")
-                        .HasColumnName("max_members");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("name");
-
-                    b.Property<long>("PriceVnd")
-                        .HasColumnType("bigint")
-                        .HasColumnName("price_vnd");
-
-                    b.Property<long>("StorageLimitBytes")
-                        .HasColumnType("bigint")
-                        .HasColumnName("storage_limit_bytes");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.HasKey("Id")
-                        .HasName("pk_subscription_plans");
-
-                    b.HasIndex("Code")
-                        .IsUnique()
-                        .HasDatabaseName("ix_subscription_plans_code");
-
-                    b.HasIndex("IsActive", "DisplayOrder")
-                        .HasDatabaseName("ix_subscription_plans_is_active_display_order");
-
-                    b.ToTable("subscription_plans", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("10000000-0000-0000-0000-000000000001"),
-                            BillingPeriodMonths = 1,
-                            Code = "free",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Description = "For trying the core document intelligence workflow.",
-                            DisplayOrder = 1,
-                            IncludedCredits = 100,
-                            IsActive = true,
-                            MaxMembers = 1,
-                            Name = "Free",
-                            PriceVnd = 0L,
-                            StorageLimitBytes = 524288000L,
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 6, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
-                        },
-                        new
-                        {
-                            Id = new Guid("10000000-0000-0000-0000-000000000002"),
-                            BillingPeriodMonths = 1,
-                            Code = "pro",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Description = "For students and small teams using AI regularly.",
-                            DisplayOrder = 2,
-                            IncludedCredits = 1500,
-                            IsActive = true,
-                            MaxMembers = 5,
-                            Name = "Pro",
-                            PriceVnd = 99000L,
-                            StorageLimitBytes = 5368709120L,
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 6, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
-                        },
-                        new
-                        {
-                            Id = new Guid("10000000-0000-0000-0000-000000000003"),
-                            BillingPeriodMonths = 1,
-                            Code = "team",
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Description = "For larger collaborative workspaces with heavier AI usage.",
-                            DisplayOrder = 3,
-                            IncludedCredits = 5000,
-                            IsActive = true,
-                            MaxMembers = 15,
-                            Name = "Team",
-                            PriceVnd = 249000L,
-                            StorageLimitBytes = 21474836480L,
-                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 6, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
-                        });
                 });
 
             modelBuilder.Entity("InsightVault.API.Domain.Entities.User", b =>
@@ -1681,79 +1242,6 @@ namespace InsightVault.API.Data.Migrations
                     b.ToTable("workspace_members", (string)null);
                 });
 
-            modelBuilder.Entity("InsightVault.API.Domain.Entities.WorkspaceSubscription", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("gen_random_uuid()");
-
-                    b.Property<bool>("CancelAtPeriodEnd")
-                        .HasColumnType("boolean")
-                        .HasColumnName("cancel_at_period_end");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<DateTimeOffset>("CurrentPeriodEnd")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("current_period_end");
-
-                    b.Property<DateTimeOffset>("CurrentPeriodStart")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("current_period_start");
-
-                    b.Property<Guid>("PlanId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("plan_id");
-
-                    b.Property<int>("RecurringCreditsRemaining")
-                        .HasColumnType("integer")
-                        .HasColumnName("recurring_credits_remaining");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("status");
-
-                    b.Property<int>("TopUpCreditsRemaining")
-                        .HasColumnType("integer")
-                        .HasColumnName("top_up_credits_remaining");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<Guid>("WorkspaceId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("workspace_id");
-
-                    b.HasKey("Id")
-                        .HasName("pk_workspace_subscriptions");
-
-                    b.HasIndex("CurrentPeriodEnd")
-                        .HasDatabaseName("ix_workspace_subscriptions_current_period_end");
-
-                    b.HasIndex("PlanId")
-                        .HasDatabaseName("ix_workspace_subscriptions_plan_id");
-
-                    b.HasIndex("Status")
-                        .HasDatabaseName("ix_workspace_subscriptions_status");
-
-                    b.HasIndex("WorkspaceId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_workspace_subscriptions_workspace_id");
-
-                    b.ToTable("workspace_subscriptions", (string)null);
-                });
-
             modelBuilder.Entity("InsightVault.API.Domain.Entities.AiJob", b =>
                 {
                     b.HasOne("InsightVault.API.Domain.Entities.User", "CreatedBy")
@@ -1871,43 +1359,6 @@ namespace InsightVault.API.Data.Migrations
                     b.Navigation("Workspace");
                 });
 
-            modelBuilder.Entity("InsightVault.API.Domain.Entities.CreditLedgerEntry", b =>
-                {
-                    b.HasOne("InsightVault.API.Domain.Entities.AiJob", "AiJob")
-                        .WithMany("CreditLedgerEntries")
-                        .HasForeignKey("AiJobId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_credit_ledger_entries_ai_jobs_ai_job_id");
-
-                    b.HasOne("InsightVault.API.Domain.Entities.PaymentOrder", "PaymentOrder")
-                        .WithMany("CreditLedgerEntries")
-                        .HasForeignKey("PaymentOrderId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_credit_ledger_entries_payment_orders_payment_order_id");
-
-                    b.HasOne("InsightVault.API.Domain.Entities.Workspace", "Workspace")
-                        .WithMany("CreditLedgerEntries")
-                        .HasForeignKey("WorkspaceId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_credit_ledger_entries_workspaces_workspace_id");
-
-                    b.HasOne("InsightVault.API.Domain.Entities.WorkspaceSubscription", "WorkspaceSubscription")
-                        .WithMany("CreditLedgerEntries")
-                        .HasForeignKey("WorkspaceSubscriptionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_credit_ledger_entries_workspace_subscriptions_workspace_sub");
-
-                    b.Navigation("AiJob");
-
-                    b.Navigation("PaymentOrder");
-
-                    b.Navigation("Workspace");
-
-                    b.Navigation("WorkspaceSubscription");
-                });
-
             modelBuilder.Entity("InsightVault.API.Domain.Entities.Document", b =>
                 {
                     b.HasOne("InsightVault.API.Domain.Entities.Folder", "Folder")
@@ -1989,43 +1440,6 @@ namespace InsightVault.API.Data.Migrations
                     b.Navigation("CreatedBy");
 
                     b.Navigation("ParentFolder");
-
-                    b.Navigation("Workspace");
-                });
-
-            modelBuilder.Entity("InsightVault.API.Domain.Entities.PaymentOrder", b =>
-                {
-                    b.HasOne("InsightVault.API.Domain.Entities.User", "CreatedBy")
-                        .WithMany("PaymentOrders")
-                        .HasForeignKey("CreatedById")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_payment_orders_users_created_by_id");
-
-                    b.HasOne("InsightVault.API.Domain.Entities.CreditPackage", "CreditPackage")
-                        .WithMany("PaymentOrders")
-                        .HasForeignKey("CreditPackageId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_payment_orders_credit_packages_credit_package_id");
-
-                    b.HasOne("InsightVault.API.Domain.Entities.SubscriptionPlan", "Plan")
-                        .WithMany("PaymentOrders")
-                        .HasForeignKey("PlanId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_payment_orders_subscription_plans_plan_id");
-
-                    b.HasOne("InsightVault.API.Domain.Entities.Workspace", "Workspace")
-                        .WithMany("PaymentOrders")
-                        .HasForeignKey("WorkspaceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_payment_orders_workspaces_workspace_id");
-
-                    b.Navigation("CreatedBy");
-
-                    b.Navigation("CreditPackage");
-
-                    b.Navigation("Plan");
 
                     b.Navigation("Workspace");
                 });
@@ -2135,31 +1549,8 @@ namespace InsightVault.API.Data.Migrations
                     b.Navigation("Workspace");
                 });
 
-            modelBuilder.Entity("InsightVault.API.Domain.Entities.WorkspaceSubscription", b =>
-                {
-                    b.HasOne("InsightVault.API.Domain.Entities.SubscriptionPlan", "Plan")
-                        .WithMany("WorkspaceSubscriptions")
-                        .HasForeignKey("PlanId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_workspace_subscriptions_subscription_plans_plan_id");
-
-                    b.HasOne("InsightVault.API.Domain.Entities.Workspace", "Workspace")
-                        .WithOne("Subscription")
-                        .HasForeignKey("InsightVault.API.Domain.Entities.WorkspaceSubscription", "WorkspaceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_workspace_subscriptions_workspaces_workspace_id");
-
-                    b.Navigation("Plan");
-
-                    b.Navigation("Workspace");
-                });
-
             modelBuilder.Entity("InsightVault.API.Domain.Entities.AiJob", b =>
                 {
-                    b.Navigation("CreditLedgerEntries");
-
                     b.Navigation("Reports");
                 });
 
@@ -2173,11 +1564,6 @@ namespace InsightVault.API.Data.Migrations
             modelBuilder.Entity("InsightVault.API.Domain.Entities.ChatSession", b =>
                 {
                     b.Navigation("Messages");
-                });
-
-            modelBuilder.Entity("InsightVault.API.Domain.Entities.CreditPackage", b =>
-                {
-                    b.Navigation("PaymentOrders");
                 });
 
             modelBuilder.Entity("InsightVault.API.Domain.Entities.Document", b =>
@@ -2207,18 +1593,6 @@ namespace InsightVault.API.Data.Migrations
                     b.Navigation("Reports");
                 });
 
-            modelBuilder.Entity("InsightVault.API.Domain.Entities.PaymentOrder", b =>
-                {
-                    b.Navigation("CreditLedgerEntries");
-                });
-
-            modelBuilder.Entity("InsightVault.API.Domain.Entities.SubscriptionPlan", b =>
-                {
-                    b.Navigation("PaymentOrders");
-
-                    b.Navigation("WorkspaceSubscriptions");
-                });
-
             modelBuilder.Entity("InsightVault.API.Domain.Entities.User", b =>
                 {
                     b.Navigation("AiJobs");
@@ -2228,8 +1602,6 @@ namespace InsightVault.API.Data.Migrations
                     b.Navigation("CreatedFolders");
 
                     b.Navigation("OwnedWorkspaces");
-
-                    b.Navigation("PaymentOrders");
 
                     b.Navigation("Reports");
 
@@ -2244,24 +1616,13 @@ namespace InsightVault.API.Data.Migrations
 
                     b.Navigation("ChatSessions");
 
-                    b.Navigation("CreditLedgerEntries");
-
                     b.Navigation("Documents");
 
                     b.Navigation("Folders");
 
                     b.Navigation("Members");
 
-                    b.Navigation("PaymentOrders");
-
                     b.Navigation("Reports");
-
-                    b.Navigation("Subscription");
-                });
-
-            modelBuilder.Entity("InsightVault.API.Domain.Entities.WorkspaceSubscription", b =>
-                {
-                    b.Navigation("CreditLedgerEntries");
                 });
 #pragma warning restore 612, 618
         }

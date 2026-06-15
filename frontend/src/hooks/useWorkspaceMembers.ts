@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { workspaceApi } from '@/api/workspaceApi'
 import type { AddMemberData, UpdateMemberData } from '@/api/workspaceApi'
-import type { WorkspaceMemberDto } from '@/types/api'
+import type { WorkspaceInvitationDto, WorkspaceMemberDto } from '@/types/api'
 import type { ApiError } from '@/api/http'
 
 export const workspaceKeys = {
@@ -24,7 +24,7 @@ export function useWorkspaceMembers(workspaceId: string | null | undefined) {
 export function useAddWorkspaceMember(workspaceId: string) {
   const queryClient = useQueryClient()
 
-  return useMutation<WorkspaceMemberDto, ApiError, AddMemberData>({
+  return useMutation<WorkspaceInvitationDto, ApiError, AddMemberData>({
     mutationFn: (data: AddMemberData) => workspaceApi.addMember(workspaceId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: workspaceKeys.members(workspaceId) })

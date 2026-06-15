@@ -1,7 +1,8 @@
 import { X, Mail, Shield, Clock, CheckCircle2, Trash2, Search } from 'lucide-react'
 import { useUiStore } from '@/stores/uiStore'
 import { useState, useMemo } from 'react'
-import { useWorkspaceMembers, useAddWorkspaceMember, useUpdateWorkspaceMember, useRemoveWorkspaceMember } from '@/hooks/useWorkspaceMembers'
+import { useWorkspaceMembers, useUpdateWorkspaceMember, useRemoveWorkspaceMember } from '@/hooks/useWorkspaceMembers'
+import { useCreateWorkspaceInvitation } from '@/hooks/useWorkspaceInvitations'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import type { WorkspaceRole } from '@/types/api'
 
@@ -17,7 +18,7 @@ export function InviteMemberModal() {
   const itemsPerPage = 5
   
   const { data: members = [], isLoading } = useWorkspaceMembers(inviteModalOpen ? activeWorkspaceId : undefined)
-  const addMemberMutation = useAddWorkspaceMember(activeWorkspaceId || '')
+  const inviteMemberMutation = useCreateWorkspaceInvitation(activeWorkspaceId || '')
   const updateMemberMutation = useUpdateWorkspaceMember(activeWorkspaceId || '')
   const removeMemberMutation = useRemoveWorkspaceMember(activeWorkspaceId || '')
 
@@ -56,7 +57,7 @@ export function InviteMemberModal() {
 
     if (!email.trim()) return
 
-    addMemberMutation.mutate(
+    inviteMemberMutation.mutate(
       { email: email.trim(), role },
       {
         onSuccess: () => {
@@ -136,10 +137,10 @@ export function InviteMemberModal() {
               <div className="flex justify-end pt-2">
                 <button 
                   type="submit"
-                  disabled={addMemberMutation.isPending || !email.trim()}
+                  disabled={inviteMemberMutation.isPending || !email.trim()}
                   className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
                 >
-                  {addMemberMutation.isPending ? 'Sending...' : 'Send Invite'}
+                  {inviteMemberMutation.isPending ? 'Sending...' : 'Send Invite'}
                 </button>
               </div>
             </div>

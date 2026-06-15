@@ -31,6 +31,7 @@ product: either a subscription plan or a credit package.
 ```text
 users
   -> workspaces
+    -> workspace_invitations
     -> folders
       -> documents
         -> document_chunks
@@ -41,6 +42,37 @@ users
     -> reports
     -> ai_jobs
 ```
+
+## Workspace Invitations
+
+`workspace_invitations` stores GitHub-like pending workspace invitations.
+
+Important columns:
+
+- `id`
+- `workspace_id`
+- `invited_user_id`
+- `email`
+- `role`
+- `status`: `Pending`, `Accepted`, `Declined`, `Expired`, or `Cancelled`
+- `token_hash` reserved for future token-link flow; nullable in the current implementation
+- `expires_at`
+- `invited_by_id`
+- `accepted_at`
+- `declined_at`
+- `cancelled_at`
+- `created_at`
+- `updated_at`
+
+Rules:
+
+- Invitations are tied to one existing active user through `invited_user_id`.
+- Active workspace membership is not created until the invitation is accepted.
+- Accept creates or reactivates `workspace_members` with `Status = Active`.
+- Decline does not create a workspace member.
+- Pending invitations do not grant access to workspace content.
+- A filtered unique index prevents more than one pending invite for the same workspace/user pair.
+- Workspace membership remains the permission source for workspace content.
 
 ## Chat And RAG Model
 

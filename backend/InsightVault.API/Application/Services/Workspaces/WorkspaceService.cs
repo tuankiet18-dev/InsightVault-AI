@@ -6,7 +6,6 @@ using InsightVault.API.Domain.Entities;
 using InsightVault.API.Domain.Enums;
 using InsightVault.API.DTOs.Workspaces;
 using InsightVault.API.Application.Abstractions.Services.Emails;
-using InsightVault.API.Application.Abstractions.Services.Billing;
 
 namespace InsightVault.API.Application.Services.Workspaces;
 
@@ -15,7 +14,6 @@ public sealed class WorkspaceService(
     IUserRepository userRepository,
     IWorkspacePermissionService permissionService,
     IEmailService emailService,
-    IWorkspaceEntitlementService entitlementService,
     InsightVaultDbContext db) : IWorkspaceService
 {
     // ── Workspace CRUD ──────────────────────────────────────────────
@@ -213,78 +211,10 @@ public sealed class WorkspaceService(
         AddWorkspaceMemberRequest request,
         CancellationToken cancellationToken = default)
     {
-        await permissionService.EnsureCanManageMembersAsync(workspaceId, userId, cancellationToken);
-
-        // Validate workspace exists
-        var workspace = await workspaceRepository.GetByIdAsync(workspaceId, cancellationToken)
-            ?? throw new KeyNotFoundException("Workspace not found.");
-
-        if (workspace.DeletedAt is not null)
-        {
-            throw new KeyNotFoundException("Workspace not found.");
-        }
-
-        if (string.IsNullOrWhiteSpace(request.Email))
-        {
-            throw new ArgumentException("Member email is required.", nameof(request));
-        }
-
-        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
-
-        var existing = await workspaceRepository.GetMemberByEmailAsync(workspaceId, normalizedEmail, cancellationToken);
-        var now = DateTimeOffset.UtcNow;
-        var targetRole = WorkspaceMapper.ToDomainRole(request.Role);
-
-        var existingUser = await userRepository.GetByEmailAsync(normalizedEmail, cancellationToken);
-        var currentUser = await userRepository.GetByIdAsync(userId, cancellationToken);
-        var inviterName = currentUser?.FullName ?? "Someone";
-
-        if (existing is { Status: not MemberStatus.Removed })
-        {
-            throw new InvalidOperationException("A member with this email already exists in the workspace.");
-        }
-
-        await entitlementService.EnsureCanAddMemberAsync(workspaceId, cancellationToken);
-
-        if (existing is not null)
-        {
-            existing.UserId = existingUser?.Id;
-            existing.Role = targetRole;
-            existing.Status = existingUser is not null ? MemberStatus.Active : MemberStatus.Invited;
-            existing.InvitedById = userId;
-            existing.InvitedAt = now;
-            existing.JoinedAt = existingUser is not null ? now : null;
-            existing.RemovedAt = null;
-            existing.UpdatedAt = now;
-
-            db.WorkspaceMembers.Update(existing);
-            await db.SaveChangesAsync(cancellationToken);
-
-            await emailService.SendWorkspaceInviteAsync(normalizedEmail, inviterName, workspace.Name, targetRole.ToString(), cancellationToken);
-
-            return WorkspaceMapper.ToMemberDto(existing);
-        }
-
-        var member = new WorkspaceMember
-        {
-            WorkspaceId = workspaceId,
-            UserId = existingUser?.Id,
-            Email = normalizedEmail,
-            Role = targetRole,
-            Status = existingUser is not null ? MemberStatus.Active : MemberStatus.Invited,
-            InvitedById = userId,
-            InvitedAt = now,
-            JoinedAt = existingUser is not null ? now : null,
-            CreatedAt = now,
-            UpdatedAt = now
-        };
-
-        await db.WorkspaceMembers.AddAsync(member, cancellationToken);
-        await db.SaveChangesAsync(cancellationToken);
-
-        await emailService.SendWorkspaceInviteAsync(normalizedEmail, inviterName, workspace.Name, targetRole.ToString(), cancellationToken);
-
-        return WorkspaceMapper.ToMemberDto(member);
+        throw new ApiException(
+            StatusCodes.Status410Gone,
+            "member.invite_endpoint_deprecated",
+            "Use POST /api/workspaces/{workspaceId}/invitations to invite workspace members.");
     }
 
     public async Task<WorkspaceMemberDto> UpdateMemberAsync(

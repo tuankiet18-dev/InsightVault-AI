@@ -2,16 +2,18 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import type { UserDashboardDto } from '@/types/api'
-import { Folder, FileText, Settings, LogOut, Plus, ChevronRight, Activity, CheckCircle, AlertTriangle, Clock} from 'lucide-react'
+import { Folder, FileText, Settings, LogOut, Plus, ChevronRight, Activity, CheckCircle, AlertTriangle, Clock, Mail} from 'lucide-react'
 import { useUiStore } from '@/stores/uiStore'
 import { CreateWorkspaceModal } from '@/components/workspace/CreateWorkspaceModal'
 import { useWorkspaces } from '@/hooks/useWorkspaces'
+import { useMyWorkspaceInvitations } from '@/hooks/useWorkspaceInvitations'
 import { documentApi } from '@/api/documentApi'
 import { reportApi } from '@/api/reportApi'
 
 export function UserDashboardPage() {
   const { user, logout } = useAuthStore()
   const { data: workspaces = [], isLoading: isWorkspacesLoading } = useWorkspaces()
+  const { data: invitations = [] } = useMyWorkspaceInvitations()
   const [stats, setStats] = useState<UserDashboardDto | null>(null)
   const [isStatsLoading, setIsStatsLoading] = useState(true)
   const { setCreateWorkspaceModalOpen } = useUiStore()
@@ -118,6 +120,15 @@ export function UserDashboardPage() {
               Admin Portal
             </Link>
           )}
+          <Link to="/invitations" className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/10">
+            <Mail className="h-4 w-4" />
+            Invitations
+            {invitations.length > 0 && (
+              <span className="rounded-full bg-[var(--color-primary)] px-2 py-0.5 text-xs font-semibold text-white">
+                {invitations.length}
+              </span>
+            )}
+          </Link>
           <button onClick={logout} className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-red-500 transition-colors hover:bg-red-500/10">
             <LogOut className="h-4 w-4" />
             Sign out
