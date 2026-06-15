@@ -6,6 +6,7 @@ using InsightVault.API.Application.Abstractions.Services.Documents;
 using InsightVault.API.Application.Abstractions.Services.Billing;
 using InsightVault.API.Application.Abstractions.Services.Workspaces;
 using InsightVault.API.Application.Abstractions.Storage;
+using InsightVault.API.Application.Services.AiJobs;
 using InsightVault.API.Common.Errors;
 using InsightVault.API.Data;
 using InsightVault.API.Domain.Entities;
@@ -33,6 +34,7 @@ public sealed class DocumentService(
     IOptions<BillingOptions> billingOptions) : IDocumentService
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private const long MaxInlineTextBytes = 5 * 1024 * 1024;
     private static readonly IReadOnlyDictionary<string, string> SupportedContentTypes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         [".pdf"] = "application/pdf",
@@ -84,6 +86,84 @@ public sealed class DocumentService(
         await workspacePermissionService.EnsureCanViewWorkspaceAsync(document.WorkspaceId, userId, cancellationToken);
 
         return ToDocumentDto(document);
+    }
+
+    public async Task<DocumentOriginalAccessResponse> GetOriginalAccessAsync(
+        Guid documentId,
+        CancellationToken cancellationToken = default)
+    {
+        var document = await GetActiveDocumentAsync(documentId, cancellationToken);
+        var userId = GetRequiredUserId();
+        await workspacePermissionService.EnsureCanManageDocumentsAsync(document.WorkspaceId, userId, cancellationToken);
+
+        var storedObject = await objectStorageService.GetObjectMetadataAsync(
+            document.MinioBucket,
+            document.MinioObjectKey,
+            cancellationToken)
+            ?? throw new ApiException(
+                StatusCodes.Status404NotFound,
+                "document.original_not_found",
+                "The original document file was not found in object storage.");
+
+        var previewKind = GetOriginalPreviewKind(document);
+        var presignedDownload = await objectStorageService.CreatePresignedDownloadAsync(
+            new Application.Abstractions.Storage.PresignedDownloadRequest(
+                document.MinioBucket,
+                document.MinioObjectKey,
+                objectStorageService.DefaultPresignedReadExpiry),
+            cancellationToken);
+
+        return new DocumentOriginalAccessResponse(
+            document.OriginalFileName,
+            storedObject.ContentType ?? document.MimeType ?? "application/octet-stream",
+            previewKind,
+            previewKind is "pdf" or "text",
+            presignedDownload.DownloadUrl,
+            presignedDownload.ExpiresAt);
+    }
+
+    public async Task<DocumentOriginalTextResponse> GetOriginalTextAsync(
+        Guid documentId,
+        CancellationToken cancellationToken = default)
+    {
+        var document = await GetActiveDocumentAsync(documentId, cancellationToken);
+        var userId = GetRequiredUserId();
+        await workspacePermissionService.EnsureCanManageDocumentsAsync(document.WorkspaceId, userId, cancellationToken);
+
+        if (GetOriginalPreviewKind(document) != "text")
+        {
+            throw new ApiException(
+                StatusCodes.Status400BadRequest,
+                "document.original_text_unsupported",
+                "Only TXT and Markdown documents can be read as inline text.");
+        }
+
+        var storedObject = await objectStorageService.GetObjectMetadataAsync(
+            document.MinioBucket,
+            document.MinioObjectKey,
+            cancellationToken)
+            ?? throw new ApiException(
+                StatusCodes.Status404NotFound,
+                "document.original_not_found",
+                "The original document file was not found in object storage.");
+
+        if (storedObject.Size > MaxInlineTextBytes)
+        {
+            throw new ApiException(
+                StatusCodes.Status413PayloadTooLarge,
+                "document.original_text_too_large",
+                "This text document is too large for inline preview. Download the original file instead.");
+        }
+
+        var content = await objectStorageService.ReadObjectAsTextAsync(
+            document.MinioBucket,
+            document.MinioObjectKey,
+            cancellationToken);
+
+        return new DocumentOriginalTextResponse(
+            document.OriginalFileName,
+            storedObject.ContentType ?? document.MimeType ?? "text/plain",
+            content);
     }
 
     public async Task<DocumentDto> UpdateAsync(
@@ -624,6 +704,18 @@ public sealed class DocumentService(
         return $"workspaces/{workspaceId}/documents/{documentId}/original{fileExtension}";
     }
 
+    private static string GetOriginalPreviewKind(Document document)
+    {
+        var extension = Path.GetExtension(document.OriginalFileName).ToLowerInvariant();
+
+        return extension switch
+        {
+            ".pdf" => "pdf",
+            ".txt" or ".md" => "text",
+            _ => "download"
+        };
+    }
+
     private static AiJob CreateProcessDocumentJob(Document document, Guid userId)
     {
         var now = DateTimeOffset.UtcNow;
@@ -685,6 +777,7 @@ public sealed class DocumentService(
             aiJob.Id,
             aiJob.WorkspaceId,
             aiJob.DocumentId,
+            AiJobOutputPayload.GetReportId(aiJob),
             ToApiAiJobType(aiJob.JobType),
             ToApiAiJobStatus(aiJob.Status),
             aiJob.RetryCount,

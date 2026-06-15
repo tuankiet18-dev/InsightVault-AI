@@ -1,5 +1,10 @@
 # Workspace Billing, Subscription, and AI Credits
 
+Current status, 2026-06-15: backend billing APIs, EF migration, PayOS gateway,
+credit ledger, and debit/refund guards are implemented. Dedicated frontend
+billing screens and real PayOS webhook verification in a public environment are
+still pending.
+
 ## Ownership model
 
 Billing belongs to a workspace, not an individual user.

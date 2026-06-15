@@ -2,6 +2,13 @@
 
 Ngay thuc hien: 2026-05-26
 
+Update 2026-06-15: AI service still starts successfully in the Docker stack and
+serves `/docs`. Backend now orchestrates document processing, compare, and
+report generation through RabbitMQ-backed workers. Backend Chat/RAG APIs are
+still pending, although AI service `/rag/query` is available. Runtime logs show
+`google.generativeai` is deprecated; migrate to `google.genai` after the MVP
+demo path is stable.
+
 ## Pham vi
 
 Da tap trung vao phan `ai-service` theo MVP docs:
@@ -111,11 +118,8 @@ Da them 9 test cases:
 
 ## Ket qua test
 
-Lenh da chay trong `ai-service`:
-
-```powershell
-.\venv\Scripts\python.exe -m unittest discover -s tests -v
-```
+The original AI-service-only pass ran the Python unit test suite before the
+repository moved to Docker-only verification.
 
 Ket qua:
 
@@ -124,11 +128,7 @@ Ran 9 tests in 0.082s
 OK
 ```
 
-Lenh kiem tra syntax/import bang AST:
-
-```powershell
-.\venv\Scripts\python.exe -B -c "import ast,pathlib; [ast.parse(p.read_text(encoding='utf-8'), filename=str(p)) for root in ['api','core','models','services','tests'] for p in pathlib.Path(root).rglob('*.py')]; print('AST parse OK')"
-```
+The original pass also ran an AST syntax/import check.
 
 Ket qua:
 
@@ -136,17 +136,25 @@ Ket qua:
 AST parse OK
 ```
 
-Ghi chu: `python -m compileall api core models services tests` bi fail do Windows permission tai `tests\__pycache__`, khong phai loi code. Da thay bang AST parse khong ghi bytecode.
+Current project verification is Docker-only. Use the repository-level check:
+
+```powershell
+.\scripts\check.ps1
+```
+
+This builds the AI service container and runs the import check inside Docker.
 
 ## Rui ro con lai
 
-- Chua chay quick E2E voi MinIO/PostgreSQL/Gemini that vi can infra va `GEMINI_API_KEY`.
+- Chua chay quick E2E voi MinIO/PostgreSQL/Gemini that vi can live
+  `GEMINI_API_KEY`; khi chay, start stack bang Docker Compose truoc.
 - Thu vien `google.generativeai` hien can migrate sang `google.genai` ve sau; test co warning deprecation.
 - Backend worker can truyen cac field optional moi (`created_by_id`, `ai_job_id`, `title`) neu muon report DB co du metadata.
 - Permission/membership van do backend enforce; AI service chi filter theo IDs/scope duoc backend truyen vao.
 
 ## De xuat tiep theo
 
-1. Chay `scripts/start-docker.ps1`, apply EF migration, set `.env`, roi chay `ai-service/scripts/quick_e2e.py`.
+1. Chay `scripts/start-docker.ps1`, set `.env`, roi chay quick E2E trong Docker
+   context; khong chay AI service bang host venv mac dinh.
 2. Tich hop backend worker de doc response `report_id` va document status.
 3. Sau demo MVP, migrate Gemini SDK tu `google.generativeai` sang `google.genai`.

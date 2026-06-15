@@ -63,6 +63,26 @@ public sealed class DocumentsController(IDocumentService documentService) : Cont
         return Ok(document);
     }
 
+    [HttpGet("api/documents/{documentId:guid}/original/access")]
+    public async Task<ActionResult<DocumentOriginalAccessResponse>> GetOriginalAccess(
+        Guid documentId,
+        CancellationToken cancellationToken)
+    {
+        var response = await documentService.GetOriginalAccessAsync(documentId, cancellationToken);
+
+        return Ok(response);
+    }
+
+    [HttpGet("api/documents/{documentId:guid}/original/text")]
+    public async Task<ActionResult<DocumentOriginalTextResponse>> GetOriginalText(
+        Guid documentId,
+        CancellationToken cancellationToken)
+    {
+        var response = await documentService.GetOriginalTextAsync(documentId, cancellationToken);
+
+        return Ok(response);
+    }
+
     [HttpPatch("api/documents/{documentId:guid}")]
     public async Task<ActionResult<DocumentDto>> UpdateDocument(
         Guid documentId,

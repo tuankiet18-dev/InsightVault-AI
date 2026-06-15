@@ -136,6 +136,58 @@ public sealed class AiServiceClient(HttpClient httpClient) : IAiServiceClient
             result.ReportId);
     }
 
+    public async Task<RagQueryResult> QueryRagAsync(
+        RagQueryAiRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await httpClient.PostAsJsonAsync(
+            "/rag/query",
+            new RagQueryRequest(
+                request.Question,
+                request.WorkspaceId,
+                request.Scope,
+                request.FolderId,
+                request.DocumentIds,
+                request.TopK,
+                request.ChatHistory.Select(message => new RagChatHistoryRequest(
+                    message.Role,
+                    message.Content)).ToList(),
+                new RagWebSearchOptionsRequest(
+                    Enabled: false,
+                    Provider: null,
+                    MaxResults: 5)),
+            cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new InvalidOperationException($"AI service rag query failed: {error}");
+        }
+
+        var result = await response.Content.ReadFromJsonAsync<RagQueryResponse>(
+            cancellationToken: cancellationToken);
+
+        if (result is null)
+        {
+            throw new InvalidOperationException("AI service returned an empty rag query response.");
+        }
+
+        return new RagQueryResult(
+            result.Answer,
+            result.Sources.Select(source => new RagSourceResult(
+                source.ChunkId,
+                source.DocumentId,
+                source.FileName,
+                source.Snippet,
+                source.Similarity,
+                source.RetrievalDebug)).ToList(),
+            result.WebSources.Select(source => new RagWebSourceResult(
+                source.Title,
+                source.Url,
+                source.Snippet,
+                source.Provider)).ToList());
+    }
+
     private sealed record ProcessDocumentRequest(
         [property: JsonPropertyName("document_id")] Guid DocumentId,
         [property: JsonPropertyName("workspace_id")] Guid WorkspaceId,
@@ -201,4 +253,42 @@ public sealed class AiServiceClient(HttpClient httpClient) : IAiServiceClient
         [property: JsonPropertyName("recommendations")] IReadOnlyList<string> Recommendations,
         [property: JsonPropertyName("raw_markdown")] string RawMarkdown,
         [property: JsonPropertyName("report_id")] Guid? ReportId);
+
+    private sealed record RagQueryRequest(
+        [property: JsonPropertyName("question")] string Question,
+        [property: JsonPropertyName("workspace_id")] Guid WorkspaceId,
+        [property: JsonPropertyName("scope")] string Scope,
+        [property: JsonPropertyName("folder_id")] Guid? FolderId,
+        [property: JsonPropertyName("document_ids")] IReadOnlyList<Guid>? DocumentIds,
+        [property: JsonPropertyName("top_k")] int TopK,
+        [property: JsonPropertyName("chat_history")] IReadOnlyList<RagChatHistoryRequest> ChatHistory,
+        [property: JsonPropertyName("web_search_options")] RagWebSearchOptionsRequest WebSearchOptions);
+
+    private sealed record RagChatHistoryRequest(
+        [property: JsonPropertyName("role")] string Role,
+        [property: JsonPropertyName("content")] string Content);
+
+    private sealed record RagWebSearchOptionsRequest(
+        [property: JsonPropertyName("enabled")] bool Enabled,
+        [property: JsonPropertyName("provider")] string? Provider,
+        [property: JsonPropertyName("max_results")] int MaxResults);
+
+    private sealed record RagQueryResponse(
+        [property: JsonPropertyName("answer")] string Answer,
+        [property: JsonPropertyName("sources")] IReadOnlyList<RagSourceResponse> Sources,
+        [property: JsonPropertyName("web_sources")] IReadOnlyList<RagWebSourceResponse> WebSources);
+
+    private sealed record RagSourceResponse(
+        [property: JsonPropertyName("chunk_id")] Guid? ChunkId,
+        [property: JsonPropertyName("document_id")] Guid? DocumentId,
+        [property: JsonPropertyName("file_name")] string FileName,
+        [property: JsonPropertyName("snippet")] string Snippet,
+        [property: JsonPropertyName("similarity")] double? Similarity,
+        [property: JsonPropertyName("retrieval_debug")] object? RetrievalDebug);
+
+    private sealed record RagWebSourceResponse(
+        [property: JsonPropertyName("title")] string Title,
+        [property: JsonPropertyName("url")] string Url,
+        [property: JsonPropertyName("snippet")] string? Snippet,
+        [property: JsonPropertyName("provider")] string? Provider);
 }

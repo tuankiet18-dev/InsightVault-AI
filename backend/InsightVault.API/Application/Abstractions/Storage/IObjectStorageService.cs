@@ -6,8 +6,19 @@ public interface IObjectStorageService
 
     TimeSpan DefaultPresignedUploadExpiry { get; }
 
+    TimeSpan DefaultPresignedReadExpiry { get; }
+
     Task<PresignedUpload> CreatePresignedUploadAsync(
         PresignedUploadRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<PresignedDownload> CreatePresignedDownloadAsync(
+        PresignedDownloadRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<string> ReadObjectAsTextAsync(
+        string bucketName,
+        string objectKey,
         CancellationToken cancellationToken = default);
 
     Task<StoredObjectMetadata?> GetObjectMetadataAsync(
@@ -36,6 +47,15 @@ public sealed record PresignedUpload(
     string UploadUrl,
     DateTimeOffset ExpiresAt,
     IReadOnlyDictionary<string, string> RequiredHeaders);
+
+public sealed record PresignedDownloadRequest(
+    string BucketName,
+    string ObjectKey,
+    TimeSpan ExpiresIn);
+
+public sealed record PresignedDownload(
+    string DownloadUrl,
+    DateTimeOffset ExpiresAt);
 
 public sealed record StoredObjectMetadata(
     long Size,

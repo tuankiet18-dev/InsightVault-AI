@@ -31,6 +31,8 @@ public sealed class AuthService(
         var user = await userRepository.GetByGoogleIdAsync(googleUser.GoogleId, cancellationToken)
             ?? await userRepository.GetByEmailAsync(normalizedEmail, cancellationToken);
 
+        var shouldSendLoginNotification = user is null || user.LastLoginAt is null;
+
         if (user is null)
         {
             user = new User
@@ -63,12 +65,14 @@ public sealed class AuthService(
             throw new UnauthorizedAccessException("User account is inactive.");
         }
 
-        await userRepository.ActivateInvitedMembershipsAsync(user, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
 
         var token = jwtTokenService.GenerateToken(user);
 
-        await emailService.SendLoginNotificationAsync(user.Email, user.FullName, now, cancellationToken);
+        if (shouldSendLoginNotification)
+        {
+            await emailService.SendLoginNotificationAsync(user.Email, user.FullName, now, cancellationToken);
+        }
 
         return new AuthResponse(
             token.AccessToken,

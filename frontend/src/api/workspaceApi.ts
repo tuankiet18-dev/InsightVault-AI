@@ -1,5 +1,5 @@
 import { http } from './http';
-import type { WorkspaceDto, WorkspaceMemberDto, WorkspaceRole, MemberStatus } from '../types/api';
+import type { WorkspaceDto, WorkspaceMemberDto, WorkspaceRole, MemberStatus, WorkspaceInvitationDto } from '../types/api';
 
 export interface CreateWorkspaceData {
   name: string;
@@ -50,7 +50,7 @@ export const workspaceApi = {
   },
 
   addMember: (workspaceId: string, data: AddMemberData) => {
-    return http.post<WorkspaceMemberDto>(`/workspaces/${workspaceId}/members`, data);
+    return http.post<WorkspaceInvitationDto>(`/workspaces/${workspaceId}/invitations`, data);
   },
 
   updateMember: (workspaceId: string, memberId: string, data: UpdateMemberData) => {

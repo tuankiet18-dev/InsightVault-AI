@@ -1,5 +1,11 @@
 # InsightVault AI - Team Execution Architecture Plan
 
+Current status note, 2026-06-15: use
+`docs/about-project/CURRENT_PROJECT_STATUS.md` as the live implementation
+anchor. RabbitMQ workers, report/compare, admin/dashboard, billing credits,
+PayOS checkout, and SMTP email queueing are implemented in backend/infra.
+Frontend billing UI now exists. Backend Chat/RAG APIs remain pending.
+
 ## 1. Chốt scope MVP
 
 MVP nên đi theo hướng **shared workspace + AI document analysis**.
@@ -40,9 +46,10 @@ flowchart LR
 | File storage | MinIO | Lưu file gốc |
 | AI service | Python | Extract text, chunking, embedding, RAG, compare, report |
 | AI provider | Gemini API | Embedding, summary, answer, compare, report generation |
-| Background job | .NET BackgroundService + ai_jobs; RabbitMQ optional | Xử lý tác vụ lâu, retry, tracking lỗi |
+| Background job | .NET BackgroundService + ai_jobs + RabbitMQ | Xử lý tác vụ lâu, retry, tracking lỗi |
 
-Khuyến nghị MVP: dùng `PostgreSQL ai_jobs + .NET BackgroundService` làm mặc định; chỉ thêm RabbitMQ nếu team còn thời gian hoặc cần điểm system design tốt hơn.
+Current MVP implementation uses RabbitMQ together with `ai_jobs` and .NET
+BackgroundService workers.
 
 ## 3. Core feature
 
@@ -75,7 +82,6 @@ Khuyến nghị MVP: dùng `PostgreSQL ai_jobs + .NET BackgroundService` làm m�
 - OCR file scan.
 - Export PDF/DOCX.
 - Mobile app.
-- Billing/payment.
 - Version control phức tạp.
 - Knowledge graph nâng cao.
 

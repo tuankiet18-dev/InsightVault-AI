@@ -1,4 +1,5 @@
 using InsightVault.API.Data;
+using InsightVault.API.Application.Abstractions.Services.Emails;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -40,6 +41,8 @@ public sealed class InsightVaultApiFactory : WebApplicationFactory<Program>
         SetRequiredEnvironment("TrashCleanup__DocumentRetentionDays", "30");
         SetRequiredEnvironment("TrashCleanup__IntervalHours", "24");
         SetRequiredEnvironment("TrashCleanup__BatchSize", "50");
+        SetRequiredEnvironment("WorkspaceInvitation__FrontendBaseUrl", "http://localhost:5173");
+        SetRequiredEnvironment("WorkspaceInvitation__ExpiresDays", "7");
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -74,22 +77,60 @@ public sealed class InsightVaultApiFactory : WebApplicationFactory<Program>
                 ["TrashCleanup:Enabled"] = "false",
                 ["TrashCleanup:DocumentRetentionDays"] = "30",
                 ["TrashCleanup:IntervalHours"] = "24",
-                ["TrashCleanup:BatchSize"] = "50"
+                ["TrashCleanup:BatchSize"] = "50",
+                ["WorkspaceInvitation:FrontendBaseUrl"] = "http://localhost:5173",
+                ["WorkspaceInvitation:ExpiresDays"] = "7"
             });
         });
 
         builder.ConfigureServices(services =>
         {
+            var databaseName = $"insightvault-tests-{Guid.NewGuid()}";
             services.RemoveAll<IHostedService>();
+            services.RemoveAll<IEmailService>();
             services.RemoveAll<DbContextOptions<InsightVaultDbContext>>();
             services.RemoveAll<IDbContextOptionsConfiguration<InsightVaultDbContext>>();
             services.AddDbContext<InsightVaultDbContext>(options =>
-                options.UseInMemoryDatabase($"insightvault-tests-{Guid.NewGuid()}"));
+                options.UseInMemoryDatabase(databaseName));
+            services.AddSingleton<IEmailService, NoopEmailService>();
         });
     }
 
     private static void SetRequiredEnvironment(string key, string value)
     {
         Environment.SetEnvironmentVariable(key, value);
+    }
+
+    private sealed class NoopEmailService : IEmailService
+    {
+        public Task SendLoginNotificationAsync(
+            string email,
+            string fullName,
+            DateTimeOffset loginTime,
+            CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+
+        public Task SendWorkspaceInviteAsync(
+            string email,
+            string inviterName,
+            string workspaceName,
+            string role,
+            string viewInvitationUrl,
+            DateTimeOffset expiresAt,
+            CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+
+        public Task SendRoleUpdatedAsync(
+            string email,
+            string workspaceName,
+            string newRole,
+            CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+
+        public Task SendRemovedFromWorkspaceAsync(
+            string email,
+            string workspaceName,
+            CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
     }
 }

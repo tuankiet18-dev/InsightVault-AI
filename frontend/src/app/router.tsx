@@ -7,10 +7,18 @@ import { WorkspacePage } from '@/pages/WorkspacePage'
 import { UserDashboardPage } from '@/pages/UserDashboardPage'
 import { ChatPage } from '@/pages/ChatPage'
 import { ComparePage } from '@/pages/ComparePage'
+import { InvitationsPage } from '@/pages/InvitationsPage'
+import { InvitationDetailPage } from '@/pages/InvitationDetailPage'
+import { BillingPage } from '@/pages/BillingPage'
+import { BillingResultPage } from '@/pages/BillingResultPage'
 import { AdminUsersPage } from '@/pages/admin/AdminUsersPage'
 import { AdminJobsPage } from '@/pages/admin/AdminJobsPage'
+<<<<<<< HEAD
 import { BillingPage } from '@/pages/BillingPage'
 import { BillingReturnPage } from '@/pages/BillingReturnPage'
+=======
+
+>>>>>>> main
 const AdminLayout = () => (
   <div className="min-h-screen bg-background text-foreground">
     <header className="flex h-14 items-center gap-6 border-b border-border bg-card px-6">
@@ -46,6 +54,14 @@ const router = createBrowserRouter([
     element: <ProtectedRoute><UserDashboardPage /></ProtectedRoute>,
   },
   {
+    path: '/invitations',
+    element: <ProtectedRoute><InvitationsPage /></ProtectedRoute>,
+  },
+  {
+    path: '/invitations/:invitationId',
+    element: <ProtectedRoute><InvitationDetailPage /></ProtectedRoute>,
+  },
+  {
     path: '/workspace',
     element: <Navigate to="/dashboard" replace />,
   },
@@ -62,31 +78,31 @@ const router = createBrowserRouter([
     element: <BillingReturnPage />,
   },
   {
-  path: '/chat',
-  element: (<ProtectedRoute> <ChatPage /> </ProtectedRoute>),
-},
-{
-  path: '/compare',
-  element: (<ProtectedRoute><ComparePage /></ProtectedRoute>),
-},
+    path: '/chat',
+    element: (<ProtectedRoute> <ChatPage /> </ProtectedRoute>),
+  },
   {
-  path: '/admin',
-  element: <ProtectedRoute requireAdmin><AdminLayout /></ProtectedRoute>,
-  children: [
-    {
-      index: true,
-      element: <AdminPage />,
-    },
-    {
-      path: 'users',
-      element: <AdminUsersPage />,   
-    },
-    {
-      path: 'jobs',
-      element: <AdminJobsPage />,    
-    },
-  ],
-},
+    path: '/compare',
+    element: (<ProtectedRoute><ComparePage /></ProtectedRoute>),
+  },
+  {
+    path: '/admin',
+    element: <ProtectedRoute requireAdmin><AdminLayout /></ProtectedRoute>,
+    children: [
+      {
+        index: true,
+        element: <AdminPage />,
+      },
+      {
+        path: 'users',
+        element: <AdminUsersPage />,
+      },
+      {
+        path: 'jobs',
+        element: <AdminJobsPage />,
+      },
+    ],
+  },
   {
     path: '*',
     element: <Navigate to="/dashboard" replace />,

@@ -1,9 +1,12 @@
 import { X, UploadCloud, FileType, CheckCircle2 } from 'lucide-react'
 import { useUiStore } from '@/stores/uiStore'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { cn, formatFileSize, FILE_TYPES_ACCEPTED, MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from '@/lib/utils'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useRequestPresignedUploadUrl, useConfirmUpload } from '@/hooks/useDocuments'
+import { useFolders } from '@/hooks/useFolders'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
 import type { ConfirmUploadRequest } from '@/types/api'
 
 export function UploadModal() {
@@ -14,9 +17,24 @@ export function UploadModal() {
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<'idle' | 'uploading' | 'success'>('idle')
   const [progress, setProgress] = useState(0)
+  const [selectedFolderId, setSelectedFolderId] = useState<string>('')
 
+  const { data: folders = [] } = useFolders(activeWorkspaceId)
   const requestUrlMutation = useRequestPresignedUploadUrl(activeWorkspaceId!)
   const confirmUploadMutation = useConfirmUpload(activeWorkspaceId!)
+
+  useEffect(() => {
+    if (uploadModalOpen) {
+      if (uploadTargetFolderId) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setSelectedFolderId(uploadTargetFolderId)
+      } else if (folders.length === 1) {
+        setSelectedFolderId(folders[0].id)
+      } else {
+        setSelectedFolderId('')
+      }
+    }
+  }, [uploadModalOpen, uploadTargetFolderId, folders])
 
   if (!uploadModalOpen) return null
 
@@ -75,6 +93,10 @@ export function UploadModal() {
       setError('Workspace is not selected. Please refresh the page and try again.');
       return;
     }
+    if (!selectedFolderId) {
+      setError('Please select a destination folder to upload into.');
+      return;
+    }
     
     setStatus('uploading')
     
@@ -84,7 +106,7 @@ export function UploadModal() {
         fileName: file.name,
         contentType: file.type || 'application/octet-stream',
         fileSizeBytes: file.size,
-        folderId: uploadTargetFolderId || undefined
+        folderId: selectedFolderId
       })
 
       // 2. Real upload progress using XMLHttpRequest
@@ -176,7 +198,7 @@ export function UploadModal() {
                 <CheckCircle2 className="w-8 h-8 text-success-500" />
               </div>
               <h3 className="text-xl font-bold text-surface-900 mb-2">Upload complete</h3>
-              <p className="text-surface-600 max-w-sm mb-6">
+              <p className="text-surface-600 dark:text-surface-300 max-w-sm mb-6">
                 "{file?.name}" has been securely uploaded. The AI processing pipeline is now extracting text and generating summaries in the background.
               </p>
               <button 
@@ -188,6 +210,21 @@ export function UploadModal() {
             </div>
           ) : (
             <>
+              {folders.length > 0 && !uploadTargetFolderId && (
+                <div className="mb-4">
+                  <Label className="mb-1.5 block text-sm font-medium text-surface-700">Destination Folder</Label>
+                  <Select value={selectedFolderId} onValueChange={setSelectedFolderId}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a folder..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {folders.map(f => (
+                        <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               {!file ? (
                 <div 
                   onDragEnter={handleDrag}
@@ -210,7 +247,7 @@ export function UploadModal() {
                     <UploadCloud className="w-6 h-6" />
                   </div>
                   <h3 className="text-base font-semibold text-surface-900 mb-1">Click or drag file to upload</h3>
-                  <p className="text-sm text-surface-500 text-center max-w-xs mb-4">
+                  <p className="text-sm text-surface-500 dark:text-surface-400 text-center max-w-xs mb-4">
                     Supports PDF, DOCX, TXT, and Markdown up to {MAX_FILE_SIZE_MB}MB
                   </p>
                   
@@ -264,7 +301,7 @@ export function UploadModal() {
                     <button 
                       onClick={resetAndClose}
                       disabled={status === 'uploading'}
-                      className="px-4 py-2 rounded-lg text-sm font-medium text-surface-600 hover:bg-surface-100 transition-colors disabled:opacity-50"
+                      className="px-4 py-2 rounded-lg text-sm font-medium text-surface-600 dark:text-surface-300 hover:bg-surface-100 transition-colors disabled:opacity-50"
                     >
                       Cancel
                     </button>

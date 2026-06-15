@@ -2,6 +2,12 @@
 
 File này dùng để mở một session chat mới và bàn lại business rule. Nội dung bên dưới tóm tắt hiện trạng dự án, phần đã làm, phần chưa làm, và các giả định business rule cũ đang nằm trong code/docs.
 
+Update 2026-06-15: this file is historical context from earlier business-rule
+review sessions. Use `docs/about-project/CURRENT_PROJECT_STATUS.md` for the
+current implementation status. Several items below are now done, including
+AiJobs, Reports, Admin, Dashboard, Billing, PayOS, and SMTP/RabbitMQ email
+queueing. Backend Chat/RAG APIs remain pending.
+
 Ngày ghi nhận: 2026-06-03.
 
 Branch đang ghi nhận: `feat/document-ai-boundary`.
@@ -61,15 +67,17 @@ Controller hiện có:
 - `WorkspacesController`
 - `FoldersController`
 - `DocumentsController`
+- `AiJobsController`
+- `ReportsController`
+- `DashboardController`
+- `AdminController`
+- `BillingController`
 - `HealthController`
 - `MetaController`
 
 Controller chưa có dù contract/schema đã chuẩn bị:
 
-- `AiJobsController`
 - `ChatController`
-- `ReportsController`
-- `AdminController`
 
 Backend đã có:
 
@@ -85,6 +93,11 @@ Backend đã có:
 - RabbitMQ publisher.
 - `DocumentProcessingWorker`.
 - `IAiServiceClient.ProcessDocumentAsync`.
+- AI job listing/detail/retry.
+- Compare/report async APIs and workers.
+- Dashboard/admin metadata APIs.
+- Workspace billing, PayOS checkout/webhook, credit ledger, and credit guards.
+- SMTP email queueing through RabbitMQ when enabled.
 - Repository pattern: generic repository + specific repositories.
 - EF Core entities/migrations cho users, workspaces, folders, documents, document_chunks, ai_jobs, chat_sessions, chat_messages, chat_message_sources, reports.
 
@@ -92,8 +105,8 @@ Backend chưa có:
 
 - Backend API cho RAG chat.
 - Backend `QueryRagAsync`.
-- Backend API cho compare/report.
-- Backend API cho ai job listing/admin monitoring.
+- Frontend billing UI now exists; backend review still owns the billing rules,
+  credit ledger, and PayOS webhook correctness.
 
 ## 4. Phần đã implement trong AI service
 
@@ -631,7 +644,12 @@ Các nội dung sau đã được chủ động hoãn, không phải câu hỏi 
 
 ## 12. Tóm tắt ngắn cho session mới
 
-Hiện dự án đã có nền tảng upload/process document chạy được end-to-end với Docker. Backend đã có auth/workspace/member/folder/document APIs và worker RabbitMQ. AI service đã có process/RAG/compare/report endpoints. Schema cho chat/report/admin đã có, nhưng Backend APIs cho chat/report/ai-jobs/admin chưa implement.
+Hiện dự án đã có nền tảng upload/process document chạy được end-to-end với
+Docker. Backend đã có auth/workspace/member/folder/document APIs, worker
+RabbitMQ, ai-jobs APIs, report/compare APIs, dashboard/admin APIs, billing
+credits, PayOS checkout/webhook và SMTP email queueing. AI service đã có
+process/RAG/compare/report endpoints. Schema và AI service đã hỗ trợ RAG, nhưng
+Backend Chat/RAG session/message APIs chưa implement.
 
 Business rule mới đã chốt: workspace là môn học/project dùng chung; folder chỉ là cấu trúc phân loại; chat session private theo từng user trong workspace; RAG mặc định theo workspace và có thể scope bằng `@file`/`@folder`; Backend là system-of-record và chịu trách nhiệm permission/source resolution/report persistence; AI chỉ xử lý AI và được đọc/ghi `document_chunks` trong phạm vi MVP.
 

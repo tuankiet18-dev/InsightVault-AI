@@ -1,6 +1,20 @@
 # InsightVault AI - MVP API Contract
 
-Status: contract for implementation. Frontend calls only Backend APIs. Backend calls AI Service internally. AI Service is not exposed directly to browsers.
+Status: mixed implemented/target contract. Frontend calls only Backend APIs.
+Backend calls AI Service internally. AI Service is not exposed directly to
+browsers.
+
+Current status reference: `docs/about-project/CURRENT_PROJECT_STATUS.md`.
+
+Implementation notes as of 2026-06-15:
+
+- Auth, workspace/member, folder/document, AI jobs, report/compare, dashboard,
+  admin, billing, PayOS webhook, and email queue backend APIs are implemented.
+- Backend Chat/RAG session/message APIs are target contract only. The database
+  and AI service support RAG, and frontend has chat UI/API files, but backend
+  still needs `ChatController`/`ChatService`.
+- Billing backend APIs and dedicated frontend billing routes are implemented:
+  `/billing`, `/billing/success`, and `/billing/cancel`.
 
 ## Billing and AI credits
 
@@ -37,9 +51,16 @@ Expensive AI operations may return HTTP `402 Payment Required`:
 }
 ```
 
+Frontend implementation status: implemented. The billing UI includes workspace
+billing summary, plan selection, top-up selection, checkout redirect, and
+checkout result pages at `/billing/success` and `/billing/cancel`.
+
 ## Global Rules
 
-- FE base URL: `VITE_API_BASE_URL`, default `http://localhost:5000/api`.
+- FE runs through Docker Compose. `VITE_API_BASE_URL` defaults to
+  `http://localhost:5126/api` inside `infra/docker-compose.yml`.
+- `VITE_GOOGLE_CLIENT_ID` is supplied to the frontend container from
+  `GOOGLE_CLIENT_ID` in `infra/.env`.
 - BE base route: `/api`.
 - AI base URL: internal config, default `http://127.0.0.1:8000`.
 - Auth: `Authorization: Bearer <jwt>` for every business API.
@@ -63,6 +84,7 @@ Expensive AI operations may return HTTP `402 Payment Required`:
 type SystemRole = "user" | "admin";
 type WorkspaceRole = "owner" | "editor" | "viewer";
 type MemberStatus = "invited" | "active" | "removed";
+type WorkspaceInvitationStatus = "pending" | "accepted" | "declined" | "expired" | "cancelled";
 type DocumentStatus = "pending_upload" | "uploaded" | "processing" | "completed" | "failed";
 type AiJobType =
   | "process_document"
@@ -140,6 +162,7 @@ type AiJobDto = {
   id: string;
   workspaceId?: string | null;
   documentId?: string | null;
+  reportId?: string | null;
   jobType: AiJobType;
   status: AiJobStatus;
   retryCount: number;
@@ -220,7 +243,7 @@ Rules:
 | Method | Path | Auth | Request | Response |
 |---|---|---:|---|---|
 | GET | `/api/workspaces/{workspaceId}/members` | Yes | - | `WorkspaceMemberDto[]` |
-| POST | `/api/workspaces/{workspaceId}/members` | Yes | `{ email, role }` | `WorkspaceMemberDto` |
+| POST | `/api/workspaces/{workspaceId}/members` | Yes | `{ email, role }` | Deprecated: use `/api/workspaces/{workspaceId}/invitations` |
 | PATCH | `/api/workspaces/{workspaceId}/members/{memberId}` | Yes | `{ role?, status? }` | `WorkspaceMemberDto` |
 | DELETE | `/api/workspaces/{workspaceId}/members/{memberId}` | Yes | - | `204` |
 
@@ -235,6 +258,47 @@ type WorkspaceMemberDto = {
   invitedById?: string | null;
   invitedAt: string;
   joinedAt?: string | null;
+};
+```
+
+### Workspace Invitations
+
+GitHub-like invite flow:
+
+- Owner invites an existing registered user by email.
+- Backend sends email with `View invitation`.
+- FE opens `/invitations/{invitationId}`.
+- User must be logged in as the invited account before Accept/Decline.
+- Accept creates/reactivates active `workspace_members`.
+- Decline does not create membership.
+- Pending invitations expire after 7 days by default.
+
+| Method | Path | Auth | Request | Response |
+|---|---|---:|---|---|
+| POST | `/api/workspaces/{workspaceId}/invitations` | Yes | `{ email, role }` | `WorkspaceInvitationDto` |
+| GET | `/api/workspaces/{workspaceId}/invitations` | Yes | - | `WorkspaceInvitationDto[]` |
+| GET | `/api/me/workspace-invitations` | Yes | - | `WorkspaceInvitationDto[]` |
+| GET | `/api/me/workspace-invitations/{invitationId}` | Yes | - | `WorkspaceInvitationDto` |
+| POST | `/api/me/workspace-invitations/{invitationId}/accept` | Yes | - | `WorkspaceInvitationDto` |
+| POST | `/api/me/workspace-invitations/{invitationId}/decline` | Yes | - | `WorkspaceInvitationDto` |
+
+```ts
+type WorkspaceInvitationDto = {
+  id: string;
+  workspaceId: string;
+  workspaceName: string;
+  invitedUserId: string;
+  email: string;
+  role: WorkspaceRole;
+  status: WorkspaceInvitationStatus;
+  invitedById?: string | null;
+  invitedByName?: string | null;
+  expiresAt: string;
+  acceptedAt?: string | null;
+  declinedAt?: string | null;
+  cancelledAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
 };
 ```
 
@@ -337,6 +401,8 @@ Other document APIs:
 |---|---|---:|---|
 | GET | `/api/workspaces/{workspaceId}/documents?folderId=&status=&q=` | Yes | List documents |
 | GET | `/api/documents/{documentId}` | Yes | Detail with summary |
+| GET | `/api/documents/{documentId}/original/access` | Yes | Returns short-lived original-file access URL and preview kind |
+| GET | `/api/documents/{documentId}/original/text` | Yes | Returns inline text content for TXT/Markdown originals only |
 | DELETE | `/api/documents/{documentId}` | Yes | Soft delete to Trash; do not delete MinIO object yet |
 | GET | `/api/workspaces/{workspaceId}/trash/documents` | Yes | Owner sees all deleted documents; Editor sees only documents they uploaded |
 | POST | `/api/documents/{documentId}/restore` | Yes | Restore a soft-deleted document |
@@ -348,6 +414,7 @@ Upload security requirements:
 - Bucket must stay private.
 - FE must never choose bucket or object key.
 - Presigned URL TTL should be short, recommended 5-15 minutes.
+- Original-file preview uses Backend-issued access only and follows the MVP raw-file permission rule: owner/editor can read the original file; viewer cannot. PDF can render inline through the short-lived URL; TXT/Markdown render through Backend text content; DOCX is download-only in MVP.
 - BE validates membership and `owner/editor` role before presign.
 - BE validates extension, MIME type, file size, and document status on confirm.
 - BE must reject confirm if object key does not match the document record.
@@ -375,6 +442,10 @@ Rules:
 - Retry requires Owner or Editor permission and republishes the appropriate AI job queue message.
 
 ### Chat And RAG
+
+Implementation status: target contract, not completed in backend yet. Do not
+mark RAG chat as accepted until the backend exposes the session/message
+endpoints below and persists messages/sources.
 
 Chat sessions belong to a workspace and default to RAG over that workspace's readable documents.
 Each chat session is private to its creator. Users do not create folder/document-specific sessions. Individual messages can narrow retrieval with `contexts`, which is the API representation of `@folder` and `@file` mentions.
@@ -513,6 +584,7 @@ Response:
   "id": "ai-job-id",
   "workspaceId": "workspace-id",
   "documentId": null,
+  "reportId": null,
   "jobType": "compare_documents",
   "status": "queued",
   "retryCount": 0,
@@ -522,7 +594,7 @@ Response:
 }
 ```
 
-Compare runs async. FE should poll `GET /api/ai-jobs/{jobId}` and refresh reports after the job is completed. Backend persists the comparison output as a `comparison_report`. If `reportGroupId` is provided, Backend appends the completed report as the next version in that report group.
+Compare runs async. FE should poll `GET /api/ai-jobs/{jobId}`. When the job is completed, `AiJobDto.reportId` points to the persisted report and FE should open or fetch `GET /api/reports/{reportId}`. Backend always persists the comparison output as a `comparison_report`; compare does not return a synchronous compare-result body. If `reportGroupId` is provided, Backend appends the completed report as the next version in that report group.
 
 ### Reports
 

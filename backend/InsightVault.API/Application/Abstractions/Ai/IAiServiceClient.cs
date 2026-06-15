@@ -15,6 +15,10 @@ public interface IAiServiceClient
     Task<CompareDocumentsResult> CompareDocumentsAsync(
         CompareDocumentsAiRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<RagQueryResult> QueryRagAsync(
+        RagQueryAiRequest request,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed record ProcessDocumentResult(
@@ -73,3 +77,35 @@ public sealed record CompareDocumentsResult(
     IReadOnlyList<string> Recommendations,
     string RawMarkdown,
     Guid? ReportId);
+
+public sealed record RagQueryAiRequest(
+    Guid WorkspaceId,
+    string Question,
+    string Scope,
+    Guid? FolderId,
+    IReadOnlyList<Guid>? DocumentIds,
+    int TopK,
+    IReadOnlyList<RagChatHistoryMessage> ChatHistory);
+
+public sealed record RagChatHistoryMessage(
+    string Role,
+    string Content);
+
+public sealed record RagQueryResult(
+    string Answer,
+    IReadOnlyList<RagSourceResult> Sources,
+    IReadOnlyList<RagWebSourceResult> WebSources);
+
+public sealed record RagSourceResult(
+    Guid? ChunkId,
+    Guid? DocumentId,
+    string FileName,
+    string Snippet,
+    double? Similarity,
+    object? RetrievalDebug);
+
+public sealed record RagWebSourceResult(
+    string Title,
+    string Url,
+    string? Snippet,
+    string? Provider);

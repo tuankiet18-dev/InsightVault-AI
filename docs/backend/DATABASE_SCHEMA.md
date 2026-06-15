@@ -2,6 +2,12 @@
 
 This document describes the current PostgreSQL schema and the intended data ownership rules for the backend.
 
+Current status reference: `docs/about-project/CURRENT_PROJECT_STATUS.md`.
+
+Important implementation note: chat tables are part of the schema/target model,
+but the backend Chat/RAG API layer is not implemented yet. Billing tables and
+credit enforcement are implemented in the backend.
+
 ## Billing tables
 
 - `subscription_plans`: product catalog for monthly workspace plans.
@@ -13,6 +19,10 @@ This document describes the current PostgreSQL schema and the intended data owne
 Billing foreign keys are workspace-scoped. Payment provider identifiers and
 ledger idempotency keys are unique. A payment order references exactly one
 product: either a subscription plan or a credit package.
+
+Seeded products currently include `free`, `pro`, `team`, `topup_500`,
+`topup_2000`, and `topup_5000`. Backend services mutate credit balances inside
+transactions and record grants, debits, refunds, and adjustments in the ledger.
 
 ## Design Principles
 
@@ -31,6 +41,7 @@ product: either a subscription plan or a credit package.
 ```text
 users
   -> workspaces
+    -> workspace_invitations
     -> folders
       -> documents
         -> document_chunks
@@ -42,7 +53,41 @@ users
     -> ai_jobs
 ```
 
+## Workspace Invitations
+
+`workspace_invitations` stores GitHub-like pending workspace invitations.
+
+Important columns:
+
+- `id`
+- `workspace_id`
+- `invited_user_id`
+- `email`
+- `role`
+- `status`: `Pending`, `Accepted`, `Declined`, `Expired`, or `Cancelled`
+- `token_hash` reserved for future token-link flow; nullable in the current implementation
+- `expires_at`
+- `invited_by_id`
+- `accepted_at`
+- `declined_at`
+- `cancelled_at`
+- `created_at`
+- `updated_at`
+
+Rules:
+
+- Invitations are tied to one existing active user through `invited_user_id`.
+- Active workspace membership is not created until the invitation is accepted.
+- Accept creates or reactivates `workspace_members` with `Status = Active`.
+- Decline does not create a workspace member.
+- Pending invitations do not grant access to workspace content.
+- A filtered unique index prevents more than one pending invite for the same workspace/user pair.
+- Workspace membership remains the permission source for workspace content.
+
 ## Chat And RAG Model
+
+Schema status: target/present in EF model. API status: pending
+`ChatController`/`ChatService`.
 
 `chat_sessions` represents a conversation inside a workspace.
 

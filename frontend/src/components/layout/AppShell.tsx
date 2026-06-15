@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { Toaster } from 'sonner'
 import { ActivityRail } from './ActivityRail'
 import { TopBar } from './TopBar'
 import { StatusBar } from './StatusBar'
@@ -57,7 +56,6 @@ export function AppShell({ children, rightPanel }: { children: ReactNode; rightP
       <CreateWorkspaceModal />
       <CreateFolderModal />
       <InviteMemberModal />
-      <Toaster position="bottom-right" richColors />
     </div>
   )
 }

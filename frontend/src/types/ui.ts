@@ -31,7 +31,11 @@ export type ChatTabItem = BaseTabItem & {
   type: 'chat'
 }
 
-export type TabItem = DocumentTabItem | ReportTabItem | CompareTabItem | ChatTabItem
+export type ReportsTabItem = BaseTabItem & {
+  type: 'reports'
+}
+
+export type TabItem = DocumentTabItem | ReportTabItem | CompareTabItem | ChatTabItem | ReportsTabItem
 
 export type FolderTreeNode = {
   id: string

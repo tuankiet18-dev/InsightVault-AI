@@ -52,7 +52,7 @@ export function WorkspaceDetail({
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
-        <div className="rounded-xl border bg-white p-5">
+        <div className="rounded-xl border bg-surface-0 p-5">
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-blue-500" />
             <p className="text-sm text-surface-400">
@@ -65,7 +65,7 @@ export function WorkspaceDetail({
           </p>
         </div>
 
-        <div className="rounded-xl border bg-white p-5">
+        <div className="rounded-xl border bg-surface-0 p-5">
           <div className="flex items-center gap-2">
             <Folder className="h-5 w-5 text-amber-500" />
             <p className="text-sm text-surface-400">
@@ -78,7 +78,7 @@ export function WorkspaceDetail({
           </p>
         </div>
 
-        <div className="rounded-xl border bg-white p-5">
+        <div className="rounded-xl border bg-surface-0 p-5">
           <div className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-green-500" />
             <p className="text-sm text-surface-400">
@@ -92,7 +92,7 @@ export function WorkspaceDetail({
         </div>
 
       </div>
-      <div className="mt-8 rounded-xl border bg-white p-5">
+      <div className="mt-8 rounded-xl border bg-surface-0 p-5">
 
         <h2 className="mb-4 text-lg font-semibold">
           Recent Activity

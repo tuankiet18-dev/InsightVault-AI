@@ -6,6 +6,7 @@ public sealed record AiJobDto(
     Guid Id,
     Guid? WorkspaceId,
     Guid? DocumentId,
+    Guid? ReportId,
     ApiAiJobType JobType,
     ApiAiJobStatus Status,
     int RetryCount,

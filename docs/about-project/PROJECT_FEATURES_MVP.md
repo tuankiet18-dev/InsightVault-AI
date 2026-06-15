@@ -1,5 +1,11 @@
 # InsightVault AI - Chi Tiết Tính Năng MVP
 
+Current status note, 2026-06-15: use
+`docs/about-project/CURRENT_PROJECT_STATUS.md` as the live implementation
+anchor. Most backend/infra MVP flows are implemented. Backend Chat/RAG APIs
+remain the largest feature gap; frontend billing UI now has a first
+implementation.
+
 ## 1. Tổng Quan
 
 **InsightVault AI** là một collaborative AI-powered knowledge workspace giúp nhóm project quản lý tài liệu chung, xử lý tài liệu thành knowledge base, hỏi đáp bằng RAG, so sánh tài liệu, phát hiện gap/conflict và tạo báo cáo Markdown.
@@ -22,7 +28,7 @@ Login -> Shared workspace -> Invite member -> Upload documents
 | Database | PostgreSQL |
 | Vector Search | pgvector |
 | File Storage | MinIO |
-| Background Processing | `.NET BackgroundService + ai_jobs`; RabbitMQ optional |
+| Background Processing | `.NET BackgroundService + ai_jobs + RabbitMQ` |
 | AI Service | Python service |
 | AI Provider | Gemini API |
 | Embedding Model | Gemini Embedding API |
@@ -204,7 +210,8 @@ MVP mặc định:
 PostgreSQL ai_jobs table + .NET BackgroundService
 ```
 
-RabbitMQ là optional nếu team muốn điểm system design tốt hơn:
+RabbitMQ is implemented in the local Docker stack and used for document
+processing, AI jobs, and email queueing:
 
 ```text
 ASP.NET Web API -> RabbitMQ -> Worker -> PostgreSQL
@@ -405,6 +412,23 @@ Admin dashboard:
 - Job queued/processing/failed.
 - Lỗi xử lý gần đây.
 
+## 14.1. Billing, Subscription, And AI Credits
+
+Billing is now part of the implemented backend scope.
+
+Features:
+
+- Workspace-scoped monthly plans.
+- One-time AI credit top-up packages.
+- Shared workspace credit balance for all active members.
+- Credit guard for document processing, report generation, and document
+  comparison.
+- PayOS checkout creation and webhook verification.
+- Immutable credit ledger for grants, debits, refunds, and adjustments.
+
+Frontend billing screens are implemented for workspace billing summary, plan
+selection, credit top-ups, and checkout success/cancel states.
+
 ## 15. Admin Features
 
 Admin dùng để giám sát hệ thống.
@@ -481,7 +505,6 @@ Cách xử lý:
 - Version control document phức tạp.
 - Export PDF/DOCX.
 - Notification realtime.
-- Billing/payment.
 - Fine-tuning model.
 - Phân quyền chi tiết theo folder/document.
 - Owner transfer giữa các workspace member.

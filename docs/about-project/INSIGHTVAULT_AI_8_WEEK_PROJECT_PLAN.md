@@ -1,5 +1,12 @@
 # InsightVault AI - Kế hoạch triển khai 8 tuần
 
+Current status note, 2026-06-15: this plan is partly historical. Use
+`docs/about-project/CURRENT_PROJECT_STATUS.md` as the live implementation
+anchor. Backend/infra has moved beyond the original scope by adding billing
+credits, PayOS checkout, SMTP email queueing, admin/dashboard, and RabbitMQ
+workers. Backend Chat/RAG APIs remain pending. Frontend billing UI now exists
+for workspace plan, credit, top-up, and checkout result flows.
+
 ## 1. Bối cảnh và mục tiêu
 
 Dự án InsightVault AI là một nền tảng web giúp nhóm project quản lý tài liệu trong workspace chung và dùng AI để tóm tắt, hỏi đáp, so sánh, phát hiện gap/conflict và tạo report từ tài liệu.
@@ -40,7 +47,8 @@ Thời gian còn lại: 8 tuần, bắt đầu từ tuần 3 đến tuần 10 c�
 - Realtime chat giữa members.
 - OCR cho PDF scan.
 - Export PDF/DOCX.
-- Billing/payment.
+- Complex multi-provider billing. The current product supports workspace
+  credits, PayOS checkout, top-ups, and the first frontend billing UI surface.
 - Knowledge graph nâng cao.
 - Version control phức tạp cho tài liệu.
 

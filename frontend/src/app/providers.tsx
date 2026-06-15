@@ -4,6 +4,9 @@ import { useEffect } from 'react'
 import { useThemeStore } from '@/stores/themeStore'
 import { useAuthStore } from '@/stores/authStore'
 import { GoogleOAuthProvider } from '@react-oauth/google'
+import { Toaster } from '@/components/ui/sonner'
+
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,9 +28,10 @@ export function Providers({ children }: { children: ReactNode }) {
   }, [fetchCurrentUser])
 
   return (
-    <GoogleOAuthProvider clientId="140394716899-dvl8kp2h9fuibv3968hkd7n6smc76j1s.apps.googleusercontent.com">
+    <GoogleOAuthProvider clientId={googleClientId}>
       <QueryClientProvider client={queryClient}>
         {children}
+        <Toaster position="bottom-right" richColors />
       </QueryClientProvider>
     </GoogleOAuthProvider>
   )

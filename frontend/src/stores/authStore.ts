@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { authApi } from '../api/authApi';
 import { setToken, clearToken, getToken } from '../api/http';
 import type { UserDto } from '../types/api';
+import { toast } from 'sonner';
 
 interface AuthState {
   user: UserDto | null;
@@ -23,8 +24,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       const response = await authApi.loginWithGoogle(idToken);
       setToken(response.accessToken);
       set({ user: response.user, isAuthenticated: true });
+      toast.success('Login successful!');
     } catch (error) {
       console.error('Login failed', error);
+      toast.error('Login failed. Please try again.');
       throw error;
     }
   },
@@ -37,6 +40,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     } finally {
       clearToken();
       set({ user: null, isAuthenticated: false });
+      toast.info('You have been logged out.');
     }
   },
 

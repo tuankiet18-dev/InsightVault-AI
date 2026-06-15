@@ -14,6 +14,8 @@ public sealed class ConfiguredObjectStorageService(
 
     public TimeSpan DefaultPresignedUploadExpiry => TimeSpan.FromMinutes(options.Value.PresignedUploadMinutes);
 
+    public TimeSpan DefaultPresignedReadExpiry => TimeSpan.FromMinutes(options.Value.PresignedReadMinutes);
+
     public async Task<PresignedUpload> CreatePresignedUploadAsync(
         PresignedUploadRequest request,
         CancellationToken cancellationToken = default)
@@ -40,6 +42,48 @@ public sealed class ConfiguredObjectStorageService(
         var expiresAt = DateTimeOffset.UtcNow.Add(request.ExpiresIn);
 
         return new PresignedUpload(uploadUrl, expiresAt, requiredHeaders);
+    }
+
+    public async Task<PresignedDownload> CreatePresignedDownloadAsync(
+        PresignedDownloadRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var storageOptions = options.Value;
+        var minioClient = CreateClient(storageOptions, storageOptions.Endpoint);
+
+        await EnsureBucketExistsAsync(minioClient, request.BucketName, cancellationToken);
+
+        var presignEndpoint = string.IsNullOrWhiteSpace(storageOptions.PublicEndpoint)
+            ? storageOptions.Endpoint
+            : storageOptions.PublicEndpoint;
+        var presignClient = CreateClient(storageOptions, presignEndpoint);
+        var presignedArgs = new PresignedGetObjectArgs()
+            .WithBucket(request.BucketName)
+            .WithObject(request.ObjectKey)
+            .WithExpiry((int)request.ExpiresIn.TotalSeconds);
+        var downloadUrl = await presignClient.PresignedGetObjectAsync(presignedArgs);
+        var expiresAt = DateTimeOffset.UtcNow.Add(request.ExpiresIn);
+
+        return new PresignedDownload(downloadUrl, expiresAt);
+    }
+
+    public async Task<string> ReadObjectAsTextAsync(
+        string bucketName,
+        string objectKey,
+        CancellationToken cancellationToken = default)
+    {
+        var minioClient = CreateClient(options.Value, options.Value.Endpoint);
+        await using var memoryStream = new MemoryStream();
+        var getArgs = new GetObjectArgs()
+            .WithBucket(bucketName)
+            .WithObject(objectKey)
+            .WithCallbackStream(stream => stream.CopyTo(memoryStream));
+
+        await minioClient.GetObjectAsync(getArgs, cancellationToken);
+        memoryStream.Position = 0;
+        using var reader = new StreamReader(memoryStream);
+
+        return await reader.ReadToEndAsync(cancellationToken);
     }
 
     public async Task DeleteObjectIfExistsAsync(

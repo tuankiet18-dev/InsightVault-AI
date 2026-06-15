@@ -2,6 +2,12 @@
 
 Trạng thái: đặc tả màn hình sẵn sàng để dựng prototype/frontend. Phong cách mục tiêu là Knowledge IDE, ưu tiên MVP desktop trước, responsive web sau, Flutter mobile nếu còn thời gian.
 
+Update 2026-06-15: this remains a target UX spec. Frontend routes for
+dashboard, workspace, chat, compare, admin, and billing exist. Backend Chat/RAG
+APIs are still pending, so chat UX should not be marked complete until those
+APIs are implemented. Billing UX now has dedicated workspace summary, plan,
+top-up, checkout success, and checkout cancel screens.
+
 ## Định Hướng Thiết Kế
 
 - Loại sản phẩm: collaborative AI knowledge workspace.
@@ -68,6 +74,10 @@ Trạng thái cần có:
 
 UX quan trọng:
 - Citation của RAG phải hiển thị gần câu trả lời.
+- Document tab mở `Original` mặc định nếu file hỗ trợ preview inline.
+- PDF, TXT, và Markdown hỗ trợ đọc file gốc inline. DOCX chỉ download trong MVP.
+- `AI Summary` là view cùng tab document, không tách sang page riêng.
+- Compare và Reports ở trong workspace tabs để giữ ngữ cảnh Explorer và AI Inspector.
 - Document đang processing phải disable Compare/Report.
 - Viewer thấy control bị disable kèm lý do ngắn gọn.
 - Việc ẩn/hiện action dựa trên role và `uploadedById` chỉ phục vụ UX; Backend vẫn phải kiểm tra quyền trên từng request.

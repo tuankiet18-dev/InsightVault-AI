@@ -4,6 +4,8 @@ This checklist is the backend MVP acceptance pass after the folder/document, tra
 
 It complements CI. CI proves the code builds; this checklist proves the integrated product flows work with PostgreSQL, MinIO, RabbitMQ, the Python AI service, and real authorization data.
 
+Current status reference: `docs/about-project/CURRENT_PROJECT_STATUS.md`.
+
 ## Current Scope
 
 Covered:
@@ -16,6 +18,8 @@ Covered:
 - Async compare and report generation.
 - Dashboard and admin monitoring metadata-only responses.
 - Backend-to-AI service boundary expectations.
+- Workspace billing, subscription plan catalog, credit top-ups, PayOS checkout
+  creation/webhook handling, and credit debit/refund behavior.
 
 Known gap to track separately:
 
@@ -25,6 +29,9 @@ Known gap to track separately:
   - `GET /api/chat-sessions/{sessionId}/messages`
   - `POST /api/chat-sessions/{sessionId}/messages`
   - `DELETE /api/chat-sessions/{sessionId}`
+- Billing frontend screens now exist. This backend checklist still focuses on
+  backend API, credit, and PayOS behavior; verify UI flows separately through
+  Docker-based frontend checks.
 
 ## Preconditions
 
@@ -33,16 +40,14 @@ Create local env files if missing:
 ```powershell
 Copy-Item infra/.env.example infra/.env
 Copy-Item ai-service/.env.example ai-service/.env
-Copy-Item backend/InsightVault.API/appsettings.Development.example.json backend/InsightVault.API/appsettings.Development.json
 ```
 
 Then replace placeholder values:
 
 - `infra/.env`: set non-placeholder Postgres, MinIO, RabbitMQ, and `JWT_SIGNING_KEY` values.
 - `ai-service/.env`: set a valid `GEMINI_API_KEY`.
-- `backend/InsightVault.API/appsettings.Development.json`: keep local-only values or use environment variables.
 
-Start the stack:
+Run everything through Docker Compose:
 
 ```powershell
 .\scripts\start-docker-fast.ps1
@@ -54,11 +59,8 @@ Quick smoke check:
 .\scripts\backend-smoke.ps1
 ```
 
-If only backend is running without PostgreSQL, use:
-
-```powershell
-.\scripts\backend-smoke.ps1 -SkipReady
-```
+Do not run backend, frontend, or AI service as separate host processes during
+manual acceptance. Use Docker logs and Docker health checks for diagnostics.
 
 Prepare these users:
 
@@ -87,6 +89,14 @@ Expected result: deploy/runtime failures are visible before users hit feature AP
 
 - [ ] Owner can create/list/get/update/delete their workspace.
 - [ ] Owner can add editor/viewer members.
+- [ ] Owner can create a pending workspace invitation for an existing registered user.
+- [ ] Owner cannot invite an unknown email.
+- [ ] Pending invitation does not create an active workspace member until accepted.
+- [ ] Invited user can list their pending invitations.
+- [ ] Invited user can accept and become an active workspace member.
+- [ ] Invited user can decline without becoming a workspace member.
+- [ ] A different user cannot view, accept, or decline another user's invitation.
+- [ ] Expired invitation cannot be accepted.
 - [ ] Owner can update member role/status.
 - [ ] Owner cannot remove the last owner if the service rejects that business case.
 - [ ] Editor can view workspace shell and workspace resources.
@@ -181,9 +191,10 @@ Expected result: `ai_jobs` remains the source of truth for frontend polling and 
 - [ ] Viewer cannot compare documents.
 - [ ] Compare rejects fewer than two valid source documents.
 - [ ] Compare rejects deleted/incomplete/source documents outside the workspace.
-- [ ] Compare returns 202 with an `AiJobDto`.
+- [ ] Compare returns 202 with an `AiJobDto` for the queued job.
 - [ ] Worker calls AI service `/compare`.
 - [ ] Completed compare persists a `comparison_report`.
+- [ ] Polling the completed compare job returns `AiJobDto.reportId` for the persisted comparison report.
 - [ ] Sending an existing comparison `reportGroupId` creates the next comparison report version.
 - [ ] `GET /api/workspaces/{workspaceId}/reports?type=` lists readable reports.
 - [ ] `GET /api/reports/{reportId}` returns detail only to allowed workspace users.
@@ -207,7 +218,30 @@ Expected result: compare/report are async, backend persists reports, and AI serv
 
 Expected result: admin observes and manages system metadata without gaining workspace-content access.
 
-## 9. Boundary And Security Regression Pass
+## 9. Billing, Credits, And PayOS
+
+- [ ] `GET /api/billing/plans` returns active seeded plans.
+- [ ] `GET /api/billing/credit-packages` returns active top-up packages.
+- [ ] Workspace owner can view billing summary.
+- [ ] Non-member cannot view billing summary.
+- [ ] Editor/viewer cannot create checkout sessions.
+- [ ] Owner can create checkout for a valid plan or credit package when PayOS is enabled.
+- [ ] Invalid or inactive product code fails with a clear business error.
+- [ ] PayOS webhook rejects unverifiable payloads.
+- [ ] Verified paid subscription webhook creates/updates the workspace subscription.
+- [ ] Verified top-up webhook grants top-up credits.
+- [ ] Replayed webhook for an already paid order does not grant credits twice.
+- [ ] Processing a document debits document credits according to configured file size cost.
+- [ ] Generating a report debits report credits.
+- [ ] Comparing documents debits compare credits.
+- [ ] Insufficient balance returns HTTP `402` with `billing.insufficient_credits`.
+- [ ] If RabbitMQ publish fails after debit, the debit is refunded and the job is failed.
+- [ ] Credit ledger idempotency keys prevent duplicate grants/debits/refunds.
+
+Expected result: workspace credits are the single guard for external AI cost,
+and payment browser redirects never grant credits without a verified webhook.
+
+## 10. Boundary And Security Regression Pass
 
 - [ ] Frontend never calls AI service directly for backend-owned flows.
 - [ ] Backend checks permissions before calling AI service.

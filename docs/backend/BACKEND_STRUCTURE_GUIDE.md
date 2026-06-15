@@ -2,9 +2,15 @@
 
 This guide documents the current ASP.NET Core backend structure for InsightVault AI. The backend uses Controller APIs, DTOs, application services, repositories, EF Core, and infrastructure adapters.
 
+Current status reference: `docs/about-project/CURRENT_PROJECT_STATUS.md`.
+
 ## Architecture Summary
 
-The backend is the system-of-record owner. It should handle API validation, authentication, permission checks, workspace/document metadata, MinIO upload orchestration, AI job lifecycle, chat/report persistence, and calls to the Python AI service.
+The backend is the system-of-record owner. It handles API validation, authentication, permission checks, workspace/document metadata, MinIO upload orchestration, AI job lifecycle, report persistence, billing/credit state, and calls to the Python AI service.
+
+Chat/RAG persistence is the target design, but the backend Chat/RAG API layer is
+not implemented yet. Do not list RAG chat as completed until `ChatController`
+and `ChatService` exist.
 
 The AI service should focus on AI computation: extraction, chunking, embedding, vector search, prompt logic, Gemini calls, compare, and report generation internals. For the target clean design, AI service returns structured results to backend, and backend writes database state.
 
@@ -20,9 +26,10 @@ backend/InsightVault.API/
     FoldersController.cs
     DocumentsController.cs
     AiJobsController.cs
-    ChatController.cs
     ReportsController.cs
+    DashboardController.cs
     AdminController.cs
+    BillingController.cs
 
   DTOs/
     Auth/
@@ -30,9 +37,11 @@ backend/InsightVault.API/
     Folders/
     Documents/
     AiJobs/
-    Chat/
     Reports/
+    Dashboard/
     Admin/
+    Billing/
+    Common/
 
   Application/
     Abstractions/
@@ -43,18 +52,19 @@ backend/InsightVault.API/
         Folders/
         Documents/
         AiJobs/
-        Chat/
         Reports/
         Admin/
+        Billing/
+        Emails/
     Services/
       Auth/
       Workspaces/
       Folders/
       Documents/
       AiJobs/
-      Chat/
       Reports/
       Admin/
+      Billing/
 
   Domain/
     Entities/
@@ -73,6 +83,10 @@ backend/InsightVault.API/
     Ai/
     Auth/
     BackgroundJobs/
+    Emails/
+    Messaging/
+    Payments/
+    Health/
 
   Common/
     Errors/
@@ -113,7 +127,10 @@ Backend MVP manual/integration acceptance checks are documented in
 | `Infrastructure/Storage` | MinIO implementation and file/object-key conventions. |
 | `Infrastructure/Ai` | HTTP client/adapters for the Python AI service. |
 | `Infrastructure/Auth` | JWT, Google OAuth, current-user helpers, and authorization handlers. |
-| `Infrastructure/BackgroundJobs` | Workers or queue consumers for document processing/report jobs. |
+| `Infrastructure/BackgroundJobs` | Workers or queue consumers for document processing, report/compare jobs, cleanup, and email. |
+| `Infrastructure/Emails` | SMTP options and queued email delivery support. |
+| `Infrastructure/Messaging` | RabbitMQ queue publisher and queue options. |
+| `Infrastructure/Payments` | PayOS payment gateway adapter and provider options. |
 | `Domain/Entities` | EF Core entities. |
 | `Domain/Enums` | Domain enums used by entities and business logic. |
 | `Data` | EF Core DbContext, design-time factory, and migrations. |
@@ -232,7 +249,8 @@ Create/update/delete APIs:
   IWorkspacePermissionService.EnsureCanManageFoldersAsync(...)
 ```
 
-Until JWT authentication is implemented, development requests can pass `X-User-Id: <user-guid>` so backend APIs can still test permission checks against `workspaces.owner_id` and `workspace_members`.
+JWT authentication is implemented. Development and test code should use a real
+JWT or the test factory helpers, not ad hoc `X-User-Id` headers.
 
 ## Folder Rules
 
@@ -257,6 +275,27 @@ BE -> DB: mark uploaded and create process_document ai_job
 Backend owns workspace permission checks, object key generation, document metadata, and AI job creation. Frontend must not choose the bucket or object key.
 
 Storage code is behind `IObjectStorageService`. The MinIO SDK implementation lives in `Infrastructure/Storage`, so `DocumentsController` and `DocumentService` stay independent from MinIO-specific APIs.
+
+## Billing And Credits
+
+Billing is workspace-scoped and owned by the backend. The current backend has:
+
+- `BillingController`
+- `IBillingService`, `ICreditService`, and `IWorkspaceEntitlementService`
+- `IPaymentGateway` with the PayOS adapter
+- subscription plan, credit package, workspace subscription, payment order, and
+  credit ledger entities
+
+Expensive AI operations consume workspace credits before queueing work. If a
+RabbitMQ publish fails after debit, the backend refunds the debit and marks the
+job failed.
+
+## Current Known Backend Gap
+
+Backend Chat/RAG endpoints are still pending. The database model and AI service
+support RAG, but there is no current `ChatController`/`ChatService` API layer.
+The contract remains in `docs/frontend-docs/API_CONTRACT_MVP.md` so the team can
+implement it without redesigning the rest of the system.
 
 Document processing uses RabbitMQ plus `ai_jobs`:
 

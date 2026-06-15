@@ -1,4 +1,4 @@
-import { Search, UserPlus, Upload, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, LogOut, Sun, Moon, Monitor } from "lucide-react";
+import { Search, UserPlus, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, LogOut, Sun, Moon, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,13 +13,11 @@ import { SettingsModal } from "@/components/settings/SettingsModal";
 import { useState } from "react";
 
 export function Topbar({
-  onOpenUpload,
   explorerOpen,
   inspectorOpen,
   onToggleExplorer,
   onToggleInspector,
 }: {
-  onOpenUpload: () => void;
   explorerOpen: boolean;
   inspectorOpen: boolean;
   onToggleExplorer: () => void;
@@ -36,7 +34,6 @@ export function Topbar({
   const currentUserRole = activeWorkspace?.currentUserRole;
 
   const canInvite = hasPermission(currentUserRole, 'invite_member');
-  const canUpload = hasPermission(currentUserRole, 'upload_document');
 
   return (
     <header className="flex h-12 items-center gap-2 border-b border-border bg-card px-3">
@@ -88,9 +85,7 @@ export function Topbar({
       <Button variant="ghost" size="sm" className="h-8 gap-1.5" disabled={!canInvite} onClick={() => setInviteModalOpen(true)}>
         <UserPlus className="h-4 w-4" /> Invite
       </Button>
-      <Button size="sm" className="h-8 gap-1.5" onClick={onOpenUpload} disabled={!canUpload}>
-        <Upload className="h-4 w-4" /> Upload
-      </Button>
+
 
       <Button
         variant="ghost"

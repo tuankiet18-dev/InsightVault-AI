@@ -11,6 +11,8 @@ export const documentKeys = {
     [...documentKeys.lists(workspaceId), { ...params }] as const,
   details: () => [...documentKeys.all, 'detail'] as const,
   detail: (id: string) => [...documentKeys.details(), id] as const,
+  originalAccess: (id: string) => [...documentKeys.detail(id), 'original-access'] as const,
+  originalText: (id: string) => [...documentKeys.detail(id), 'original-text'] as const,
   trashLists: (workspaceId: string) => [...documentKeys.workspace(workspaceId), 'trash'] as const,
 };
 
@@ -41,6 +43,24 @@ export const useDocument = (documentId: string | null) => {
       }
       return false;
     },
+  });
+};
+
+export const useDocumentOriginalAccess = (documentId: string | null) => {
+  return useQuery({
+    queryKey: documentKeys.originalAccess(documentId!),
+    queryFn: () => documentApi.getOriginalAccess(documentId!),
+    enabled: !!documentId,
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
+export const useDocumentOriginalText = (documentId: string | null, enabled: boolean) => {
+  return useQuery({
+    queryKey: documentKeys.originalText(documentId!),
+    queryFn: () => documentApi.getOriginalText(documentId!),
+    enabled: !!documentId && enabled,
+    staleTime: 5 * 60 * 1000,
   });
 };
 

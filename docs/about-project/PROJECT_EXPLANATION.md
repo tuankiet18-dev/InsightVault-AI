@@ -1,5 +1,10 @@
 # InsightVault AI - Tài liệu giải thích dự án cho team
 
+Current status note, 2026-06-15: use
+`docs/about-project/CURRENT_PROJECT_STATUS.md` as the live implementation
+anchor. Backend billing/credits/PayOS, SMTP email queueing, and frontend
+billing UI are now implemented; backend Chat/RAG APIs remain pending.
+
 ## 1. InsightVault AI là gì?
 
 **InsightVault AI** là một nền tảng web giúp người dùng và nhóm project quản lý, phân tích và khai thác tri thức từ tài liệu bằng trí tuệ nhân tạo.
@@ -553,7 +558,7 @@ Tech stack hiện tại:
 | Vector Search | pgvector |
 | AI Provider | Gemini API |
 | AI Service | Python service |
-| Background Job | .NET BackgroundService + ai_jobs; RabbitMQ optional |
+| Background Job | .NET BackgroundService + ai_jobs + RabbitMQ queues |
 
 ### 12.1. Vai trò từng thành phần
 
@@ -587,7 +592,9 @@ Tạo embedding, summary, answer, comparison, report.
 
 **Background job**
 
-MVP mặc định dùng `.NET BackgroundService + ai_jobs` để xử lý các tác vụ lâu như document processing, report generation, compare documents. RabbitMQ chỉ là optional nếu team còn thời gian hoặc muốn tăng điểm system design.
+Current implementation uses `.NET BackgroundService + ai_jobs + RabbitMQ`
+queues for long-running tasks such as document processing, report generation,
+compare documents, and email delivery.
 
 ## 13. ERD hiện tại
 
@@ -750,7 +757,6 @@ Không nên làm trong MVP:
 - Export PDF/DOCX.
 - Knowledge graph nâng cao.
 - Version control phức tạp.
-- Billing/payment.
 
 ## 18. Luồng demo đề xuất
 

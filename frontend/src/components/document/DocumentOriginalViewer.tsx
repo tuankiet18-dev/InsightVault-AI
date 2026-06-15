@@ -1,0 +1,136 @@
+import { AlertCircle, Download, ExternalLink, FileText, Loader2 } from 'lucide-react'
+import { useDocumentOriginalAccess, useDocumentOriginalText } from '@/hooks/useDocuments'
+import type { DocumentDto } from '@/types/api'
+
+export function DocumentOriginalViewer({ document }: { document: DocumentDto }) {
+  const accessQuery = useDocumentOriginalAccess(document.id)
+  const access = accessQuery.data
+  const textQuery = useDocumentOriginalText(document.id, access?.previewKind === 'text')
+
+  if (accessQuery.isLoading) {
+    return (
+      <div className="flex min-h-[420px] items-center justify-center rounded-lg border border-border bg-surface-0 text-sm text-muted-foreground">
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        Preparing original file preview...
+      </div>
+    )
+  }
+
+  if (accessQuery.isError || !access) {
+    return (
+      <PreviewNotice
+        tone="danger"
+        title="Original file is unavailable"
+        detail="The document metadata is available, but the uploaded object could not be prepared for preview."
+      />
+    )
+  }
+
+  if (access.previewKind === 'pdf') {
+    return (
+      <section className="flex min-h-[calc(100dvh-190px)] flex-col overflow-hidden rounded-lg border border-border bg-surface-0">
+        <PreviewToolbar accessUrl={access.downloadUrl} fileName={access.fileName} />
+        <iframe
+          src={access.downloadUrl}
+          title={`Original PDF preview for ${access.fileName}`}
+          className="min-h-[620px] flex-1 bg-white"
+        />
+      </section>
+    )
+  }
+
+  if (access.previewKind === 'text') {
+    return (
+      <section className="overflow-hidden rounded-lg border border-border bg-surface-0">
+        <PreviewToolbar accessUrl={access.downloadUrl} fileName={access.fileName} />
+        {textQuery.isLoading ? (
+          <div className="flex min-h-[360px] items-center justify-center text-sm text-muted-foreground">
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Loading text preview...
+          </div>
+        ) : textQuery.isError || !textQuery.data ? (
+          <PreviewNotice
+            tone="warning"
+            title="Text preview could not be loaded"
+            detail="Download the original file, or try again after the object storage service is ready."
+          />
+        ) : (
+          <pre className="max-h-[calc(100dvh-220px)] overflow-auto whitespace-pre-wrap p-6 font-mono text-[13px] leading-6 text-foreground">
+            {textQuery.data.content}
+          </pre>
+        )}
+      </section>
+    )
+  }
+
+  return (
+    <section className="rounded-lg border border-border bg-surface-0 p-8">
+      <div className="mx-auto flex max-w-md flex-col items-center text-center">
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+          <FileText className="h-6 w-6" />
+        </div>
+        <h2 className="text-sm font-semibold text-foreground">Inline preview is not available</h2>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          DOCX files are download-only in the MVP. You can still review the AI Summary tab after processing completes.
+        </p>
+        <a
+          href={access.downloadUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-5 inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground"
+        >
+          <Download className="h-4 w-4" />
+          Download original
+        </a>
+      </div>
+    </section>
+  )
+}
+
+function PreviewToolbar({ accessUrl, fileName }: { accessUrl: string; fileName: string }) {
+  return (
+    <div className="flex min-h-11 items-center justify-between gap-3 border-b border-border bg-surface-50 px-3">
+      <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
+        <FileText className="h-4 w-4 shrink-0" />
+        <span className="truncate">{fileName}</span>
+      </div>
+      <div className="flex shrink-0 items-center gap-1">
+        <a
+          href={accessUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+          Open
+        </a>
+        <a
+          href={accessUrl}
+          download
+          className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+        >
+          <Download className="h-3.5 w-3.5" />
+          Download
+        </a>
+      </div>
+    </div>
+  )
+}
+
+function PreviewNotice({
+  title,
+  detail,
+  tone,
+}: {
+  title: string
+  detail: string
+  tone: 'danger' | 'warning'
+}) {
+  return (
+    <div className="flex min-h-[360px] flex-col items-center justify-center rounded-lg border border-dashed border-border bg-surface-0 p-8 text-center">
+      <AlertCircle className={tone === 'danger' ? 'mb-3 h-6 w-6 text-danger-600' : 'mb-3 h-6 w-6 text-warning-600'} />
+      <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+      <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">{detail}</p>
+    </div>
+  )
+}

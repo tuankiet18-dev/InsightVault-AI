@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Navigate, useParams } from 'react-router-dom'
+import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AppShell } from '@/components/layout/AppShell'
 import { TabStrip } from '@/components/document/TabStrip'
 import { DocumentViewer } from '@/components/document/DocumentViewer'
@@ -29,19 +29,59 @@ import {
   Sparkles,
   Upload,
 } from 'lucide-react'
-import type { DocumentDto } from '@/types/api'
+import type { DocumentDto, ReportDto } from '@/types/api'
 
 export function WorkspacePage() {
   const { workspaceId } = useParams()
+  const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const { setActiveWorkspace } = useWorkspaceStore()
   const { tabs, getActiveTab } = useTabStore()
   const activeTab = getActiveTab()
   const { data: workspace, isLoading, isError } = useWorkspace(workspaceId ?? null)
+  const { inspectorOpen, setActiveNavItem, toggleInspector } = useUiStore()
+  const { openTab } = useTabStore()
 
   useEffect(() => {
     setActiveWorkspace(workspaceId ?? null)
     return () => setActiveWorkspace(null)
   }, [setActiveWorkspace, workspaceId])
+
+  useEffect(() => {
+    if (!workspaceId) return
+
+    const panel = searchParams.get('panel')
+    const tool = searchParams.get('tool')
+
+    if (panel === 'chat') {
+      setActiveNavItem('chat')
+      if (!inspectorOpen) toggleInspector()
+    }
+
+    if (tool === 'compare') {
+      setActiveNavItem('compare')
+      openTab({
+        id: 'compare-workspace',
+        label: 'Compare',
+        type: 'compare',
+        closable: true,
+      })
+    }
+
+    if (tool === 'reports') {
+      setActiveNavItem('reports')
+      openTab({
+        id: 'reports-workspace',
+        label: 'Reports',
+        type: 'reports',
+        closable: true,
+      })
+    }
+
+    if (panel || tool) {
+      navigate(`/workspaces/${workspaceId}`, { replace: true })
+    }
+  }, [inspectorOpen, navigate, openTab, searchParams, setActiveNavItem, toggleInspector, workspaceId])
 
   if (!workspaceId) {
     return <Navigate to="/dashboard" replace />
@@ -67,11 +107,81 @@ export function WorkspacePage() {
           {activeTab.type === 'document' && <DocumentViewer />}
           {activeTab.type === 'report' && <ReportViewer />}
           {activeTab.type === 'compare' && <ComparePanel />}
+          {activeTab.type === 'reports' && <ReportsPanel workspaceId={workspaceId} />}
         </>
       ) : (
         <WorkspaceHome workspaceId={workspaceId} workspaceName={workspace?.name ?? 'Workspace'} />
       )}
     </AppShell>
+  )
+}
+
+function ReportsPanel({ workspaceId }: { workspaceId: string }) {
+  const { data: reports = [], isLoading } = useReports(workspaceId)
+  const { openTab } = useTabStore()
+
+  const openReport = (report: ReportDto) => {
+    openTab({
+      id: `report-${report.id}`,
+      label: report.title,
+      type: 'report',
+      reportId: report.id,
+      closable: true,
+    })
+  }
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col bg-surface-50">
+      <header className="flex min-h-16 shrink-0 items-center justify-between gap-4 border-b border-border bg-surface-0 px-6 py-4">
+        <div>
+          <h1 className="text-xl font-semibold leading-tight text-surface-900">Reports</h1>
+          <p className="mt-1 text-sm text-surface-500">
+            Open generated reports without leaving the workspace context.
+          </p>
+        </div>
+        <FileBarChart2 className="h-5 w-5 text-primary-600" />
+      </header>
+
+      <main className="min-h-0 flex-1 overflow-y-auto p-5">
+        {isLoading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div key={index} className="h-16 animate-pulse rounded-md bg-muted" />
+            ))}
+          </div>
+        ) : reports.length > 0 ? (
+          <div className="mx-auto max-w-4xl overflow-hidden rounded-lg border border-border bg-surface-0">
+            {reports.map((report) => (
+              <button
+                key={report.id}
+                type="button"
+                onClick={() => openReport(report)}
+                className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-border px-5 py-4 text-left last:border-b-0 hover:bg-muted/60"
+              >
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-foreground">{report.title}</div>
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span>{report.reportType.replace(/_/g, ' ')}</span>
+                    <span>{new Date(report.updatedAt).toLocaleDateString()}</span>
+                  </div>
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="mx-auto flex min-h-[360px] max-w-md flex-col items-center justify-center text-center">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-dashed border-border bg-muted">
+              <FileBarChart2 className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <h2 className="text-sm font-semibold text-foreground">No reports yet</h2>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              Generate a report from the AI inspector or run Compare and save the result as a report.
+            </p>
+          </div>
+        )}
+      </main>
+    </div>
   )
 }
 
@@ -114,7 +224,7 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-surface-50">
       <div className="mx-auto flex w-full max-w-[1180px] flex-1 flex-col gap-4 px-4 py-4 lg:px-5">
         <section className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="rounded-lg border border-border bg-white p-5">
+          <div className="rounded-lg border border-border bg-surface-0 p-5">
             <div className="flex flex-col gap-4">
               <div className="min-w-0">
                 <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
@@ -153,7 +263,7 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
             </div>
           </div>
 
-          <div className="rounded-lg border border-border bg-white p-5">
+          <div className="rounded-lg border border-border bg-surface-0 p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-sm font-semibold text-foreground">AI workflow</h2>
@@ -185,7 +295,7 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
         </section>
 
         <section className="grid min-h-[360px] gap-4 2xl:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="rounded-lg border border-border bg-white">
+          <div className="rounded-lg border border-border bg-surface-0">
             <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
               <div>
                 <h2 className="text-sm font-semibold text-foreground">Recent documents</h2>
@@ -248,7 +358,7 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
             )}
           </div>
 
-          <div className="rounded-lg border border-border bg-white p-5">
+          <div className="rounded-lg border border-border bg-surface-0 p-5">
             <div className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-muted-foreground" />
               <h2 className="text-sm font-semibold text-foreground">Workspace health</h2>
