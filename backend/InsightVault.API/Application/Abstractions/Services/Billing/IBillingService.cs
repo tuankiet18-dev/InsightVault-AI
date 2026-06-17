@@ -1,4 +1,5 @@
 using InsightVault.API.DTOs.Billing;
+using System.Text.Json;
 
 namespace InsightVault.API.Application.Abstractions.Services.Billing;
 
@@ -20,7 +21,11 @@ public interface IBillingService
         string clientIp,
         CancellationToken cancellationToken = default);
 
-    Task<PaymentNotificationOutcome> HandlePaymentNotificationAsync(
+    Task<PaymentNotificationOutcome> HandlePaymentWebhookAsync(
+        JsonElement payload,
+        CancellationToken cancellationToken = default);
+
+    Task<PaymentNotificationOutcome> HandlePaymentReturnAsync(
         IReadOnlyDictionary<string, string> parameters,
         CancellationToken cancellationToken = default);
 }

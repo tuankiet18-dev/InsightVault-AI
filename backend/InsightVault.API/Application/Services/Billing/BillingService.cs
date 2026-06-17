@@ -10,6 +10,7 @@ using InsightVault.API.DTOs.Billing;
 using InsightVault.API.Infrastructure.Payments;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.Text.Json;
 
 namespace InsightVault.API.Application.Services.Billing;
 
@@ -19,7 +20,7 @@ public sealed class BillingService(
     IWorkspacePermissionService workspacePermissionService,
     ICreditService creditService,
     IPaymentGateway paymentGateway,
-    IOptions<VnPayOptions> vnPayOptions) : IBillingService
+    IOptions<PayOsOptions> payOsOptions) : IBillingService
 {
     public async Task<IReadOnlyList<BillingPlanDto>> ListPlansAsync(
         CancellationToken cancellationToken = default)
@@ -110,7 +111,7 @@ public sealed class BillingService(
                 "This product does not require checkout.");
         }
 
-        if (!vnPayOptions.Value.Enabled)
+        if (!payOsOptions.Value.Enabled)
         {
             throw new ApiException(
                 StatusCodes.Status503ServiceUnavailable,
@@ -122,7 +123,7 @@ public sealed class BillingService(
             candidate => candidate.Id == userId,
             cancellationToken);
         var now = DateTimeOffset.UtcNow;
-        var expiresAt = now.AddMinutes(vnPayOptions.Value.CheckoutExpiryMinutes);
+        var expiresAt = now.AddMinutes(payOsOptions.Value.CheckoutExpiryMinutes);
         var orderCode = CreateOrderCode();
         var order = new PaymentOrder
         {
@@ -181,13 +182,36 @@ public sealed class BillingService(
         }
     }
 
-    public async Task<PaymentNotificationOutcome> HandlePaymentNotificationAsync(
+    public async Task<PaymentNotificationOutcome> HandlePaymentWebhookAsync(
+        JsonElement payload,
+        CancellationToken cancellationToken = default)
+    {
+        var verifiedPayment = await paymentGateway.VerifyWebhookAsync(
+            payload,
+            cancellationToken);
+
+        return await ApplyVerifiedPaymentAsync(
+            verifiedPayment,
+            cancellationToken);
+    }
+
+    public async Task<PaymentNotificationOutcome> HandlePaymentReturnAsync(
         IReadOnlyDictionary<string, string> parameters,
         CancellationToken cancellationToken = default)
     {
-        var verifiedPayment = await paymentGateway.VerifyNotificationAsync(
+        var verifiedPayment = await paymentGateway.VerifyReturnAsync(
             parameters,
             cancellationToken);
+
+        return await ApplyVerifiedPaymentAsync(
+            verifiedPayment,
+            cancellationToken);
+    }
+
+    private async Task<PaymentNotificationOutcome> ApplyVerifiedPaymentAsync(
+        VerifiedPayment verifiedPayment,
+        CancellationToken cancellationToken)
+    {
         if (!verifiedPayment.IsSignatureValid)
         {
             return PaymentNotificationOutcome.InvalidSignature;

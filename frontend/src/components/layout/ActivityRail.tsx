@@ -123,7 +123,7 @@ export function ActivityRail() {
             label="Billing"
             to={activeWorkspaceId ? `/billing?workspaceId=${activeWorkspaceId}` : '/billing'}
           >
-            <CreditCard className="h-5 w-5" />
+            <CreditCard className="h-5 w-5 pointer-events-none" />
           </RailLink>
           {user?.systemRole === 'admin' && (
             <RailLink label="Admin" to="/admin">
