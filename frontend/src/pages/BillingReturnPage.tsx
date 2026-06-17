@@ -9,7 +9,7 @@ export function BillingReturnPage() {
   const [result, setResult] = useState<PaymentReturnResponseDto | null>(null)
   const query = window.location.search.slice(1)
   const [error, setError] = useState<string | null>(
-    query ? null : 'VNPay did not return payment information.',
+    query ? null : 'payOS did not return payment information.',
   )
   const confirmed = useRef(false)
   const workspaceId = sessionStorage.getItem(pendingBillingWorkspaceKey)
@@ -21,7 +21,7 @@ export function BillingReturnPage() {
     if (!query) return
 
     billingApi
-      .confirmVnPayReturn(query)
+      .confirmPayOsReturn(query)
       .then((response) => {
         setResult(response)
         if (response.successful) {
@@ -47,8 +47,8 @@ export function BillingReturnPage() {
             </div>
             <h1 className="mt-5 text-2xl font-semibold">Confirming payment</h1>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              InsightVault is verifying the VNPay signature and transaction
-              details. Please keep this page open.
+              InsightVault is checking the payOS transaction status before
+              updating your workspace billing. Please keep this page open.
             </p>
           </>
         ) : result?.successful ? (

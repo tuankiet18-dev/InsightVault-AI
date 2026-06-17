@@ -44,7 +44,10 @@ export function BillingPage() {
     try {
       const session = await checkout.mutateAsync(productCode)
       const checkoutUrl = new URL(session.checkoutUrl)
-      if (checkoutUrl.protocol !== 'https:') {
+      const isLocalCheckout =
+        checkoutUrl.hostname === 'localhost' ||
+        checkoutUrl.hostname === '127.0.0.1'
+      if (checkoutUrl.protocol !== 'https:' && !isLocalCheckout) {
         toast.error('Backend returned an unexpected payment URL.')
         return
       }
@@ -190,7 +193,7 @@ export function BillingPage() {
               <div className="mb-4">
                 <h2 className="text-xl font-semibold">Monthly plans</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Upgrade applies after VNPay confirms the sandbox transaction.
+                  Upgrade applies after payOS confirms the checkout transaction.
                 </p>
               </div>
               <div className="grid gap-4 lg:grid-cols-3">

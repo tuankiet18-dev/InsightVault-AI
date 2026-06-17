@@ -26,9 +26,9 @@ credit top-up, while all active members consume the shared workspace balance.
 | GET | `/api/billing/plans` | No | List active subscription plans |
 | GET | `/api/billing/credit-packages` | No | List active top-up packages |
 | GET | `/api/workspaces/{workspaceId}/billing` | Yes | Get plan and remaining credits |
-| POST | `/api/workspaces/{workspaceId}/billing/checkout` | Owner | Create VNPay Sandbox checkout |
-| GET | `/api/billing/vnpay/ipn` | VNPay HMAC-SHA512 | Apply verified payment |
-| GET | `/api/billing/vnpay/return` | VNPay HMAC-SHA512 | Verify browser return and apply payment |
+| POST | `/api/workspaces/{workspaceId}/billing/checkout` | Owner | Create payOS checkout |
+| POST | `/api/billing/payos/webhook` | payOS signature | Apply verified payment webhook |
+| GET | `/api/billing/payos/return` | Public return fallback | Verify browser return through payOS and apply payment |
 
 Checkout request:
 

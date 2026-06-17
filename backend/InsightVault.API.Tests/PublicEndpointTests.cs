@@ -25,18 +25,18 @@ public sealed class PublicEndpointTests(InsightVaultApiFactory factory)
     }
 
     [Fact]
-    public async Task VnPay_return_rejects_unsigned_payment_data()
+    public async Task PayOs_return_rejects_missing_order_code()
     {
         using var client = factory.CreateClient();
 
         var response = await client.GetAsync(
-            "/api/billing/vnpay/return?vnp_TxnRef=123&vnp_Amount=9900000");
+            "/api/billing/payos/return?status=PAID");
         var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.False(body.RootElement.GetProperty("successful").GetBoolean());
         Assert.Equal(
-            "invalidsignature",
+            "invaliddata",
             body.RootElement.GetProperty("status").GetString());
     }
 }

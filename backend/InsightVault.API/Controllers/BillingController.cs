@@ -2,6 +2,7 @@ using InsightVault.API.Application.Abstractions.Services.Billing;
 using InsightVault.API.DTOs.Billing;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace InsightVault.API.Controllers;
 
@@ -53,52 +54,42 @@ public sealed class BillingController(IBillingService billingService) : Controll
     }
 
     [AllowAnonymous]
-    [HttpGet("vnpay/ipn")]
-    public async Task<ActionResult<VnPayIpnResponseDto>> HandleVnPayIpn(
+    [HttpPost("payos/webhook")]
+    public async Task<ActionResult<PaymentReturnResponseDto>> HandlePayOsWebhook(
+        [FromBody] JsonElement payload,
         CancellationToken cancellationToken)
     {
-        var parameters = Request.Query.ToDictionary(
-            pair => pair.Key,
-            pair => pair.Value.ToString(),
-            StringComparer.Ordinal);
-        var outcome = await billingService.HandlePaymentNotificationAsync(
-            parameters,
+        var outcome = await billingService.HandlePaymentWebhookAsync(
+            payload,
             cancellationToken);
 
-        return Ok(outcome switch
-        {
-            PaymentNotificationOutcome.Applied or PaymentNotificationOutcome.Acknowledged =>
-                new VnPayIpnResponseDto("00", "Confirm Success"),
-            PaymentNotificationOutcome.AlreadyProcessed =>
-                new VnPayIpnResponseDto("02", "Order already confirmed"),
-            PaymentNotificationOutcome.OrderNotFound =>
-                new VnPayIpnResponseDto("01", "Order not found"),
-            PaymentNotificationOutcome.InvalidAmount =>
-                new VnPayIpnResponseDto("04", "Invalid amount"),
-            PaymentNotificationOutcome.InvalidSignature =>
-                new VnPayIpnResponseDto("97", "Invalid signature"),
-            _ => new VnPayIpnResponseDto("99", "Unknown error")
-        });
+        return Ok(ToPaymentReturnResponse(outcome));
     }
 
     [AllowAnonymous]
-    [HttpGet("vnpay/return")]
-    public async Task<ActionResult<PaymentReturnResponseDto>> HandleVnPayReturn(
+    [HttpGet("payos/return")]
+    public async Task<ActionResult<PaymentReturnResponseDto>> HandlePayOsReturn(
         CancellationToken cancellationToken)
     {
         var parameters = Request.Query.ToDictionary(
             pair => pair.Key,
             pair => pair.Value.ToString(),
             StringComparer.Ordinal);
-        var outcome = await billingService.HandlePaymentNotificationAsync(
+        var outcome = await billingService.HandlePaymentReturnAsync(
             parameters,
             cancellationToken);
 
-        return Ok(new PaymentReturnResponseDto(
+        return Ok(ToPaymentReturnResponse(outcome));
+    }
+
+    private static PaymentReturnResponseDto ToPaymentReturnResponse(
+        PaymentNotificationOutcome outcome)
+    {
+        return new PaymentReturnResponseDto(
             outcome.ToString().ToLowerInvariant(),
             outcome is PaymentNotificationOutcome.Applied
                 or PaymentNotificationOutcome.AlreadyProcessed,
-            GetReturnMessage(outcome)));
+            GetReturnMessage(outcome));
     }
 
     private static string GetReturnMessage(PaymentNotificationOutcome outcome)
