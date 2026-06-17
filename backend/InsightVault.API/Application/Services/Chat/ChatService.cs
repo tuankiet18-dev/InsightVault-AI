@@ -121,12 +121,13 @@ public sealed class ChatService(
                 Id = Guid.NewGuid(),
                 WorkspaceId = session.WorkspaceId,
                 ChatMessageId = Guid.Empty,
-                ContextType = context.ContextType,
-                FolderId = context.FolderId,
-                DocumentId = context.DocumentId,
-                IncludeSubfolders = context.IncludeSubfolders,
-                ContextOrder = context.ContextOrder,
-                ContextDisplayName = context.ContextDisplayName,
+                    ContextType = context.ContextType,
+                    FolderId = context.FolderId,
+                    DocumentId = context.DocumentId,
+                    ReportId = context.ReportId,
+                    IncludeSubfolders = context.IncludeSubfolders,
+                    ContextOrder = context.ContextOrder,
+                    ContextDisplayName = context.ContextDisplayName,
                 ContextPath = context.ContextPath,
                 CreatedAt = now
             }).ToList()
@@ -151,6 +152,7 @@ public sealed class ChatService(
                     resolvedScope.Scope,
                     FolderId: null,
                     resolvedScope.DocumentIds,
+                    resolvedScope.ReportContext,
                     DefaultTopK,
                     chatHistory),
                 cancellationToken);
@@ -181,9 +183,7 @@ public sealed class ChatService(
                 FileName = string.IsNullOrWhiteSpace(source.FileName) ? "Unknown source" : source.FileName,
                 Snippet = source.Snippet,
                 SimilarityScore = source.Similarity,
-                Metadata = source.RetrievalDebug is null
-                    ? "{}"
-                    : JsonSerializer.Serialize(source.RetrievalDebug, JsonOptions),
+                Metadata = BuildSourceMetadata(source),
                 SourceOrder = index,
                 CreatedAt = now
             }).ToList()
@@ -272,13 +272,14 @@ public sealed class ChatService(
     {
         if (requestedContexts is null || requestedContexts.Count == 0)
         {
-            return new ResolvedRagScope("workspace", null, []);
+            return new ResolvedRagScope("workspace", null, ReportContext: null, []);
         }
 
         var contexts = new List<ResolvedContext>();
         var documentIds = new HashSet<Guid>();
         var contextKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var contextOrder = 0;
+        string? reportContext = null;
 
         foreach (var request in requestedContexts)
         {
@@ -322,13 +323,36 @@ public sealed class ChatService(
                 continue;
             }
 
+            if (request.ContextType == ApiChatContextType.Report)
+            {
+                var reportContextResult = await ResolveReportContextAsync(
+                    workspaceId,
+                    request,
+                    contextOrder,
+                    cancellationToken);
+
+                if (contextKeys.Add($"report:{reportContextResult.ReportId}"))
+                {
+                    contexts.Add(reportContextResult.Context);
+                    contextOrder++;
+                }
+
+                foreach (var documentId in reportContextResult.DocumentIds)
+                {
+                    documentIds.Add(documentId);
+                }
+
+                reportContext = reportContextResult.ReportContext;
+                continue;
+            }
+
             throw new ApiException(
                 StatusCodes.Status400BadRequest,
                 "chat.invalid_context",
                 "Chat context type is invalid.");
         }
 
-        if (documentIds.Count == 0)
+        if (documentIds.Count == 0 && string.IsNullOrWhiteSpace(reportContext))
         {
             throw new ApiException(
                 StatusCodes.Status409Conflict,
@@ -336,7 +360,11 @@ public sealed class ChatService(
                 "Selected chat contexts do not contain completed documents.");
         }
 
-        return new ResolvedRagScope("document", documentIds.ToList(), contexts);
+        return new ResolvedRagScope(
+            string.IsNullOrWhiteSpace(reportContext) ? "document" : "report",
+            documentIds.Count == 0 ? null : documentIds.ToList(),
+            reportContext,
+            contexts);
     }
 
     private async Task<ResolvedFolderContext> ResolveFolderContextAsync(
@@ -345,7 +373,7 @@ public sealed class ChatService(
         int contextOrder,
         CancellationToken cancellationToken)
     {
-        if (!request.FolderId.HasValue || request.DocumentId.HasValue)
+        if (!request.FolderId.HasValue || request.DocumentId.HasValue || request.ReportId.HasValue)
         {
             throw new ApiException(
                 StatusCodes.Status400BadRequest,
@@ -380,6 +408,7 @@ public sealed class ChatService(
                 ChatContextType.Folder,
                 folder.Id,
                 DocumentId: null,
+                ReportId: null,
                 includeSubfolders,
                 contextOrder,
                 folder.Name,
@@ -393,7 +422,7 @@ public sealed class ChatService(
         int contextOrder,
         CancellationToken cancellationToken)
     {
-        if (!request.DocumentId.HasValue || request.FolderId.HasValue)
+        if (!request.DocumentId.HasValue || request.FolderId.HasValue || request.ReportId.HasValue)
         {
             throw new ApiException(
                 StatusCodes.Status400BadRequest,
@@ -417,10 +446,82 @@ public sealed class ChatService(
                 ChatContextType.Document,
                 FolderId: null,
                 document.Id,
+                ReportId: null,
                 IncludeSubfolders: false,
                 contextOrder,
                 document.OriginalFileName,
                 await BuildDocumentPathAsync(workspaceId, document, cancellationToken)));
+    }
+
+    private async Task<ResolvedReportContext> ResolveReportContextAsync(
+        Guid workspaceId,
+        ChatMessageContextRequestDto request,
+        int contextOrder,
+        CancellationToken cancellationToken)
+    {
+        if (!request.ReportId.HasValue || request.FolderId.HasValue || request.DocumentId.HasValue)
+        {
+            throw new ApiException(
+                StatusCodes.Status400BadRequest,
+                "chat.invalid_context",
+                "Report context requires reportId and must omit folderId and documentId.");
+        }
+
+        var report = await db.Reports
+            .AsNoTracking()
+            .FirstOrDefaultAsync(candidate => candidate.Id == request.ReportId.Value
+                && candidate.WorkspaceId == workspaceId
+                && candidate.DeletedAt == null,
+                cancellationToken)
+            ?? throw new ApiException(
+                StatusCodes.Status404NotFound,
+                "report.not_found",
+                "Report not found.");
+
+        var documentIds = ParseReportSourceDocumentIds(report.SourceDocuments);
+        return new ResolvedReportContext(
+            report.Id,
+            documentIds,
+            BuildReportContext(report),
+            new ResolvedContext(
+                ChatContextType.Report,
+                FolderId: null,
+                DocumentId: null,
+                report.Id,
+                IncludeSubfolders: false,
+                contextOrder,
+                report.Title,
+                $"Reports/{report.Title}"));
+    }
+
+    private static IReadOnlyList<Guid> ParseReportSourceDocumentIds(string sourceDocuments)
+    {
+        if (string.IsNullOrWhiteSpace(sourceDocuments))
+        {
+            return [];
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<IReadOnlyList<Guid>>(sourceDocuments, JsonOptions)?
+                .Where(id => id != Guid.Empty)
+                .Distinct()
+                .ToList() ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+
+    private static string BuildReportContext(Report report)
+    {
+        var title = string.IsNullOrWhiteSpace(report.Title) ? "Untitled report" : report.Title.Trim();
+        var content = string.IsNullOrWhiteSpace(report.MarkdownContent)
+            ? "(Report content is empty.)"
+            : report.MarkdownContent.Trim();
+
+        return $"Report: {title}\nType: {report.ReportType}\n\n{content}";
     }
 
     private async Task<IReadOnlyCollection<Guid>> GetFolderTreeIdsAsync(
@@ -582,6 +683,7 @@ public sealed class ChatService(
             ToApiContextType(context.ContextType),
             context.FolderId,
             context.DocumentId,
+            context.ReportId,
             context.IncludeSubfolders,
             context.ContextDisplayName,
             context.ContextPath);
@@ -594,7 +696,9 @@ public sealed class ChatService(
             source.DocumentChunkId,
             source.FileName,
             source.Snippet ?? string.Empty,
-            source.SimilarityScore);
+            source.SimilarityScore,
+            TryReadIntMetadata(source.Metadata, "chunk_index"),
+            TryReadIntMetadata(source.Metadata, "page_number"));
     }
 
     private static WebSourceDto ToWebSourceDto(RagWebSourceResult source)
@@ -638,19 +742,54 @@ public sealed class ChatService(
         {
             ChatContextType.Folder => ApiChatContextType.Folder,
             ChatContextType.Document => ApiChatContextType.Document,
+            ChatContextType.Report => ApiChatContextType.Report,
             _ => throw new ArgumentOutOfRangeException(nameof(contextType), contextType, null)
         };
+    }
+
+    private static int? TryReadIntMetadata(string? metadata, string propertyName)
+    {
+        if (string.IsNullOrWhiteSpace(metadata))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(metadata);
+            return document.RootElement.TryGetProperty(propertyName, out var property)
+                && property.ValueKind == JsonValueKind.Number
+                && property.TryGetInt32(out var value)
+                ? value
+                : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static string BuildSourceMetadata(RagSourceResult source)
+    {
+        return JsonSerializer.Serialize(new
+        {
+            chunk_index = source.ChunkIndex,
+            page_number = source.PageNumber,
+            retrieval_debug = source.RetrievalDebug
+        }, JsonOptions);
     }
 
     private sealed record ResolvedRagScope(
         string Scope,
         IReadOnlyList<Guid>? DocumentIds,
+        string? ReportContext,
         IReadOnlyList<ResolvedContext> Contexts);
 
     private sealed record ResolvedContext(
         ChatContextType ContextType,
         Guid? FolderId,
         Guid? DocumentId,
+        Guid? ReportId,
         bool IncludeSubfolders,
         int ContextOrder,
         string? ContextDisplayName,
@@ -662,5 +801,11 @@ public sealed class ChatService(
 
     private sealed record ResolvedDocumentContext(
         Guid DocumentId,
+        ResolvedContext Context);
+
+    private sealed record ResolvedReportContext(
+        Guid ReportId,
+        IReadOnlyList<Guid> DocumentIds,
+        string ReportContext,
         ResolvedContext Context);
 }

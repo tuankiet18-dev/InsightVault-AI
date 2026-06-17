@@ -85,7 +85,7 @@ Required surfaces:
 - Workspace IDE
 - Document explorer and viewer
 - Upload flow
-- Chat/RAG panel
+- Chat/RAG inspector and optional full chat panel
 - Compare panel
 - Report viewer/list
 - Admin dashboard/users/jobs
@@ -103,8 +103,11 @@ Motion should be fast and functional:
 
 - Billing UI is implemented with workspace summary, plan selection, top-ups,
   checkout redirects, and success/cancel result states.
-- Chat UI exists, but backend Chat/RAG APIs are pending.
-- Report list/detail navigation needs clearer product flow.
+- Chat Ask is connected to backend Chat/RAG APIs. It should default to the
+  active workspace, narrow to active document/folder/report context, and keep
+  source citations near the answer.
+- Report list/detail navigation is implemented as workbench tabs; continue
+  polishing affordances for opening generated reports from Compare.
 - Duplicate workspace/layout component families should be consolidated.
 - Several screens still depend on mock-style components or isolated routes.
 - Mobile behavior needs structural adaptation beyond hidden side panels.

@@ -2,10 +2,14 @@ import { create } from 'zustand'
 import type { AiMode } from '../lib/constants'
 
 export type Citation = {
+  documentId: string
+  documentChunkId?: string | null
   fileName: string
   similarity: number
   chunkDetail: string
   snippet: string
+  chunkIndex?: number | null
+  pageNumber?: number | null
 }
 
 type AiState = {

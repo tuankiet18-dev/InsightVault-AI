@@ -4,9 +4,9 @@ This document describes the current PostgreSQL schema and the intended data owne
 
 Current status reference: `docs/about-project/CURRENT_PROJECT_STATUS.md`.
 
-Important implementation note: chat tables are part of the schema/target model,
-but the backend Chat/RAG API layer is not implemented yet. Billing tables and
-credit enforcement are implemented in the backend.
+Important implementation note: chat tables and backend Chat/RAG APIs are
+implemented. Billing tables and credit enforcement are implemented in the
+backend.
 
 ## Billing tables
 
@@ -31,7 +31,7 @@ transactions and record grants, debits, refunds, and adjustments in the ledger.
 - Active folder names are unique among sibling folders with the same parent in the same workspace.
 - Active document file names are unique inside the same folder, including root-level documents where `folder_id IS NULL`.
 - `ChatSession` belongs to one workspace and does not carry folder/document scope.
-- `ChatMessageContext` stores per-message `@folder` and `@file` mentions.
+- `ChatMessageContext` stores per-message folder, document, and report scope.
 - `ChatMessageSource.document_id` is nullable so hard-deleting a document preserves historical chat messages and citation snapshots.
 - User-facing delete for `Folder` and `Document` is soft delete through `deleted_at`.
 - Historical chat context uses snapshot fields and nullable resource references so approved Trash purge is not blocked by old chat history.
@@ -86,8 +86,7 @@ Rules:
 
 ## Chat And RAG Model
 
-Schema status: target/present in EF model. API status: pending
-`ChatController`/`ChatService`.
+Schema and API status: implemented through `ChatController`/`ChatService`.
 
 `chat_sessions` represents a conversation inside a workspace.
 
@@ -118,16 +117,17 @@ Important columns:
 
 `workspace_id` is denormalized from `chat_sessions.workspace_id`. This is intentional: it allows the database to enforce same-workspace constraints for message contexts.
 
-`chat_message_contexts` stores the explicit context selected by the user in a single message, usually from `@folder` or `@file`.
+`chat_message_contexts` stores the explicit context selected by the user in a single message, usually the active folder, document, or report.
 
 Important columns:
 
 - `id`
 - `workspace_id`
 - `chat_message_id`
-- `context_type`: `Folder` or `Document`
+- `context_type`: `Folder`, `Document`, or `Report`
 - `folder_id`
 - `document_id`
+- `report_id`
 - `include_subfolders`
 - `context_order`
 - `context_display_name`
@@ -138,9 +138,10 @@ Rules:
 
 - If `context_type = Folder`, `document_id` must be null. `folder_id` may later become null after hard delete because `context_display_name` and `context_path` preserve the historical snapshot.
 - If `context_type = Document`, `folder_id` must be null. `document_id` may later become null after hard delete because `context_display_name` and `context_path` preserve the historical snapshot.
+- If `context_type = Report`, `folder_id` and `document_id` must be null. `report_id` may later become null after hard delete because `context_display_name` and `context_path` preserve the historical snapshot.
 - `workspace_id` must match the parent chat message.
-- New folder/document references must belong to the same workspace. The application validates this on write; the database keeps nullable resource references so hard delete can preserve chat history snapshots.
-- Duplicate folder/document contexts in one message are rejected by unique indexes.
+- New folder/document/report references must belong to the same workspace. The application validates this on write; the database keeps nullable resource references so hard delete can preserve chat history snapshots.
+- Duplicate folder/document/report contexts in one message are rejected by unique indexes.
 - `context_display_name` and `context_path` are snapshots for readable chat history after rename or soft delete.
 
 RAG behavior:
@@ -148,6 +149,7 @@ RAG behavior:
 - Message without contexts: retrieve across the whole workspace.
 - Message with document contexts: retrieve only those documents.
 - Message with folder contexts: retrieve documents in the selected folder, optionally including subfolders.
+- Message with report context: answer against the report Markdown and, when available, retrieve related source document chunks.
 
 ## Delete Policy
 
@@ -178,6 +180,7 @@ Required order for a document purge:
 - `chat_message_contexts (chat_message_id, workspace_id)` references `chat_messages (id, workspace_id)`.
 - `chat_message_contexts.folder_id` references `folders.id` with `SET NULL`.
 - `chat_message_contexts.document_id` references `documents.id` with `SET NULL`.
+- `chat_message_contexts.report_id` references `reports.id` with `SET NULL`.
 - `documents` has filtered unique indexes for active file names per folder:
   - `(workspace_id, folder_id, file_name)` where `folder_id IS NOT NULL AND deleted_at IS NULL`
   - `(workspace_id, file_name)` where `folder_id IS NULL AND deleted_at IS NULL`

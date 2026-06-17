@@ -84,6 +84,7 @@ public sealed record RagQueryAiRequest(
     string Scope,
     Guid? FolderId,
     IReadOnlyList<Guid>? DocumentIds,
+    string? ReportContext,
     int TopK,
     IReadOnlyList<RagChatHistoryMessage> ChatHistory);
 
@@ -102,6 +103,8 @@ public sealed record RagSourceResult(
     string FileName,
     string Snippet,
     double? Similarity,
+    int? ChunkIndex,
+    int? PageNumber,
     object? RetrievalDebug);
 
 public sealed record RagWebSourceResult(

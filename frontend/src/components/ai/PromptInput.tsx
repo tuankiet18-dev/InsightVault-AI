@@ -1,17 +1,30 @@
 import { useAiStore } from '@/stores/aiStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { useChatStore } from '@/stores/chatStore'
+import { useTabStore } from '@/stores/tabStore'
 import { Send } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useCompareDocuments, useGenerateReport } from '@/hooks/useReports'
+import { chatApi } from '@/api/chatApi'
+import { chatKeys, useChatSessions } from '@/hooks/useChat'
+import { useQueryClient } from '@tanstack/react-query'
+import { ApiError } from '@/api/http'
+import type { ChatMessageContextRequest } from '@/types/api'
+import type { TabItem } from '@/types/ui'
 
 export function PromptInput() {
   const { prompt, setPrompt, mode, setAnswer, setCitations, setSuggestions, isLoading, setIsLoading } = useAiStore()
   const { activeWorkspaceId, selectedDocumentId, selectedFolderId } = useWorkspaceStore()
+  const { activeSessionId, setActiveSession } = useChatStore()
+  const { getActiveTab } = useTabStore()
+  const activeTab = getActiveTab()
+  const queryClient = useQueryClient()
+  const { data: sessions = [] } = useChatSessions(activeWorkspaceId)
   
   const compareMutation = useCompareDocuments()
   const generateReportMutation = useGenerateReport(activeWorkspaceId || '')
   
-  const handleRun = () => {
+  const handleRun = async () => {
     if (!prompt.trim() || isLoading || !activeWorkspaceId) return
     
     setIsLoading(true)
@@ -23,10 +36,55 @@ export function PromptInput() {
     const folderId = selectedFolderId
 
     if (mode === 'Ask') {
-      setAnswer('Workspace chat is designed for the right inspector, but backend Chat/RAG session APIs are not implemented yet.')
-      setSuggestions(['Use Compare for async document comparison', 'Use Report mode to queue a report job'])
-      setIsLoading(false)
-      setPrompt('')
+      try {
+        const activeSession = sessions.find(session => session.id === activeSessionId)
+        const session = activeSession ?? sessions[0] ?? await chatApi.createSession(activeWorkspaceId, {
+          title: 'Workspace chat',
+        })
+
+        if (session.id !== activeSessionId) {
+          setActiveSession(session.id)
+        }
+
+        const response = await chatApi.sendMessage(session.id, {
+          content: prompt,
+          contexts: buildAskContexts(activeTab, selectedDocumentId, selectedFolderId),
+        })
+
+        queryClient.invalidateQueries({ queryKey: chatKeys.sessions(activeWorkspaceId) })
+        queryClient.invalidateQueries({ queryKey: chatKeys.messages(session.id) })
+
+        setAnswer(response.assistantMessage.content)
+        setCitations(response.assistantMessage.sources
+          .filter(source => !!source.documentId)
+          .map(source => ({
+            documentId: source.documentId,
+            documentChunkId: source.documentChunkId,
+            fileName: source.fileName,
+            similarity: source.similarity ?? 0,
+            chunkDetail: source.pageNumber
+              ? `Page ${source.pageNumber}${source.chunkIndex != null ? ` · chunk ${source.chunkIndex}` : ''}`
+              : source.chunkIndex != null
+                ? `Chunk ${source.chunkIndex}`
+                : source.documentChunkId
+                  ? `Chunk ${source.documentChunkId.slice(0, 8)}`
+                  : 'Retrieved source',
+            snippet: source.snippet,
+            chunkIndex: source.chunkIndex,
+            pageNumber: source.pageNumber,
+          })))
+        setSuggestions(
+          response.assistantMessage.sources.length > 0
+            ? ['Open cited source', 'Ask a follow-up in the same workspace chat']
+            : ['Try asking about a completed document', 'Open a report or document to narrow the scope']
+        )
+        setPrompt('')
+      } catch (error) {
+        setAnswer(formatChatError(error))
+        setSuggestions(['Check that at least one source document is completed', 'Try again after the AI service is ready'])
+      } finally {
+        setIsLoading(false)
+      }
       return
     }
 
@@ -117,4 +175,44 @@ export function PromptInput() {
       </p>
     </div>
   )
+}
+
+function buildAskContexts(
+  activeTab: TabItem | undefined,
+  selectedDocumentId: string | null,
+  selectedFolderId: string | null,
+): ChatMessageContextRequest[] | undefined {
+  if (activeTab?.type === 'report') {
+    return [{ contextType: 'report', reportId: activeTab.reportId }]
+  }
+
+  if (activeTab?.type === 'document') {
+    return [{ contextType: 'document', documentId: activeTab.documentId }]
+  }
+
+  if (selectedDocumentId) {
+    return [{ contextType: 'document', documentId: selectedDocumentId }]
+  }
+
+  if (selectedFolderId) {
+    return [{ contextType: 'folder', folderId: selectedFolderId, includeSubfolders: true }]
+  }
+
+  return undefined
+}
+
+function formatChatError(error: unknown) {
+  if (error instanceof ApiError) {
+    if (error.errorCode === 'chat.no_completed_documents') {
+      return 'No completed documents were found in the selected chat scope. Upload or wait for processing to finish, then ask again.'
+    }
+
+    if (error.errorCode === 'chat.ai_failed') {
+      return 'The AI service could not answer this question right now. The message was saved, so you can retry in the same workspace chat.'
+    }
+
+    return error.message
+  }
+
+  return 'Chat failed unexpectedly. Please try again.'
 }

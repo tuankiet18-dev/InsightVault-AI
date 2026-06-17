@@ -121,7 +121,10 @@ public enum ApiChatContextType
     Folder,
 
     [JsonStringEnumMemberName("document")]
-    Document
+    Document,
+
+    [JsonStringEnumMemberName("report")]
+    Report
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter<ApiChatMessageRole>))]

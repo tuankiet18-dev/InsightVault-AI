@@ -148,6 +148,7 @@ public sealed class AiServiceClient(HttpClient httpClient) : IAiServiceClient
                 request.Scope,
                 request.FolderId,
                 request.DocumentIds,
+                request.ReportContext,
                 request.TopK,
                 request.ChatHistory.Select(message => new RagChatHistoryRequest(
                     message.Role,
@@ -180,6 +181,8 @@ public sealed class AiServiceClient(HttpClient httpClient) : IAiServiceClient
                 source.FileName,
                 source.Snippet,
                 source.Similarity,
+                source.ChunkIndex,
+                source.PageNumber,
                 source.RetrievalDebug)).ToList(),
             result.WebSources.Select(source => new RagWebSourceResult(
                 source.Title,
@@ -260,6 +263,7 @@ public sealed class AiServiceClient(HttpClient httpClient) : IAiServiceClient
         [property: JsonPropertyName("scope")] string Scope,
         [property: JsonPropertyName("folder_id")] Guid? FolderId,
         [property: JsonPropertyName("document_ids")] IReadOnlyList<Guid>? DocumentIds,
+        [property: JsonPropertyName("report_context")] string? ReportContext,
         [property: JsonPropertyName("top_k")] int TopK,
         [property: JsonPropertyName("chat_history")] IReadOnlyList<RagChatHistoryRequest> ChatHistory,
         [property: JsonPropertyName("web_search_options")] RagWebSearchOptionsRequest WebSearchOptions);
@@ -284,6 +288,8 @@ public sealed class AiServiceClient(HttpClient httpClient) : IAiServiceClient
         [property: JsonPropertyName("file_name")] string FileName,
         [property: JsonPropertyName("snippet")] string Snippet,
         [property: JsonPropertyName("similarity")] double? Similarity,
+        [property: JsonPropertyName("chunk_index")] int? ChunkIndex,
+        [property: JsonPropertyName("page_number")] int? PageNumber,
         [property: JsonPropertyName("retrieval_debug")] object? RetrievalDebug);
 
     private sealed record RagWebSourceResponse(

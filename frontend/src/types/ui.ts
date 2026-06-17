@@ -16,6 +16,9 @@ export type BaseTabItem = {
 export type DocumentTabItem = BaseTabItem & {
   type: 'document'
   documentId: string
+  sourceSnippet?: string
+  sourceChunkId?: string | null
+  sourcePageNumber?: number | null
 }
 
 export type ReportTabItem = BaseTabItem & {

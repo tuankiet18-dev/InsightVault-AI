@@ -17,6 +17,7 @@ public sealed record ChatMessageContextDto(
     ApiChatContextType ContextType,
     Guid? FolderId,
     Guid? DocumentId,
+    Guid? ReportId,
     bool IncludeSubfolders,
     string? ContextDisplayName,
     string? ContextPath);
