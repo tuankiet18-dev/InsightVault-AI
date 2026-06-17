@@ -38,27 +38,14 @@ function DocumentViewerContent({ document }: { document: DocumentDto }) {
 
   return (
     <div className="flex flex-col flex-1 min-h-0 bg-background">
-      <DocumentHeader document={document} />
+      <DocumentHeader document={document} viewMode={viewMode} setViewMode={setViewMode} />
 
-      <div className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-border bg-surface-0 px-4">
-        <div className="inline-flex rounded-md bg-muted p-1">
-          <ViewModeButton active={viewMode === 'original'} onClick={() => setViewMode('original')}>
-            Original
-          </ViewModeButton>
-          <ViewModeButton active={viewMode === 'summary'} onClick={() => setViewMode('summary')}>
-            AI Summary
-          </ViewModeButton>
-        </div>
-        <p className="hidden text-xs text-muted-foreground md:block">
-          {viewMode === 'original'
-            ? 'Read the uploaded source file. PDF, TXT, and Markdown support inline preview.'
-            : 'Review AI-generated summary, findings, and structured document intelligence.'}
-        </p>
-      </div>
-      
-      <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto flex max-w-6xl items-start gap-12 px-5 py-5 lg:px-8 lg:py-8">
-          <div className="min-w-0 flex-1">
+      <div className={cn("flex-1 flex flex-col min-h-0", viewMode === 'original' ? "overflow-hidden" : "overflow-y-auto")}>
+        <div className={cn(
+          "mx-auto flex w-full flex-1 flex-col min-h-0",
+          viewMode === 'summary' ? "max-w-[1280px] gap-12 p-6 lg:p-10" : ""
+        )}>
+          <div className="min-w-0 flex-1 flex flex-col min-h-0">
             {viewMode === 'original' ? (
               <DocumentOriginalViewer document={document} />
             ) : (
@@ -68,30 +55,6 @@ function DocumentViewerContent({ document }: { document: DocumentDto }) {
         </div>
       </div>
     </div>
-  )
-}
-
-function ViewModeButton({
-  active,
-  children,
-  onClick,
-}: {
-  active: boolean
-  children: string
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'h-8 rounded px-3 text-xs font-semibold transition-colors',
-        active ? 'bg-surface-0 text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-      )}
-      aria-pressed={active}
-    >
-      {children}
-    </button>
   )
 }
 

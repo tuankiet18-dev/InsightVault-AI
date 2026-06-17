@@ -12,6 +12,7 @@ type UiState = {
   inviteModalOpen: boolean
   activeNavItem: string
   mobileDrawer: 'explorer' | 'inspector' | null
+  focusMode: boolean
 
   toggleExplorer: () => void
   toggleInspector: () => void
@@ -24,6 +25,7 @@ type UiState = {
   setInviteModalOpen: (open: boolean) => void
   setActiveNavItem: (id: string) => void
   setMobileDrawer: (drawer: 'explorer' | 'inspector' | null) => void
+  setFocusMode: (active: boolean) => void
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -38,6 +40,7 @@ export const useUiStore = create<UiState>((set) => ({
   inviteModalOpen: false,
   activeNavItem: 'explorer',
   mobileDrawer: null,
+  focusMode: false,
 
   toggleExplorer: () => set((s) => ({ explorerOpen: !s.explorerOpen })),
   toggleInspector: () => set((s) => ({ inspectorOpen: !s.inspectorOpen })),
@@ -50,4 +53,5 @@ export const useUiStore = create<UiState>((set) => ({
   setInviteModalOpen: (open) => set({ inviteModalOpen: open }),
   setActiveNavItem: (id) => set({ activeNavItem: id }),
   setMobileDrawer: (drawer) => set({ mobileDrawer: drawer }),
+  setFocusMode: (active) => set({ focusMode: active }),
 }))

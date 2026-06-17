@@ -1,4 +1,5 @@
-import { AlertCircle, Download, ExternalLink, FileText, Loader2 } from 'lucide-react'
+import { AlertCircle, Download, FileText, Loader2 } from 'lucide-react'
+
 import { useDocumentOriginalAccess, useDocumentOriginalText } from '@/hooks/useDocuments'
 import type { DocumentDto } from '@/types/api'
 
@@ -28,12 +29,11 @@ export function DocumentOriginalViewer({ document }: { document: DocumentDto }) 
 
   if (access.previewKind === 'pdf') {
     return (
-      <section className="flex min-h-[calc(100dvh-190px)] flex-col overflow-hidden rounded-lg border border-border bg-surface-0">
-        <PreviewToolbar accessUrl={access.downloadUrl} fileName={access.fileName} />
+      <section className="flex flex-1 flex-col overflow-hidden min-h-0 bg-background">
         <iframe
           src={access.downloadUrl}
           title={`Original PDF preview for ${access.fileName}`}
-          className="min-h-[620px] flex-1 bg-white"
+          className="flex-1 w-full bg-white"
         />
       </section>
     )
@@ -41,8 +41,7 @@ export function DocumentOriginalViewer({ document }: { document: DocumentDto }) 
 
   if (access.previewKind === 'text') {
     return (
-      <section className="overflow-hidden rounded-lg border border-border bg-surface-0">
-        <PreviewToolbar accessUrl={access.downloadUrl} fileName={access.fileName} />
+      <section className="flex flex-1 flex-col overflow-hidden min-h-0 bg-background">
         {textQuery.isLoading ? (
           <div className="flex min-h-[360px] items-center justify-center text-sm text-muted-foreground">
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -55,7 +54,7 @@ export function DocumentOriginalViewer({ document }: { document: DocumentDto }) 
             detail="Download the original file, or try again after the object storage service is ready."
           />
         ) : (
-          <pre className="max-h-[calc(100dvh-220px)] overflow-auto whitespace-pre-wrap p-6 font-mono text-[13px] leading-6 text-foreground">
+          <pre className="flex-1 overflow-auto whitespace-pre-wrap p-6 font-mono text-[13px] leading-6 text-foreground">
             {textQuery.data.content}
           </pre>
         )}
@@ -87,35 +86,7 @@ export function DocumentOriginalViewer({ document }: { document: DocumentDto }) 
   )
 }
 
-function PreviewToolbar({ accessUrl, fileName }: { accessUrl: string; fileName: string }) {
-  return (
-    <div className="flex min-h-11 items-center justify-between gap-3 border-b border-border bg-surface-50 px-3">
-      <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
-        <FileText className="h-4 w-4 shrink-0" />
-        <span className="truncate">{fileName}</span>
-      </div>
-      <div className="flex shrink-0 items-center gap-1">
-        <a
-          href={accessUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
-        >
-          <ExternalLink className="h-3.5 w-3.5" />
-          Open
-        </a>
-        <a
-          href={accessUrl}
-          download
-          className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
-        >
-          <Download className="h-3.5 w-3.5" />
-          Download
-        </a>
-      </div>
-    </div>
-  )
-}
+
 
 function PreviewNotice({
   title,

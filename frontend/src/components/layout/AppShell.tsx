@@ -8,10 +8,10 @@ import { CreateWorkspaceModal } from '../workspace/CreateWorkspaceModal'
 import { CreateFolderModal } from '../workspace/CreateFolderModal'
 import { InviteMemberModal } from '../workspace/InviteMemberModal'
 import { useUiStore } from '@/stores/uiStore'
-import { cn } from '@/lib/utils'
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 
 export function AppShell({ children, rightPanel }: { children: ReactNode; rightPanel?: ReactNode }) {
-  const { explorerOpen, inspectorOpen } = useUiStore()
+  const { explorerOpen, inspectorOpen, focusMode } = useUiStore()
 
   return (
     <div className="flex h-[100dvh] w-screen flex-col overflow-hidden bg-background text-foreground">
@@ -20,33 +20,31 @@ export function AppShell({ children, rightPanel }: { children: ReactNode; rightP
         <div className="flex min-w-0 flex-1 flex-col">
           <TopBar />
 
-          <div className="flex min-h-0 flex-1">
-            <div
-              className={cn(
-                "hidden shrink-0 overflow-hidden transition-[width] duration-200 ease-out lg:block",
-                explorerOpen ? "lg:w-[280px]" : "lg:w-0"
-              )}
-            >
-              <ExplorerPanel />
-            </div>
+          <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1 w-full">
+            {explorerOpen && !focusMode && (
+              <ResizablePanel id="explorer-panel" defaultSize="20%" minSize="15%" maxSize="40%" className="min-w-0">
+                <div className="h-full w-full overflow-hidden">
+                  <ExplorerPanel />
+                </div>
+              </ResizablePanel>
+            )}
+            {explorerOpen && !focusMode && <ResizableHandle withHandle />}
 
-            <main className="flex min-w-0 flex-1 flex-col bg-background">
-              {children}
-            </main>
+            <ResizablePanel id="main-panel" defaultSize="60%" minSize="30%" className="min-w-0">
+              <main className="flex h-full w-full flex-col bg-background min-h-0 min-w-0 overflow-hidden">
+                {children}
+              </main>
+            </ResizablePanel>
 
-            {rightPanel && (
-              <div
-                className={cn(
-                  "hidden shrink-0 overflow-hidden transition-[width] duration-200 ease-out xl:block",
-                  inspectorOpen ? "xl:w-[340px]" : "xl:w-0"
-                )}
-              >
-                <aside className="flex h-full w-full min-w-0 flex-col border-l border-border bg-card">
+            {rightPanel && inspectorOpen && !focusMode && <ResizableHandle withHandle />}
+            {rightPanel && inspectorOpen && !focusMode && (
+              <ResizablePanel id="inspector-panel" defaultSize="20%" minSize="15%" maxSize="40%" className="min-w-0">
+                <aside className="flex h-full w-full flex-col border-l border-border bg-card overflow-hidden">
                   {rightPanel}
                 </aside>
-              </div>
+              </ResizablePanel>
             )}
-          </div>
+          </ResizablePanelGroup>
 
           <StatusBar />
         </div>
