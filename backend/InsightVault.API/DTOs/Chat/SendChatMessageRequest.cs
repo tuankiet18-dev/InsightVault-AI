@@ -11,4 +11,5 @@ public sealed record ChatMessageContextRequestDto(
     ApiChatContextType ContextType,
     Guid? FolderId,
     Guid? DocumentId,
+    Guid? ReportId,
     bool? IncludeSubfolders);

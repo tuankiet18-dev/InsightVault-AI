@@ -425,8 +425,9 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
         {
             entity.ToTable(table => table.HasCheckConstraint(
                 "ck_chat_message_contexts_context_shape",
-                "(context_type = 'Folder' AND document_id IS NULL) OR " +
-                "(context_type = 'Document' AND folder_id IS NULL)"));
+                "(context_type = 'Folder' AND document_id IS NULL AND report_id IS NULL) OR " +
+                "(context_type = 'Document' AND folder_id IS NULL AND report_id IS NULL) OR " +
+                "(context_type = 'Report' AND folder_id IS NULL AND document_id IS NULL)"));
 
             entity.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.Property(x => x.ContextType).HasConversion(contextTypeConverter).HasMaxLength(50).IsRequired();
@@ -451,10 +452,16 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
                 .HasForeignKey(x => x.DocumentId)
                 .OnDelete(DeleteBehavior.SetNull);
 
+            entity.HasOne(x => x.Report)
+                .WithMany()
+                .HasForeignKey(x => x.ReportId)
+                .OnDelete(DeleteBehavior.SetNull);
+
             entity.HasIndex(x => x.WorkspaceId);
             entity.HasIndex(x => x.ChatMessageId);
             entity.HasIndex(x => x.FolderId);
             entity.HasIndex(x => x.DocumentId);
+            entity.HasIndex(x => x.ReportId);
             entity.HasIndex(x => new { x.ChatMessageId, x.ContextOrder });
             entity.HasIndex(x => new { x.ChatMessageId, x.ContextType, x.FolderId })
                 .IsUnique()
@@ -462,6 +469,9 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
             entity.HasIndex(x => new { x.ChatMessageId, x.ContextType, x.DocumentId })
                 .IsUnique()
                 .HasFilter("document_id IS NOT NULL");
+            entity.HasIndex(x => new { x.ChatMessageId, x.ContextType, x.ReportId })
+                .IsUnique()
+                .HasFilter("report_id IS NOT NULL");
         });
     }
 

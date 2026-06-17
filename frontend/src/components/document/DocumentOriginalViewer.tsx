@@ -1,8 +1,17 @@
+import { useEffect, useRef } from 'react'
 import { AlertCircle, Download, ExternalLink, FileText, Loader2 } from 'lucide-react'
 import { useDocumentOriginalAccess, useDocumentOriginalText } from '@/hooks/useDocuments'
 import type { DocumentDto } from '@/types/api'
 
-export function DocumentOriginalViewer({ document }: { document: DocumentDto }) {
+export function DocumentOriginalViewer({
+  document,
+  sourceSnippet,
+  sourcePageNumber,
+}: {
+  document: DocumentDto
+  sourceSnippet?: string
+  sourcePageNumber?: number | null
+}) {
   const accessQuery = useDocumentOriginalAccess(document.id)
   const access = accessQuery.data
   const textQuery = useDocumentOriginalText(document.id, access?.previewKind === 'text')
@@ -31,7 +40,7 @@ export function DocumentOriginalViewer({ document }: { document: DocumentDto }) 
       <section className="flex min-h-[calc(100dvh-190px)] flex-col overflow-hidden rounded-lg border border-border bg-surface-0">
         <PreviewToolbar accessUrl={access.downloadUrl} fileName={access.fileName} />
         <iframe
-          src={access.downloadUrl}
+          src={sourcePageNumber ? `${access.downloadUrl}#page=${sourcePageNumber}` : access.downloadUrl}
           title={`Original PDF preview for ${access.fileName}`}
           className="min-h-[620px] flex-1 bg-white"
         />
@@ -55,9 +64,7 @@ export function DocumentOriginalViewer({ document }: { document: DocumentDto }) 
             detail="Download the original file, or try again after the object storage service is ready."
           />
         ) : (
-          <pre className="max-h-[calc(100dvh-220px)] overflow-auto whitespace-pre-wrap p-6 font-mono text-[13px] leading-6 text-foreground">
-            {textQuery.data.content}
-          </pre>
+          <TextPreview content={textQuery.data.content} sourceSnippet={sourceSnippet} />
         )}
       </section>
     )
@@ -85,6 +92,55 @@ export function DocumentOriginalViewer({ document }: { document: DocumentDto }) 
       </div>
     </section>
   )
+}
+
+function TextPreview({ content, sourceSnippet }: { content: string; sourceSnippet?: string }) {
+  const match = findSnippetMatch(content, sourceSnippet)
+  const markRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    markRef.current?.scrollIntoView({ block: 'center' })
+  }, [match?.start])
+
+  if (!match) {
+    return (
+      <pre className="max-h-[calc(100dvh-220px)] overflow-auto whitespace-pre-wrap p-6 font-mono text-[13px] leading-6 text-foreground">
+        {content}
+      </pre>
+    )
+  }
+
+  return (
+    <pre className="max-h-[calc(100dvh-220px)] overflow-auto whitespace-pre-wrap p-6 font-mono text-[13px] leading-6 text-foreground">
+      {content.slice(0, match.start)}
+      <mark ref={markRef} className="rounded bg-ai-100 px-0.5 text-ai-950 ring-1 ring-ai-200">
+        {content.slice(match.start, match.end)}
+      </mark>
+      {content.slice(match.end)}
+    </pre>
+  )
+}
+
+function findSnippetMatch(content: string, snippet?: string) {
+  const rawSnippet = snippet?.replace(/\.\.\.$/, '').trim()
+  const normalizedSnippet = rawSnippet?.replace(/\s+/g, ' ').trim()
+  if (!rawSnippet || !normalizedSnippet) return null
+
+  const candidates = [
+    rawSnippet,
+    normalizedSnippet,
+    normalizedSnippet.slice(0, 180),
+    normalizedSnippet.slice(0, 120),
+  ].filter(candidate => candidate.length >= 24)
+
+  for (const candidate of candidates) {
+    const index = content.toLowerCase().indexOf(candidate.toLowerCase())
+    if (index >= 0) {
+      return { start: index, end: index + candidate.length }
+    }
+  }
+
+  return null
 }
 
 function PreviewToolbar({ accessUrl, fileName }: { accessUrl: string; fileName: string }) {

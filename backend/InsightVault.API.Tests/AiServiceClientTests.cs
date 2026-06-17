@@ -27,6 +27,8 @@ public sealed class AiServiceClientTests
                       "file_name": "Requirement.pdf",
                       "snippet": "Relevant snippet",
                       "similarity": 0.82,
+                      "chunk_index": 4,
+                      "page_number": 2,
                       "retrieval_debug": { "dense_rank": 1 }
                     }
                   ],
@@ -48,6 +50,7 @@ public sealed class AiServiceClientTests
             "document",
             FolderId: null,
             [documentId],
+            ReportContext: null,
             TopK: 5,
             [new RagChatHistoryMessage("user", "Previous question")]));
 
@@ -64,6 +67,8 @@ public sealed class AiServiceClientTests
         Assert.Equal(workspaceId, root.GetProperty("workspace_id").GetGuid());
         Assert.Equal("document", root.GetProperty("scope").GetString());
         Assert.Equal(documentId, root.GetProperty("document_ids")[0].GetGuid());
+        Assert.True(root.TryGetProperty("report_context", out var reportContext));
+        Assert.Equal(JsonValueKind.Null, reportContext.ValueKind);
         Assert.Equal(5, root.GetProperty("top_k").GetInt32());
         Assert.Equal("user", root.GetProperty("chat_history")[0].GetProperty("role").GetString());
         Assert.False(root.GetProperty("web_search_options").GetProperty("enabled").GetBoolean());

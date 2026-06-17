@@ -1,8 +1,10 @@
 import { useAiStore } from '@/stores/aiStore'
+import { useTabStore } from '@/stores/tabStore'
 import { FileText, ChevronRight } from 'lucide-react'
 
 export function AiAnswer() {
   const { answer, citations, suggestions } = useAiStore()
+  const { openTab } = useTabStore()
 
   if (!answer) return null
 
@@ -24,6 +26,17 @@ export function AiAnswer() {
             {citations.map((c, i) => (
               <button 
                 key={i} 
+                type="button"
+                onClick={() => openTab({
+                  id: `doc-${c.documentId}`,
+                  label: c.fileName,
+                  type: 'document',
+                  documentId: c.documentId,
+                  sourceSnippet: c.snippet,
+                  sourceChunkId: c.documentChunkId,
+                  sourcePageNumber: c.pageNumber,
+                  closable: true,
+                })}
                 className="flex flex-col text-left p-3 rounded-lg border border-border bg-surface-0 hover:border-ai-300 hover:shadow-sm transition-all group"
               >
                 <div className="flex items-center justify-between w-full mb-1">

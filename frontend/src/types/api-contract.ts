@@ -194,12 +194,13 @@ export type ChatSessionDto = {
   updatedAt: string
 }
 
-export type ChatContextType = 'folder' | 'document'
+export type ChatContextType = 'folder' | 'document' | 'report'
 
 export type ChatMessageContextRequest = {
   contextType: ChatContextType
   folderId?: string | null
   documentId?: string | null
+  reportId?: string | null
   includeSubfolders?: boolean
 }
 
@@ -207,6 +208,7 @@ export type ChatMessageContextDto = {
   contextType: ChatContextType
   folderId?: string | null
   documentId?: string | null
+  reportId?: string | null
   includeSubfolders: boolean
   contextDisplayName?: string | null
   contextPath?: string | null
@@ -218,6 +220,8 @@ export type ChatSourceDto = {
   fileName: string
   snippet: string
   similarity?: number | null
+  chunkIndex?: number | null
+  pageNumber?: number | null
 }
 
 export type WebSourceDto = {

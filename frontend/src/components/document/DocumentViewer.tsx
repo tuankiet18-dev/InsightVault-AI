@@ -32,6 +32,8 @@ export function DocumentViewer() {
 }
 
 function DocumentViewerContent({ document }: { document: DocumentDto }) {
+  const { getActiveTab } = useTabStore()
+  const activeTab = getActiveTab()
   const [viewMode, setViewMode] = useState<DocumentViewMode>(
     canPreviewOriginal(document.originalFileName, document.fileType) ? 'original' : 'summary'
   )
@@ -60,7 +62,11 @@ function DocumentViewerContent({ document }: { document: DocumentDto }) {
         <div className="mx-auto flex max-w-6xl items-start gap-12 px-5 py-5 lg:px-8 lg:py-8">
           <div className="min-w-0 flex-1">
             {viewMode === 'original' ? (
-              <DocumentOriginalViewer document={document} />
+              <DocumentOriginalViewer
+                document={document}
+                sourceSnippet={activeTab?.type === 'document' ? activeTab.sourceSnippet : undefined}
+                sourcePageNumber={activeTab?.type === 'document' ? activeTab.sourcePageNumber : undefined}
+              />
             ) : (
               <DocumentSummary document={document} />
             )}
