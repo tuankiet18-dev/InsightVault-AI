@@ -52,7 +52,10 @@ public sealed class AiServiceClientTests
             [documentId],
             ReportContext: null,
             TopK: 5,
-            [new RagChatHistoryMessage("user", "Previous question")]));
+            ChatHistory: [new RagChatHistoryMessage("user", "Previous question")],
+            ModelName: "gemini-2.5-flash",
+            WebSearchEnabled: true,
+            WebSearchProvider: "duckduckgo"));
 
         Assert.Equal("/rag/query", handler.RequestUri?.AbsolutePath);
         Assert.Equal("Answer markdown", result.Answer);
@@ -70,8 +73,10 @@ public sealed class AiServiceClientTests
         Assert.True(root.TryGetProperty("report_context", out var reportContext));
         Assert.Equal(JsonValueKind.Null, reportContext.ValueKind);
         Assert.Equal(5, root.GetProperty("top_k").GetInt32());
+        Assert.Equal("gemini-2.5-flash", root.GetProperty("model_name").GetString());
         Assert.Equal("user", root.GetProperty("chat_history")[0].GetProperty("role").GetString());
-        Assert.False(root.GetProperty("web_search_options").GetProperty("enabled").GetBoolean());
+        Assert.True(root.GetProperty("web_search_options").GetProperty("enabled").GetBoolean());
+        Assert.Equal("duckduckgo", root.GetProperty("web_search_options").GetProperty("provider").GetString());
     }
 
     private sealed class CapturingHandler(HttpResponseMessage response) : HttpMessageHandler, IDisposable

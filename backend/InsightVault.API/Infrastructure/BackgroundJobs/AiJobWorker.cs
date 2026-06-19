@@ -1,7 +1,9 @@
 using System.Text;
 using System.Text.Json;
 using InsightVault.API.Application.Abstractions.Ai;
+using InsightVault.API.Application.Abstractions.Services.SystemSettings;
 using InsightVault.API.Application.Services.Reports;
+using InsightVault.API.Application.Services.SystemSettings;
 using InsightVault.API.Data;
 using InsightVault.API.Domain.Entities;
 using InsightVault.API.Domain.Enums;
@@ -96,6 +98,7 @@ public sealed class AiJobWorker(
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<InsightVaultDbContext>();
         var aiServiceClient = scope.ServiceProvider.GetRequiredService<IAiServiceClient>();
+        var systemSettingReader = scope.ServiceProvider.GetRequiredService<ISystemSettingReader>();
 
         var job = await db.AiJobs.FirstOrDefaultAsync(
             candidate => candidate.Id == jobId,
@@ -127,14 +130,18 @@ public sealed class AiJobWorker(
         try
         {
             var payload = DeserializePayload(job.InputPayload);
+            var modelName = await systemSettingReader.GetStringAsync(
+                SystemSettingKeys.DefaultAiModel,
+                SystemSettingKeys.DefaultAiModelFallback,
+                cancellationToken);
 
             if (job.JobType == AiJobType.GenerateReport)
             {
-                await ProcessGenerateReportJobAsync(db, aiServiceClient, job, payload, cancellationToken);
+                await ProcessGenerateReportJobAsync(db, aiServiceClient, job, payload, modelName, cancellationToken);
                 return;
             }
 
-            await ProcessCompareJobAsync(db, aiServiceClient, job, payload, cancellationToken);
+            await ProcessCompareJobAsync(db, aiServiceClient, job, payload, modelName, cancellationToken);
         }
         catch (Exception exception)
         {
@@ -161,6 +168,7 @@ public sealed class AiJobWorker(
         IAiServiceClient aiServiceClient,
         AiJob job,
         ReportJobPayload payload,
+        string modelName,
         CancellationToken cancellationToken)
     {
         var reportType = ReportService.ParseReportTypeRequired(
@@ -175,7 +183,8 @@ public sealed class AiJobWorker(
                 ReportService.ToApiReportTypeString(reportType),
                 payload.Title,
                 payload.CustomPrompt,
-                StoreReport: false),
+                StoreReport: false,
+                ModelName: modelName),
             cancellationToken);
 
         var structuredResult = JsonSerializer.Serialize(new
@@ -208,6 +217,7 @@ public sealed class AiJobWorker(
         IAiServiceClient aiServiceClient,
         AiJob job,
         ReportJobPayload payload,
+        string modelName,
         CancellationToken cancellationToken)
     {
         var result = await aiServiceClient.CompareDocumentsAsync(
@@ -219,7 +229,8 @@ public sealed class AiJobWorker(
                 payload.DocumentIds,
                 payload.DocumentNames,
                 payload.Title,
-                StoreReport: false),
+                StoreReport: false,
+                ModelName: modelName),
             cancellationToken);
 
         var structuredResult = JsonSerializer.Serialize(new

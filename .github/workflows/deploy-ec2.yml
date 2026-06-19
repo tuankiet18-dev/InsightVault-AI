@@ -1,0 +1,33 @@
+name: Deploy EC2
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-ec2
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy Docker Compose stack
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_SSH_PORT || '22' }}
+          script_stop: true
+          script: |
+            set -e
+            cd "${{ secrets.EC2_APP_DIR }}"
+            git fetch origin main
+            git checkout main
+            git reset --hard origin/main
+            docker compose --env-file infra/.env -f infra/docker-compose.prod.yml config >/tmp/insightvault-compose.yml
+            docker compose --env-file infra/.env -f infra/docker-compose.prod.yml up -d --build --remove-orphans
+            docker image prune -f
+            docker compose --env-file infra/.env -f infra/docker-compose.prod.yml ps

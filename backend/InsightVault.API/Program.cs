@@ -26,6 +26,7 @@ builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 
 builder.Services.AddOpenApi();
+builder.Services.AddMemoryCache();
 builder.Services.AddControllers()
     .ConfigureApiBehaviorOptions(options =>
     {
@@ -132,12 +133,16 @@ builder.Services.AddInfrastructureServices(builder.Configuration);
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+var autoMigrate = builder.Configuration.GetValue<bool>("Database:AutoMigrate");
+if (app.Environment.IsDevelopment() || autoMigrate)
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<InsightVaultDbContext>();
     await db.Database.MigrateAsync();
+}
 
+if (app.Environment.IsDevelopment())
+{
     app.MapOpenApi();
     app.MapScalarApiReference();
 }

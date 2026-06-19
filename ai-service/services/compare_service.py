@@ -9,7 +9,7 @@ import time
 
 from core.config import settings
 from core.database import get_connection
-from core.chat_provider import chat_model
+from core.chat_provider import chat_model, get_chat_model
 from services.report_store import insert_report
 
 logger = logging.getLogger(__name__)
@@ -85,6 +85,7 @@ def compare_documents(
     ai_job_id: str | None = None,
     title: str | None = None,
     store_report: bool = False,
+    model_name: str | None = None,
 ) -> dict:
     """
     Compare multiple documents and detect gaps/conflicts.
@@ -115,10 +116,11 @@ def compare_documents(
 
     last_error: Exception | None = None
     delay = settings.GEMINI_RETRY_DELAY
+    model = get_chat_model(model_name)
 
     for attempt in range(1, settings.GEMINI_MAX_RETRIES + 1):
         try:
-            raw = chat_model.generate_text(prompt)
+            raw = model.generate_text(prompt)
 
             if raw.startswith("```"):
                 raw = raw.split("```")[1]

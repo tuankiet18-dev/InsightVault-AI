@@ -31,6 +31,7 @@ async def compare(req: CompareRequest) -> CompareResponse:
             document_names=req.document_names,
             title=req.title,
             store_report=req.store_report and settings.AI_ALLOW_REPORT_PERSISTENCE,
+            model_name=req.model_name,
         )
     except RuntimeError as exc:
         logger.error("Compare failed: %s", exc)
