@@ -27,8 +27,8 @@ export const billingApi = {
       { productCode },
     ),
 
-  confirmVnPayReturn: (queryString: string) =>
+  confirmPayOsReturn: (queryString: string) =>
     http.get<PaymentReturnResponseDto>(
-      `/billing/vnpay/return${queryString ? `?${queryString}` : ''}`,
+      `/billing/payos/return${queryString ? `?${queryString}` : ''}`,
     ),
 }

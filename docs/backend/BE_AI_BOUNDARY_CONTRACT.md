@@ -4,10 +4,9 @@ This document defines the agreed boundary between the ASP.NET Core backend and t
 
 Current status reference: `docs/about-project/CURRENT_PROJECT_STATUS.md`.
 
-Current implementation note: document processing, compare, and report
-orchestration are implemented through backend workers and the AI service.
-Backend Chat/RAG session/message APIs are still pending, so the RAG section
-below is the target contract rather than completed backend behavior.
+Current implementation note: document processing, compare, report
+orchestration, and Chat/RAG session/message APIs are implemented through
+backend services and the AI service.
 
 ## Final Ownership Decision
 
@@ -20,6 +19,8 @@ Backend owns:
 - MinIO upload authorization and object-key creation.
 - `documents`, `ai_jobs`, `chat_sessions`, `chat_messages`, `chat_message_sources`, and `reports` business state.
 - Resolving `@file` and `@folder` mentions into allowed document ids before an AI request.
+- Resolving active report context into allowed report Markdown plus related
+  source document ids before an AI request.
 - Soft delete, trash, restore, hard delete, and report versioning business rules.
 
 AI service owns:
@@ -86,6 +87,8 @@ New MVP RAG rule:
 - Backend deduplicates all resolved document ids and sends them to AI as explicit `document_ids`.
 - AI should treat explicit `document_ids` as the most precise scope.
 - Direct `folder_id` RAG remains supported for compatibility, but new Backend chat flow should prefer `document_ids` so folder subtree behavior is deterministic.
+- Active report chat sends `scope = "report"` with `report_context`; AI uses the
+  report Markdown as evidence and may retrieve related source chunks.
 - Backend must resolve only `completed` and non-deleted documents.
 - AI similarity search must also filter `documents.deleted_at IS NULL` as defense in depth.
 - Soft-deleted document chunks may remain physically stored, but they must be hidden from retrieval through the document filter.
@@ -143,9 +146,8 @@ Target persistence:
 
 ### RAG Query
 
-Backend implementation status: pending. AI service supports `/rag/query`, but
-backend still needs `ChatController`/`ChatService` to authenticate, resolve
-mentions, call AI, and persist messages/sources.
+Backend implementation status: implemented. `ChatController`/`ChatService`
+authenticate, resolve context, call AI, and persist messages/sources.
 
 Backend calls AI only after checking chat workspace permission and message context ownership.
 Backend resolves any `@file` / `@folder` mentions before calling AI.
@@ -156,6 +158,7 @@ RAG scope is resolved by backend before calling AI:
 - If a message has no contexts, backend uses all readable documents in the chat session workspace.
 - Folder contexts resolve to completed, non-deleted documents in the folder and all subfolders by default.
 - Document contexts resolve to the mentioned documents.
+- Report contexts resolve to the active report Markdown plus source document ids when the report stores them.
 
 Retrieval uses hybrid RAG:
 
@@ -173,9 +176,10 @@ Request:
 {
   "question": "Explain chapter 1",
   "workspace_id": "uuid",
-  "scope": "workspace|document|folder",
+  "scope": "workspace|document|folder|report",
   "folder_id": "uuid-or-null",
   "document_ids": ["uuid"],
+  "report_context": "Report markdown when scope=report",
   "top_k": 5,
   "chat_history": [
     { "role": "user", "content": "Previous question" },
@@ -190,6 +194,7 @@ Backend mapping:
 - `@file` -> `scope = "document"`, `document_ids = resolved file ids`.
 - `@folder` -> `scope = "document"`, `document_ids = all resolved document ids under the folder tree`.
 - Compatibility-only folder scope -> `scope = "folder"`, `folder_id = selected folder id`.
+- Active report -> `scope = "report"`, `report_context = markdown`, `document_ids = report source ids when available`.
 - RAG chat does not create an `ai_jobs` row.
 - Viewer can call RAG chat but cannot run compare or report generation in MVP.
 
@@ -205,6 +210,8 @@ Response:
       "file_name": "Lecture 1.pdf",
       "snippet": "Relevant text",
       "similarity": 0.82,
+      "chunk_index": 3,
+      "page_number": 2,
       "retrieval_debug": {
         "dense_rank": 1,
         "dense_score": 0.82,
@@ -224,7 +231,7 @@ Persistence target in Backend:
 
 - User message.
 - Assistant message.
-- Message contexts for `@folder` and `@file` mentions. Context rows store `workspace_id` and snapshot display fields so the database can enforce same-workspace references and chat history remains understandable after rename/soft delete.
+- Message contexts for folder, document, and report scope. Context rows store `workspace_id` and snapshot display fields so the database can enforce same-workspace references and chat history remains understandable after rename/soft delete.
 - Message sources.
 - Retrieval debug score in `chat_message_sources.metadata` as JSON for admin-only audit/debug.
 
@@ -233,7 +240,7 @@ Database safety:
 - `chat_sessions` are workspace-scoped only.
 - `chat_messages.workspace_id` must match the parent session workspace.
 - `chat_message_contexts.workspace_id` must match the parent message workspace.
-- Folder/document context references are nullable so approved hard delete can preserve chat history snapshots. Backend must validate same-workspace ownership before creating message contexts.
+- Folder/document/report context references are nullable so approved hard delete can preserve chat history snapshots. Backend must validate same-workspace ownership before creating message contexts.
 - User-facing delete for folders/documents is soft delete.
 - Workspace Owner may soft-delete, restore, or hard-delete any document in the workspace.
 - Editor may soft-delete, restore, or hard-delete only documents whose `uploaded_by_id` matches the current Editor.

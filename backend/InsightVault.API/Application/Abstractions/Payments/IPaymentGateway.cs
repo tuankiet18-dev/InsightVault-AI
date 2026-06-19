@@ -1,5 +1,7 @@
 namespace InsightVault.API.Application.Abstractions.Payments;
 
+using System.Text.Json;
+
 public interface IPaymentGateway
 {
     string ProviderName { get; }
@@ -8,7 +10,11 @@ public interface IPaymentGateway
         PaymentCheckoutRequest request,
         CancellationToken cancellationToken = default);
 
-    Task<VerifiedPayment> VerifyNotificationAsync(
+    Task<VerifiedPayment> VerifyWebhookAsync(
+        JsonElement payload,
+        CancellationToken cancellationToken = default);
+
+    Task<VerifiedPayment> VerifyReturnAsync(
         IReadOnlyDictionary<string, string> parameters,
         CancellationToken cancellationToken = default);
 }

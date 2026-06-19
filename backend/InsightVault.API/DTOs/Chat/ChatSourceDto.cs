@@ -5,4 +5,6 @@ public sealed record ChatSourceDto(
     Guid? DocumentChunkId,
     string FileName,
     string Snippet,
-    double? Similarity);
+    double? Similarity,
+    int? ChunkIndex,
+    int? PageNumber);

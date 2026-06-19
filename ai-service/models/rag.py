@@ -16,15 +16,24 @@ class WebSearchOptions(BaseModel):
 class RagQueryRequest(BaseModel):
     question: str = Field(..., min_length=1, description="Câu hỏi của user")
     workspace_id: str = Field(..., description="UUID của workspace (bắt buộc)")
-    scope: Literal["workspace", "folder", "document"] = Field(
+    scope: Literal["workspace", "folder", "document", "report"] = Field(
         "workspace", description="Phạm vi tìm kiếm"
     )
     folder_id: str | None = Field(None, description="UUID folder — bắt buộc khi scope=folder")
     document_ids: list[str] | None = Field(
         None, description="Danh sách UUID documents — bắt buộc khi scope=document"
     )
+    report_context: str | None = Field(
+        None, description="Markdown/content of the active report when scope=report"
+    )
     top_k: int = Field(5, ge=1, le=20)
     chat_history: list[ChatHistoryMessage] = Field(default_factory=list)
+    model_name: str | None = Field(
+        None,
+        max_length=128,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$",
+        description="Optional chat model override for this request",
+    )
     web_search_options: WebSearchOptions | None = Field(
         None,
         description="Reserved for later web search phase. Current AI service ignores it.",
@@ -37,6 +46,8 @@ class RagSource(BaseModel):
     file_name: str
     snippet: str
     similarity: float | None = None
+    chunk_index: int | None = None
+    page_number: int | None = None
     retrieval_debug: dict = Field(default_factory=dict)
 
 

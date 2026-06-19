@@ -6,6 +6,7 @@ public interface IAiServiceClient
 {
     Task<ProcessDocumentResult> ProcessDocumentAsync(
         Document document,
+        string? modelName = null,
         CancellationToken cancellationToken = default);
 
     Task<GenerateReportResult> GenerateReportAsync(
@@ -50,7 +51,8 @@ public sealed record GenerateReportAiRequest(
     string ReportType,
     string? Title,
     string? CustomPrompt,
-    bool StoreReport);
+    bool StoreReport,
+    string? ModelName);
 
 public sealed record GenerateReportResult(
     string ReportType,
@@ -65,7 +67,8 @@ public sealed record CompareDocumentsAiRequest(
     IReadOnlyList<Guid> DocumentIds,
     IReadOnlyList<string> DocumentNames,
     string? Title,
-    bool StoreReport);
+    bool StoreReport,
+    string? ModelName);
 
 public sealed record CompareDocumentsResult(
     string Objectives,
@@ -84,8 +87,12 @@ public sealed record RagQueryAiRequest(
     string Scope,
     Guid? FolderId,
     IReadOnlyList<Guid>? DocumentIds,
+    string? ReportContext,
     int TopK,
-    IReadOnlyList<RagChatHistoryMessage> ChatHistory);
+    IReadOnlyList<RagChatHistoryMessage> ChatHistory,
+    string? ModelName,
+    bool WebSearchEnabled,
+    string? WebSearchProvider);
 
 public sealed record RagChatHistoryMessage(
     string Role,
@@ -102,6 +109,8 @@ public sealed record RagSourceResult(
     string FileName,
     string Snippet,
     double? Similarity,
+    int? ChunkIndex,
+    int? PageNumber,
     object? RetrievalDebug);
 
 public sealed record RagWebSourceResult(

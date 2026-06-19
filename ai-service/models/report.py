@@ -27,6 +27,12 @@ class GenerateReportRequest(BaseModel):
     title: str | None = Field(None, description="Report title when persisted")
     custom_prompt: str | None = Field(None, description="Additional instruction for section_report/custom_report")
     store_report: bool = Field(False, description="Persist generated Markdown into reports table")
+    model_name: str | None = Field(
+        None,
+        max_length=128,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$",
+        description="Optional chat model override for this request",
+    )
     web_search_options: WebSearchOptions | None = Field(
         None,
         description="Reserved for later web search phase. Current AI service ignores it.",

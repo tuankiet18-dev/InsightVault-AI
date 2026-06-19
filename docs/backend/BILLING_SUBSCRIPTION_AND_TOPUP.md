@@ -64,8 +64,8 @@ If the ledger insert fails, the balance update is rolled back. Unique
 idempotency keys remain a second line of defense against duplicate debit,
 refund, or grant entries.
 
-IPN processing locks the matching payment order before checking its
-status. A replay of an already paid order returns without granting credits
+Payment callback processing locks the matching payment order before checking
+its status. A replay of an already paid order returns without granting credits
 again. Different paid orders for the same workspace are additionally
 serialized by the workspace lock.
 
@@ -99,68 +99,74 @@ Request:
 }
 ```
 
-VNPay IPN:
+payOS webhook:
 
 ```text
-GET /api/billing/vnpay/ipn
+POST /api/billing/payos/webhook
 ```
 
-Only a signed VNPay callback verified by the backend may activate a plan or
-grant top-up credits. The frontend never updates billing state by itself.
+Only a payOS webhook verified by the backend may activate a plan or grant
+top-up credits automatically. The frontend never updates billing state by
+itself.
 
-For local sandbox development, the frontend route `/billing/return` forwards
-the complete signed VNPay query to:
+For local development without a public backend URL, the frontend route
+`/billing/return` forwards the payOS return query to:
 
 ```text
-GET /api/billing/vnpay/return
+GET /api/billing/payos/return
 ```
 
-This backend endpoint runs the same signature, merchant, order, amount, and
-status validation as IPN before updating billing. The frontend never marks an
-order paid by itself. Keeping IPN enabled in deployed environments is still
-recommended because users can close the browser before the return redirect.
+This return endpoint does not trust browser query status. It extracts the
+`orderCode`, calls payOS to retrieve the authoritative payment-link status, and
+only then updates billing. Keeping the webhook enabled in deployed environments
+is still recommended because users can close the browser before the return
+redirect.
 
-All persisted application timestamps use `DateTimeOffset.UtcNow`. VNPay requires
-`vnp_CreateDate` and `vnp_ExpireDate` in GMT+7, so checkout generation converts
-UTC values to the fixed Vietnam offset before formatting `yyyyMMddHHmmss`. A
-successful HMAC-SHA512 verified IPN is matched by `vnp_TxnRef`, amount, response
-code, and transaction status.
+All persisted application timestamps use `DateTimeOffset.UtcNow`.
 
-## VNPay Sandbox configuration
+## payOS configuration
 
-Register at the VNPay Sandbox developer portal and copy the sandbox TmnCode and
-Hash Secret into local environment variables:
+Copy payOS credentials into local environment variables:
 
 ```env
-VNPAY_ENABLED=true
-VNPAY_PAYMENT_URL=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
-VNPAY_TMN_CODE=...
-VNPAY_HASH_SECRET=...
-VNPAY_RETURN_URL=https://your-frontend.example/billing/success
+PAYOS_ENABLED=true
+PAYOS_CLIENT_ID=...
+PAYOS_API_KEY=...
+PAYOS_CHECKSUM_KEY=...
+PAYOS_RETURN_URL=http://localhost:5173/billing/return
+PAYOS_CANCEL_URL=http://localhost:5173/billing/return
+PAYOS_CHECKOUT_EXPIRY_MINUTES=15
 ```
 
-Register the public backend IPN URL:
+For deployed environments, use the deployed frontend route for return/cancel:
+
+```env
+PAYOS_RETURN_URL=https://your-frontend.example/billing/return
+PAYOS_CANCEL_URL=https://your-frontend.example/billing/return
+```
+
+Register the public backend webhook URL in payOS when the backend has a public
+domain:
 
 ```text
-https://your-api.example/api/billing/vnpay/ipn
+https://your-api.example/api/billing/payos/webhook
 ```
 
-For local IPN testing, expose the backend through an HTTPS tunnel. VNPay must be
-able to reach the IPN URL from its servers. Do not commit sandbox credentials or
-tunnel secrets.
+For local webhook testing, expose the backend through an HTTPS tunnel. payOS
+must be able to reach the webhook URL from its servers. Do not commit payOS
+credentials or tunnel secrets.
 
-## VNPay flow
+## payOS flow
 
-- Backend creates sorted `vnp_*` query parameters.
-- The amount is sent as VND multiplied by 100.
-- Checkout data is signed with HMAC-SHA512 using the sandbox Hash Secret.
-- The user is redirected to the VNPay Sandbox payment page.
-- The browser returns through `vnp_ReturnUrl` for display only.
-- VNPay calls the backend IPN with signed query parameters.
-- Backend validates signature, TmnCode, transaction reference, amount,
-  `vnp_ResponseCode`, and `vnp_TransactionStatus`.
+- Backend creates a payOS payment link for the pending payment order.
+- The user is redirected to the payOS checkout page.
+- In production, payOS calls the backend webhook. Backend verifies the webhook
+  signature through the payOS SDK before applying the order.
+- In local/dev, the browser returns to `/billing/return`; the frontend calls
+  `/api/billing/payos/return`, and backend retrieves the payment link from
+  payOS by `orderCode` before applying the order.
 - The payment order row and workspace row are locked before granting credits.
-- Replayed IPNs return `RspCode=02` without granting credits again.
+- Replayed callbacks return without granting credits again.
 
 The provider remains behind `IPaymentGateway`; subscription plans, payment
 orders, credit ledger, and quota enforcement stay provider-neutral.

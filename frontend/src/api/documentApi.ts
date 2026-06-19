@@ -8,7 +8,9 @@ import type {
   AiJobDto,
   PresignUploadRequest,
   DocumentOriginalAccessResponse,
-  DocumentOriginalTextResponse
+  DocumentOriginalTextResponse,
+  DocumentChunkDto,
+  DocumentExtractedTextResponse
 } from '../types/api';
 
 export interface GetDocumentsParams {
@@ -38,6 +40,14 @@ export const documentApi = {
 
   getOriginalText: (documentId: string) => {
     return http.get<DocumentOriginalTextResponse>(`/documents/${documentId}/original/text`);
+  },
+
+  getChunks: (documentId: string) => {
+    return http.get<DocumentChunkDto[]>(`/documents/${documentId}/chunks`);
+  },
+
+  getExtractedText: (documentId: string) => {
+    return http.get<DocumentExtractedTextResponse>(`/documents/${documentId}/extracted-text`);
   },
 
   updateDocument: (documentId: string, data: UpdateDocumentData) => {

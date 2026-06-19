@@ -26,6 +26,10 @@ async def rag_chat(req: RagQueryRequest) -> RagQueryResponse:
         raise HTTPException(
             status_code=422, detail="document_ids is required when scope='document'"
         )
+    if req.scope == "report" and not req.report_context:
+        raise HTTPException(
+            status_code=422, detail="report_context is required when scope='report'"
+        )
 
     try:
         result = rag_query(
@@ -34,8 +38,11 @@ async def rag_chat(req: RagQueryRequest) -> RagQueryResponse:
             scope=req.scope,
             folder_id=req.folder_id,
             document_ids=req.document_ids,
+            report_context=req.report_context,
             top_k=req.top_k,
             chat_history=[m.model_dump() for m in req.chat_history],
+            model_name=req.model_name,
+            web_search_options=req.web_search_options.model_dump() if req.web_search_options else None,
         )
     except RuntimeError as exc:
         logger.error("RAG query failed: %s", exc)
@@ -47,4 +54,5 @@ async def rag_chat(req: RagQueryRequest) -> RagQueryResponse:
     return RagQueryResponse(
         answer=result["answer"],
         sources=[RagSource(**s) for s in result["sources"]],
+        web_sources=result.get("web_sources", []),
     )

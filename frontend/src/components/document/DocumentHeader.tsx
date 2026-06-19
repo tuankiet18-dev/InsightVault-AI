@@ -24,7 +24,7 @@ export function DocumentHeader({
   setViewMode: (mode: 'original' | 'summary') => void
 }) {
   const { openTab } = useTabStore()
-  const { setMode, setScope } = useAiStore()
+  const { setScope } = useAiStore()
   const { inspectorOpen, focusMode, setFocusMode, setActiveNavItem, toggleInspector } = useUiStore()
   const { setSelectedDocument } = useWorkspaceStore()
   
@@ -43,7 +43,6 @@ export function DocumentHeader({
   const prepareReport = () => {
     setSelectedDocument(document.id)
     setScope('document')
-    setMode('Report')
     setActiveNavItem('chat')
     if (!inspectorOpen) {
       toggleInspector()

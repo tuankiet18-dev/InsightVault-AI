@@ -1,6 +1,8 @@
 using System.Text;
 using System.Text.Json;
 using InsightVault.API.Application.Abstractions.Ai;
+using InsightVault.API.Application.Abstractions.Services.SystemSettings;
+using InsightVault.API.Application.Services.SystemSettings;
 using InsightVault.API.Data;
 using InsightVault.API.Domain.Entities;
 using InsightVault.API.Domain.Enums;
@@ -95,6 +97,7 @@ public sealed class DocumentProcessingWorker(
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<InsightVaultDbContext>();
         var aiServiceClient = scope.ServiceProvider.GetRequiredService<IAiServiceClient>();
+        var systemSettingReader = scope.ServiceProvider.GetRequiredService<ISystemSettingReader>();
 
         var job = await db.AiJobs
             .Include(candidate => candidate.Document)
@@ -135,7 +138,11 @@ public sealed class DocumentProcessingWorker(
 
         try
         {
-            var result = await aiServiceClient.ProcessDocumentAsync(job.Document, cancellationToken);
+            var modelName = await systemSettingReader.GetStringAsync(
+                SystemSettingKeys.DefaultAiModel,
+                SystemSettingKeys.DefaultAiModelFallback,
+                cancellationToken);
+            var result = await aiServiceClient.ProcessDocumentAsync(job.Document, modelName, cancellationToken);
             ValidateProcessingResult(job.Document, result);
             await db.Entry(job.Document).ReloadAsync(cancellationToken);
 

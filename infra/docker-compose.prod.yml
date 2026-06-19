@@ -1,0 +1,186 @@
+name: insightvault-ai
+
+services:
+  frontend:
+    build:
+      context: ../frontend
+      target: production
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:?Set VITE_API_BASE_URL in infra/.env}
+        VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+    container_name: insightvault_frontend
+    depends_on:
+      backend:
+        condition: service_started
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ../backend/InsightVault.API
+    container_name: insightvault_backend
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_URLS: http://+:8080
+      Database__AutoMigrate: ${DATABASE_AUTO_MIGRATE:-true}
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB:-insightvault};Username=${POSTGRES_USER:-admin};Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in infra/.env}
+      Jwt__Issuer: ${JWT_ISSUER:-InsightVault.API}
+      Jwt__Audience: ${JWT_AUDIENCE:-InsightVault.Frontend}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in infra/.env}
+      GoogleAuth__ClientId: ${GOOGLE_CLIENT_ID:-}
+      Cors__AllowedOrigins__0: ${FRONTEND_ALLOWED_ORIGIN:?Set FRONTEND_ALLOWED_ORIGIN in infra/.env}
+      Cors__AllowedOrigins__1: ${FRONTEND_ALLOWED_ORIGIN_HTTPS:-}
+      MinIO__Endpoint: minio:9000
+      MinIO__PublicEndpoint: ${MINIO_PUBLIC_ENDPOINT:?Set MINIO_PUBLIC_ENDPOINT in infra/.env}
+      MinIO__BucketName: ${MINIO_BUCKET_NAME:-insightvault-documents}
+      MinIO__PresignedUploadMinutes: ${MINIO_PRESIGNED_UPLOAD_MINUTES:-10}
+      MinIO__UseSsl: ${MINIO_USE_SSL:-false}
+      MinIO__AccessKey: ${MINIO_ROOT_USER:-admin}
+      MinIO__SecretKey: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in infra/.env}
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__Port: 5672
+      RabbitMQ__Username: ${RABBITMQ_DEFAULT_USER:-admin}
+      RabbitMQ__Password: ${RABBITMQ_DEFAULT_PASS:?Set RABBITMQ_DEFAULT_PASS in infra/.env}
+      RabbitMQ__DocumentProcessingQueue: document-processing
+      RabbitMQ__AiJobsQueue: ai-jobs
+      RabbitMQ__EmailQueue: emails
+      AIService__BaseUrl: http://ai-service:8000
+      Smtp__Enabled: ${SMTP_ENABLED:-false}
+      Smtp__Host: ${SMTP_HOST:-smtp.gmail.com}
+      Smtp__Port: ${SMTP_PORT:-587}
+      Smtp__Username: ${SMTP_USERNAME:-}
+      Smtp__Password: ${SMTP_PASSWORD:-}
+      Smtp__SenderName: ${SMTP_SENDER_NAME:-InsightVault AI}
+      Smtp__SenderEmail: ${SMTP_SENDER_EMAIL:-}
+      Smtp__UseSsl: ${SMTP_USE_SSL:-true}
+      PayOS__Enabled: ${PAYOS_ENABLED:-false}
+      PayOS__ClientId: ${PAYOS_CLIENT_ID:-}
+      PayOS__ApiKey: ${PAYOS_API_KEY:-}
+      PayOS__ChecksumKey: ${PAYOS_CHECKSUM_KEY:-}
+      PayOS__ReturnUrl: ${PAYOS_RETURN_URL:?Set PAYOS_RETURN_URL in infra/.env}
+      PayOS__CancelUrl: ${PAYOS_CANCEL_URL:?Set PAYOS_CANCEL_URL in infra/.env}
+      PayOS__CheckoutExpiryMinutes: ${PAYOS_CHECKOUT_EXPIRY_MINUTES:-15}
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health/live"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      ai-service:
+        condition: service_started
+    restart: unless-stopped
+
+  ai-service:
+    build:
+      context: ../ai-service
+    container_name: insightvault_ai_service
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?Set GEMINI_API_KEY in infra/.env}
+      GEMINI_EMBEDDING_MODEL: ${GEMINI_EMBEDDING_MODEL:-models/gemini-embedding-001}
+      GEMINI_CHAT_MODEL: ${GEMINI_CHAT_MODEL:-models/gemini-2.5-flash}
+      CHAT_PROVIDER: ${CHAT_PROVIDER:-gemini}
+      CHAT_TEMPERATURE: ${CHAT_TEMPERATURE:-0.2}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_BASE_URL: ${GROQ_BASE_URL:-https://api.groq.com/openai/v1}
+      GROQ_CHAT_MODEL: ${GROQ_CHAT_MODEL:-llama-3.3-70b-versatile}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in infra/.env}@postgres:5432/${POSTGRES_DB:-insightvault}
+      AI_ALLOW_REPORT_PERSISTENCE: ${AI_ALLOW_REPORT_PERSISTENCE:-false}
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-admin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in infra/.env}
+      MINIO_SECURE: ${MINIO_SECURE:-false}
+      CHUNK_SIZE_TOKENS: ${CHUNK_SIZE_TOKENS:-800}
+      CHUNK_OVERLAP_TOKENS: ${CHUNK_OVERLAP_TOKENS:-100}
+      EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-20}
+      RAG_TOP_K: ${RAG_TOP_K:-5}
+      RAG_DENSE_TOP_K: ${RAG_DENSE_TOP_K:-10}
+      RAG_SPARSE_TOP_K: ${RAG_SPARSE_TOP_K:-10}
+      RAG_SIMILARITY_THRESHOLD: ${RAG_SIMILARITY_THRESHOLD:-0.5}
+      GEMINI_MAX_RETRIES: ${GEMINI_MAX_RETRIES:-3}
+      GEMINI_RETRY_DELAY: ${GEMINI_RETRY_DELAY:-2.0}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    restart: unless-stopped
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: insightvault_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in infra/.env}
+      POSTGRES_DB: ${POSTGRES_DB:-insightvault}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-insightvault}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio
+    container_name: insightvault_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in infra/.env}
+      MINIO_API_CORS_ALLOW_ORIGIN: ${MINIO_CORS_ALLOW_ORIGIN:-*}
+    volumes:
+      - minio_data:/data
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: insightvault_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:?Set RABBITMQ_DEFAULT_PASS in infra/.env}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: insightvault_caddy
+    restart: unless-stopped
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set APP_DOMAIN in infra/.env}
+      CADDY_ACME_EMAIL: ${CADDY_ACME_EMAIL:?Set CADDY_ACME_EMAIL in infra/.env}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "${MINIO_HTTPS_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_HTTPS_PORT:-9001}:9001"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      frontend:
+        condition: service_started
+      backend:
+        condition: service_started
+      minio:
+        condition: service_started
+
+volumes:
+  postgres_data:
+  minio_data:
+  rabbitmq_data:
+  caddy_data:
+  caddy_config:

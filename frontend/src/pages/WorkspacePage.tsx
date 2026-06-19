@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AppShell } from '@/components/layout/AppShell'
 import { TabStrip } from '@/components/document/TabStrip'
@@ -19,7 +19,6 @@ import {
   AlertTriangle,
   ArrowRight,
   BarChart3,
-  CheckCircle2,
   FileBarChart2,
   FileText,
   FolderTree,
@@ -36,16 +35,21 @@ export function WorkspacePage() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { setActiveWorkspace } = useWorkspaceStore()
-  const { tabs, getActiveTab } = useTabStore()
+  const { tabs, getActiveTab, resetTabs } = useTabStore()
   const activeTab = getActiveTab()
   const { data: workspace, isLoading, isError } = useWorkspace(workspaceId ?? null)
   const { inspectorOpen, setActiveNavItem, toggleInspector } = useUiStore()
   const { openTab } = useTabStore()
+  const previousWorkspaceIdRef = useRef<string | null>(null)
 
   useEffect(() => {
+    if (previousWorkspaceIdRef.current && previousWorkspaceIdRef.current !== workspaceId) {
+      resetTabs()
+    }
+    previousWorkspaceIdRef.current = workspaceId ?? null
     setActiveWorkspace(workspaceId ?? null)
     return () => setActiveWorkspace(null)
-  }, [setActiveWorkspace, workspaceId])
+  }, [resetTabs, setActiveWorkspace, workspaceId])
 
   useEffect(() => {
     if (!workspaceId) return
@@ -89,9 +93,11 @@ export function WorkspacePage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-[100dvh] w-screen items-center justify-center bg-background text-muted-foreground">
-        <Loader2 className="h-7 w-7 animate-spin text-primary" />
-      </div>
+      <AppShell rightPanel={<AiInspector />}>
+        <div className="flex min-h-0 flex-1 items-center justify-center bg-background text-muted-foreground">
+          <Loader2 className="h-7 w-7 animate-spin text-primary" />
+        </div>
+      </AppShell>
     )
   }
 
@@ -229,14 +235,11 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
               <div className="min-w-0">
                 <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
                   <FolderTree className="h-4 w-4" />
-                  <span className="truncate">Workspace command center</span>
+                  <span className="truncate">Workspace</span>
                 </div>
                 <h1 className="text-2xl font-semibold leading-tight tracking-tight text-foreground">
                   {workspaceName}
                 </h1>
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-                  Upload project documents, let AI classify the content, then review scope, risks, gaps, and next actions from one place.
-                </p>
               </div>
 
               <div className="flex flex-wrap gap-2">
@@ -257,7 +260,7 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <Metric label="Documents" value={documents.length} detail={`${completed} ready`} icon={FileText} />
-              <Metric label="AI readiness" value={`${readyRate}%`} detail={`${processing} processing`} icon={Sparkles} />
+              <Metric label="Ready" value={`${readyRate}%`} detail={`${processing} processing`} icon={Sparkles} />
               <Metric label="Reports" value={reports.length} detail="stored outputs" icon={FileBarChart2} />
               <Metric label="Needs review" value={failed} detail={`${activeJobs} active jobs`} icon={AlertTriangle} tone={failed > 0 ? 'danger' : 'neutral'} />
             </div>
@@ -266,25 +269,31 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
           <div className="rounded-lg border border-border bg-surface-0 p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-sm font-semibold text-foreground">AI workflow</h2>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  Best path for project docs after upload.
-                </p>
+                <h2 className="text-sm font-semibold text-foreground">Next step</h2>
               </div>
               <Sparkles className="h-5 w-5 text-ai-500" />
             </div>
 
-            <div className="mt-5 space-y-3">
-              <WorkflowStep done={documents.length > 0} label="Collect source docs" detail="PRD, MVP spec, meeting note, technical doc" />
-              <WorkflowStep done={completed > 0} label="Review intelligence" detail="Scope, decisions, risks, gaps, next actions" />
-              <WorkflowStep done={reports.length > 0} label="Generate team report" detail="Turn extracted insights into Markdown output" />
-            </div>
+            <p className="mt-4 text-sm leading-6 text-muted-foreground">
+              {documents.length === 0
+                ? 'Upload your first document.'
+                : failed > 0
+                  ? 'Review failed processing.'
+                  : completed >= 2
+                    ? 'Compare ready documents.'
+                    : 'Open a completed document.'}
+            </p>
 
             <button
               type="button"
               onClick={() => {
                 setActiveNavItem('chat')
+                if (window.innerWidth < 1280) {
+                  useUiStore.getState().setMobileDrawer('inspector')
+                  return
+                }
                 if (!inspectorOpen) toggleInspector()
+                window.setTimeout(() => document.getElementById('ai-prompt')?.focus(), 0)
               }}
               className="mt-5 flex w-full items-center justify-between rounded-md border border-ai-100 bg-ai-50 px-3 py-2 text-left text-sm font-medium text-ai-700 transition-colors hover:bg-ai-100"
             >
@@ -299,9 +308,6 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
             <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
               <div>
                 <h2 className="text-sm font-semibold text-foreground">Recent documents</h2>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Open a document to inspect AI summary and structured insights.
-                </p>
               </div>
               <Button variant="ghost" size="sm" onClick={() => openUploadModal()}>
                 <Upload className="h-4 w-4" />
@@ -347,9 +353,6 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
                   <FileText className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <h3 className="text-sm font-semibold text-foreground">No documents yet</h3>
-                <p className="mt-1 max-w-sm text-sm leading-6 text-muted-foreground">
-                  Start with a PRD, MVP spec, proposal, meeting note, technical doc, or project report.
-                </p>
                 <Button className="mt-4" onClick={() => openUploadModal()}>
                   <Upload className="h-4 w-4" />
                   Upload first document
@@ -370,18 +373,6 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
               <HealthRow label="Failed processing" value={failed} total={documents.length} tone="danger" />
             </div>
 
-            <div className="mt-6 rounded-md border border-border bg-muted/40 p-3">
-              <h3 className="text-xs font-semibold text-foreground">Recommended next step</h3>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                {documents.length === 0
-                  ? 'Upload a project document to let AI build the first workspace summary.'
-                  : failed > 0
-                    ? 'Open failed documents and retry processing before running reports.'
-                    : completed >= 2
-                      ? 'Run Compare to detect conflicts, missing details, and next actions across documents.'
-                      : 'Open the completed document and review its risks, gaps, and next actions.'}
-              </p>
-            </div>
           </div>
         </section>
       </div>
@@ -410,24 +401,6 @@ function Metric({
       </div>
       <div className="mt-3 text-2xl font-semibold leading-none tracking-tight text-foreground">{value}</div>
       <div className="mt-1 text-xs text-muted-foreground">{detail}</div>
-    </div>
-  )
-}
-
-function WorkflowStep({ done, label, detail }: { done: boolean; label: string; detail: string }) {
-  return (
-    <div className="flex gap-3">
-      <div className="mt-0.5">
-        {done ? (
-          <CheckCircle2 className="h-4 w-4 text-success-600" />
-        ) : (
-          <div className="h-4 w-4 rounded-full border border-border bg-background" />
-        )}
-      </div>
-      <div>
-        <div className="text-sm font-medium text-foreground">{label}</div>
-        <div className="mt-0.5 text-xs leading-5 text-muted-foreground">{detail}</div>
-      </div>
     </div>
   )
 }

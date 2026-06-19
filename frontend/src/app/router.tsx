@@ -13,22 +13,41 @@ import { BillingPage } from '@/pages/BillingPage'
 
 import { AdminUsersPage } from '@/pages/admin/AdminUsersPage'
 import { AdminJobsPage } from '@/pages/admin/AdminJobsPage'
+import { AdminWorkspacesPage } from '@/pages/admin/AdminWorkspacesPage'
+import { AdminBillingPage } from '@/pages/admin/AdminBillingPage'
+import { AdminSettingsPage } from '@/pages/admin/AdminSettingsPage'
 import { BillingReturnPage } from '@/pages/BillingReturnPage'
+const adminNavClass = ({ isActive }: { isActive: boolean }) =>
+  isActive
+    ? 'rounded-md bg-primary px-3 py-1.5 text-primary-foreground'
+    : 'rounded-md px-3 py-1.5 text-muted-foreground hover:bg-accent hover:text-foreground'
+
 const AdminLayout = () => (
   <div className="min-h-screen bg-background text-foreground">
-    <header className="flex h-14 items-center gap-6 border-b border-border bg-card px-6">
-      <div className="font-semibold">InsightVault Admin</div>
-      <nav className="flex items-center gap-1 text-sm text-muted-foreground">
-        <NavLink className="rounded-md px-3 py-1.5 hover:bg-accent hover:text-foreground" to="/admin" end>
-          Dashboard
-        </NavLink>
-        <NavLink className="rounded-md px-3 py-1.5 hover:bg-accent hover:text-foreground" to="/admin/users">
-          Users
-        </NavLink>
-        <NavLink className="rounded-md px-3 py-1.5 hover:bg-accent hover:text-foreground" to="/admin/jobs">
-          AI Jobs
-        </NavLink>
-      </nav>
+    <header className="sticky top-0 z-20 border-b border-border bg-card/95 px-4 backdrop-blur lg:px-6">
+      <div className="flex min-h-14 flex-wrap items-center gap-3 py-2">
+        <div className="mr-2 font-semibold">InsightVault Admin</div>
+        <nav className="flex flex-wrap items-center gap-1 text-sm">
+          <NavLink className={adminNavClass} to="/admin" end>
+            Dashboard
+          </NavLink>
+          <NavLink className={adminNavClass} to="/admin/users">
+            Users
+          </NavLink>
+          <NavLink className={adminNavClass} to="/admin/jobs">
+            AI Jobs
+          </NavLink>
+          <NavLink className={adminNavClass} to="/admin/workspaces">
+            Workspaces
+          </NavLink>
+          <NavLink className={adminNavClass} to="/admin/billing">
+            Billing
+          </NavLink>
+          <NavLink className={adminNavClass} to="/admin/settings">
+            Settings
+          </NavLink>
+        </nav>
+      </div>
     </header>
     <Outlet />
   </div>
@@ -95,6 +114,18 @@ const router = createBrowserRouter([
       {
         path: 'jobs',
         element: <AdminJobsPage />,
+      },
+      {
+        path: 'workspaces',
+        element: <AdminWorkspacesPage />,
+      },
+      {
+        path: 'billing',
+        element: <AdminBillingPage />,
+      },
+      {
+        path: 'settings',
+        element: <AdminSettingsPage />,
       },
     ],
   },

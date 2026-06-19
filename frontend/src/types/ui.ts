@@ -16,11 +16,17 @@ export type BaseTabItem = {
 export type DocumentTabItem = BaseTabItem & {
   type: 'document'
   documentId: string
+  preferredView?: 'original' | 'extracted' | 'chunks' | 'summary'
+  sourceSnippet?: string
+  sourceChunkId?: string | null
+  sourceChunkIndex?: number | null
+  sourcePageNumber?: number | null
 }
 
 export type ReportTabItem = BaseTabItem & {
   type: 'report'
   reportId: string
+  compareDocumentIds?: string[]
 }
 
 export type CompareTabItem = BaseTabItem & {

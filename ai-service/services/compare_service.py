@@ -9,7 +9,7 @@ import time
 
 from core.config import settings
 from core.database import get_connection
-from core.chat_provider import chat_model
+from core.chat_provider import chat_model, get_chat_model
 from services.report_store import insert_report
 
 logger = logging.getLogger(__name__)
@@ -28,6 +28,7 @@ Nguyên tắc:
 - Nếu một nhận định là suy luận từ nhiều tài liệu, thêm "^[inferred]".
 - recommendations phải cụ thể và có thể hành động.
 - Không bịa thông tin ngoài tài liệu.
+- QUAN TRỌNG: Hãy sử dụng HTML tag `<mark class="bg-warning-200 text-warning-900 rounded px-1">` để bọc quanh các từ khóa, số liệu, hoặc đoạn văn bản thể hiện rõ nhất sự khác biệt hoặc mâu thuẫn (áp dụng cho differences và potential_conflicts, cũng như trong raw_markdown).
 
 Trả về JSON với cấu trúc sau, KHÔNG có text ngoài JSON:
 {{
@@ -85,6 +86,7 @@ def compare_documents(
     ai_job_id: str | None = None,
     title: str | None = None,
     store_report: bool = False,
+    model_name: str | None = None,
 ) -> dict:
     """
     Compare multiple documents and detect gaps/conflicts.
@@ -115,10 +117,11 @@ def compare_documents(
 
     last_error: Exception | None = None
     delay = settings.GEMINI_RETRY_DELAY
+    model = get_chat_model(model_name)
 
     for attempt in range(1, settings.GEMINI_MAX_RETRIES + 1):
         try:
-            raw = chat_model.generate_text(prompt)
+            raw = model.generate_text(prompt)
 
             if raw.startswith("```"):
                 raw = raw.split("```")[1]

@@ -6,13 +6,13 @@ browsers.
 
 Current status reference: `docs/about-project/CURRENT_PROJECT_STATUS.md`.
 
-Implementation notes as of 2026-06-15:
+Implementation notes as of 2026-06-17:
 
 - Auth, workspace/member, folder/document, AI jobs, report/compare, dashboard,
   admin, billing, PayOS webhook, and email queue backend APIs are implemented.
-- Backend Chat/RAG session/message APIs are target contract only. The database
-  and AI service support RAG, and frontend has chat UI/API files, but backend
-  still needs `ChatController`/`ChatService`.
+- Backend Chat/RAG session/message APIs are implemented. AI Inspector Ask uses
+  workspace-scoped private chat sessions and can narrow retrieval by active
+  folder, document, or report context.
 - Billing backend APIs and dedicated frontend billing routes are implemented:
   `/billing`, `/billing/success`, and `/billing/cancel`.
 
@@ -26,9 +26,9 @@ credit top-up, while all active members consume the shared workspace balance.
 | GET | `/api/billing/plans` | No | List active subscription plans |
 | GET | `/api/billing/credit-packages` | No | List active top-up packages |
 | GET | `/api/workspaces/{workspaceId}/billing` | Yes | Get plan and remaining credits |
-| POST | `/api/workspaces/{workspaceId}/billing/checkout` | Owner | Create VNPay Sandbox checkout |
-| GET | `/api/billing/vnpay/ipn` | VNPay HMAC-SHA512 | Apply verified payment |
-| GET | `/api/billing/vnpay/return` | VNPay HMAC-SHA512 | Verify browser return and apply payment |
+| POST | `/api/workspaces/{workspaceId}/billing/checkout` | Owner | Create payOS checkout |
+| POST | `/api/billing/payos/webhook` | payOS signature | Apply verified payment webhook |
+| GET | `/api/billing/payos/return` | Public return fallback | Verify browser return through payOS and apply payment |
 
 Checkout request:
 
@@ -443,21 +443,22 @@ Rules:
 
 ### Chat And RAG
 
-Implementation status: target contract, not completed in backend yet. Do not
-mark RAG chat as accepted until the backend exposes the session/message
-endpoints below and persists messages/sources.
+Implementation status: implemented backend contract. Manual E2E with real
+Gemini credentials is still required before marking demo acceptance complete.
 
 Chat sessions belong to a workspace and default to RAG over that workspace's readable documents.
-Each chat session is private to its creator. Users do not create folder/document-specific sessions. Individual messages can narrow retrieval with `contexts`, which is the API representation of `@folder` and `@file` mentions.
+Each chat session is private to its creator. Users do not create folder/document-specific sessions. Individual messages can narrow retrieval with `contexts`, which is the API representation of active folder, document, or report scope.
 
 Validation:
 
 - A message without `contexts` uses the whole session workspace as its RAG scope.
-- A `folder` context requires `folderId` and must omit `documentId`.
-- A `document` context requires `documentId` and must omit `folderId`.
-- Every folder/document in message contexts must belong to the session workspace.
+- A `folder` context requires `folderId` and must omit `documentId` and `reportId`.
+- A `document` context requires `documentId` and must omit `folderId` and `reportId`.
+- A `report` context requires `reportId` and must omit `folderId` and `documentId`.
+- Every folder/document/report in message contexts must belong to the session workspace.
 - `@folder` includes all subfolders by default.
-- Backend resolves contexts to deduplicated explicit `document_ids`.
+- Backend resolves folder/document contexts to deduplicated explicit `document_ids`.
+- Backend sends report Markdown as `report_context` when a message targets the active report tab.
 - Only completed, non-deleted documents can be resolved for RAG.
 - Backend stores message contexts with `workspaceId` internally and enforces same-workspace context integrity at the database layer.
 - Labels and paths supplied by the client are display hints only; Backend trusts IDs only after permission checks.
@@ -493,9 +494,10 @@ type CreateChatSessionRequest = {
 };
 
 type ChatMessageContextDto = {
-  contextType: "folder" | "document";
+  contextType: "folder" | "document" | "report";
   folderId?: string | null;
   documentId?: string | null;
+  reportId?: string | null;
   includeSubfolders: boolean;
   contextDisplayName?: string | null;
   contextPath?: string | null;
@@ -516,9 +518,10 @@ type ChatMessageDto = {
 type SendChatMessageRequest = {
   content: string;
   contexts?: Array<{
-    contextType: "folder" | "document";
+    contextType: "folder" | "document" | "report";
     folderId?: string | null;
     documentId?: string | null;
+    reportId?: string | null;
     includeSubfolders?: boolean;
   }>;
   webSearchOptions?: WebSearchOptions;
@@ -530,6 +533,8 @@ type ChatSourceDto = {
   fileName: string;
   snippet: string;
   similarity?: number | null;
+  chunkIndex?: number | null;
+  pageNumber?: number | null;
 };
 
 type WebSourceDto = {
@@ -737,6 +742,7 @@ Backend decides the retrieval set before calling AI:
 - No mention: send `scope = "workspace"` with only `workspace_id`.
 - `@file`: resolve mentioned files to `document_ids`, send `scope = "document"`.
 - `@folder`: resolve mentioned folder plus subfolders to `document_ids`, send `scope = "document"`.
+- Active report tab: send `scope = "report"` with `report_context` and any known source `document_ids`.
 - Direct `scope = "folder"` remains accepted by AI for compatibility, but Backend should prefer explicit `document_ids` for new chat flow.
 - Backend must ensure all source documents are `completed` and `deleted_at IS NULL`.
 - AI similarity search must join/filter documents so soft-deleted documents never contribute chunks.
@@ -750,6 +756,7 @@ Request:
   "scope": "document",
   "folder_id": null,
   "document_ids": ["uuid-1", "uuid-2"],
+  "report_context": null,
   "top_k": 5,
   "chat_history": [
     { "role": "user", "content": "..." },
@@ -774,7 +781,9 @@ Response:
       "document_id": "uuid",
       "file_name": "Requirement.docx",
       "snippet": "...",
-      "similarity": 0.82
+      "similarity": 0.82,
+      "chunk_index": 3,
+      "page_number": 2
     }
   ],
   "web_sources": []

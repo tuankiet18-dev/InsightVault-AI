@@ -36,7 +36,7 @@ public sealed class InsightVaultApiFactory : WebApplicationFactory<Program>
         SetRequiredEnvironment("RabbitMQ__EmailQueue", "emails-test");
         SetRequiredEnvironment("AIService__BaseUrl", "http://localhost:8000");
         SetRequiredEnvironment("Smtp__Enabled", "false");
-        SetRequiredEnvironment("VnPay__Enabled", "false");
+        SetRequiredEnvironment("PayOS__Enabled", "false");
         SetRequiredEnvironment("TrashCleanup__Enabled", "false");
         SetRequiredEnvironment("TrashCleanup__DocumentRetentionDays", "30");
         SetRequiredEnvironment("TrashCleanup__IntervalHours", "24");
@@ -73,7 +73,7 @@ public sealed class InsightVaultApiFactory : WebApplicationFactory<Program>
                 ["RabbitMQ:EmailQueue"] = "emails-test",
                 ["AIService:BaseUrl"] = "http://localhost:8000",
                 ["Smtp:Enabled"] = "false",
-                ["VnPay:Enabled"] = "false",
+                ["PayOS:Enabled"] = "false",
                 ["TrashCleanup:Enabled"] = "false",
                 ["TrashCleanup:DocumentRetentionDays"] = "30",
                 ["TrashCleanup:IntervalHours"] = "24",

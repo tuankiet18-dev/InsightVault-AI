@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { DocumentHeader } from './DocumentHeader'
+import { DocumentChunksViewer } from './DocumentChunksViewer'
+import { DocumentExtractedTextViewer } from './DocumentExtractedTextViewer'
 import { DocumentOriginalViewer } from './DocumentOriginalViewer'
 import { DocumentSummary } from './DocumentSummary'
 import { useTabStore } from '@/stores/tabStore'
@@ -7,7 +9,7 @@ import { useDocument } from '@/hooks/useDocuments'
 import { cn } from '@/lib/utils'
 import type { DocumentDto } from '@/types/api'
 
-type DocumentViewMode = 'original' | 'summary'
+export type DocumentViewMode = 'original' | 'extracted' | 'chunks' | 'summary'
 
 export function DocumentViewer() {
   const { getActiveTab } = useTabStore()
@@ -28,17 +30,53 @@ export function DocumentViewer() {
     )
   }
 
-  return <DocumentViewerContent key={document.id} document={document} />
+  const viewerKey = activeTab.type === 'document'
+    ? `${document.id}-${activeTab.preferredView ?? 'default'}-${activeTab.sourceChunkId ?? activeTab.sourceChunkIndex ?? 'none'}`
+    : document.id
+
+  return (
+    <DocumentViewerContent 
+      key={viewerKey} 
+      document={document} 
+      preferredView={activeTab.type === 'document' ? activeTab.preferredView : undefined}
+      sourceSnippet={activeTab.type === 'document' ? activeTab.sourceSnippet : undefined}
+      sourceChunkId={activeTab.type === 'document' ? activeTab.sourceChunkId : undefined}
+      sourceChunkIndex={activeTab.type === 'document' ? activeTab.sourceChunkIndex : undefined}
+      sourcePageNumber={activeTab.type === 'document' ? activeTab.sourcePageNumber : undefined}
+    />
+  )
 }
 
-function DocumentViewerContent({ document }: { document: DocumentDto }) {
+function DocumentViewerContent({ 
+  document,
+  preferredView,
+  sourceSnippet,
+  sourceChunkId,
+  sourceChunkIndex,
+  sourcePageNumber,
+  minimal
+}: { 
+  document: DocumentDto
+  preferredView?: DocumentViewMode
+  sourceSnippet?: string
+  sourceChunkId?: string | null
+  sourceChunkIndex?: number | null
+  sourcePageNumber?: number | null
+  minimal?: boolean
+}) {
   const [viewMode, setViewMode] = useState<DocumentViewMode>(
-    canPreviewOriginal(document.originalFileName, document.fileType) ? 'original' : 'summary'
+    preferredView
+      ? preferredView
+      : canPreviewOriginal(document.originalFileName, document.fileType)
+      ? 'original'
+      : canShowExtractedText(document.originalFileName, document.fileType)
+        ? 'extracted'
+        : 'summary'
   )
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 bg-background">
-      <DocumentHeader document={document} viewMode={viewMode} setViewMode={setViewMode} />
+    <div className={cn("flex flex-col flex-1 min-h-0", minimal ? "bg-surface-0" : "bg-background")}>
+      {!minimal && <DocumentHeader document={document} viewMode={viewMode as 'original' | 'summary'} setViewMode={setViewMode as React.Dispatch<React.SetStateAction<DocumentViewMode>>} />}
 
       <div className={cn("flex-1 flex flex-col min-h-0", viewMode === 'original' ? "overflow-hidden" : "overflow-y-auto")}>
         <div className={cn(
@@ -47,7 +85,19 @@ function DocumentViewerContent({ document }: { document: DocumentDto }) {
         )}>
           <div className="min-w-0 flex-1 flex flex-col min-h-0">
             {viewMode === 'original' ? (
-              <DocumentOriginalViewer document={document} />
+              <DocumentOriginalViewer
+                document={document}
+                sourceSnippet={sourceSnippet}
+                sourcePageNumber={sourcePageNumber}
+              />
+            ) : viewMode === 'extracted' ? (
+              <DocumentExtractedTextViewer document={document} />
+            ) : viewMode === 'chunks' ? (
+              <DocumentChunksViewer
+                document={document}
+                sourceChunkId={sourceChunkId}
+                sourceChunkIndex={sourceChunkIndex}
+              />
             ) : (
               <DocumentSummary document={document} />
             )}
@@ -58,9 +108,20 @@ function DocumentViewerContent({ document }: { document: DocumentDto }) {
   )
 }
 
+export { DocumentViewerContent }
 function canPreviewOriginal(fileName: string, fileType: string) {
   const normalized = `${fileName}.${fileType}`.toLowerCase()
   return normalized.endsWith('.pdf')
+    || normalized.endsWith('.txt')
+    || normalized.endsWith('.md')
+    || normalized.endsWith('.markdown')
+}
+
+function canShowExtractedText(fileName: string, fileType: string) {
+  const normalized = `${fileName}.${fileType}`.toLowerCase()
+  return normalized.endsWith('.docx')
+    || normalized.endsWith('.doc')
+    || normalized.endsWith('.pdf')
     || normalized.endsWith('.txt')
     || normalized.endsWith('.md')
     || normalized.endsWith('.markdown')

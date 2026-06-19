@@ -58,7 +58,6 @@ coverage/
 out/
 
 # Infra
-docker-compose.yml
 docker-compose.dev.yml
 #backend
 launchSettings.json

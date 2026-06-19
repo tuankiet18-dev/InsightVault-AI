@@ -7,6 +7,7 @@ type TabState = {
   openTab: (tab: TabItem) => void
   closeTab: (id: string) => void
   setActiveTab: (id: string) => void
+  resetTabs: () => void
   getActiveTab: () => TabItem | undefined
 }
 
@@ -18,7 +19,10 @@ export const useTabStore = create<TabState>((set, get) => ({
     const { tabs } = get()
     const existing = tabs.find(t => t.id === tab.id)
     if (existing) {
-      set({ activeTabId: tab.id })
+      set({
+        tabs: tabs.map(item => item.id === tab.id ? { ...item, ...tab } : item),
+        activeTabId: tab.id,
+      })
     } else {
       set({ tabs: [...tabs, tab], activeTabId: tab.id })
     }
@@ -37,6 +41,8 @@ export const useTabStore = create<TabState>((set, get) => ({
   },
 
   setActiveTab: (id) => set({ activeTabId: id }),
+
+  resetTabs: () => set({ tabs: [], activeTabId: null }),
 
   getActiveTab: () => {
     const { tabs, activeTabId } = get()

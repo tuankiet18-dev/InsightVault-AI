@@ -7,7 +7,7 @@ import logging
 import time
 
 from core.config import settings
-from core.chat_provider import chat_model
+from core.chat_provider import chat_model, get_chat_model
 from services.embedder import embed_query
 from services.vector_store import hybrid_search
 
@@ -55,6 +55,15 @@ def _build_context_block(chunks: list[dict]) -> str:
     return "\n\n".join(parts)
 
 
+def _build_report_context_block(report_context: str | None, chunks: list[dict]) -> str:
+    parts = []
+    if report_context:
+        parts.append(f"[REPORT] Báo cáo hiện tại\n{report_context.strip()}")
+    if chunks:
+        parts.append(_build_context_block(chunks))
+    return "\n\n".join(parts)
+
+
 def _build_chat_history(chat_history: list[dict]) -> str:
     """Format chat history list into readable text."""
     if not chat_history:
@@ -72,8 +81,11 @@ def query(
     scope: str = "workspace",
     folder_id: str | None = None,
     document_ids: list[str] | None = None,
+    report_context: str | None = None,
     top_k: int = settings.RAG_TOP_K,
     chat_history: list[dict] | None = None,
+    model_name: str | None = None,
+    web_search_options: dict | None = None,
 ) -> dict:
     """
     Execute the full RAG pipeline.
@@ -81,7 +93,7 @@ def query(
     Args:
         question: User's question (Vietnamese or English).
         workspace_id: Required for permission scoping.
-        scope: "workspace" | "folder" | "document".
+        scope: "workspace" | "folder" | "document" | "report".
         folder_id: Required when scope="folder".
         document_ids: Required when scope="document".
         top_k: Number of chunks to retrieve.
@@ -90,7 +102,14 @@ def query(
     Returns:
         dict with keys: answer (str), sources (list[dict])
     """
-    logger.info("RAG query: scope=%s workspace=%s question=%r", scope, workspace_id, question[:80])
+    logger.info(
+        "RAG query: scope=%s workspace=%s model=%s web_search=%s question=%r",
+        scope,
+        workspace_id,
+        model_name or chat_model.model_name,
+        bool(web_search_options and web_search_options.get("enabled")),
+        question[:80],
+    )
 
     # Step 1: Embed the question.
     query_vector = embed_query(question)
@@ -101,11 +120,11 @@ def query(
         query_vector=query_vector,
         workspace_id=workspace_id,
         folder_id=folder_id if scope == "folder" else None,
-        document_ids=document_ids if scope == "document" else None,
+        document_ids=document_ids if scope in {"document", "report"} else None,
         top_k=top_k,
     )
 
-    if not chunks:
+    if not chunks and not report_context:
         logger.info("No relevant chunks found for query in workspace %s", workspace_id)
         return {
             "answer": "Tôi không tìm thấy thông tin liên quan trong các tài liệu hiện có trong workspace.",
@@ -113,7 +132,11 @@ def query(
         }
 
     # Step 3: Build prompt.
-    context_block = _build_context_block(chunks)
+    context_block = (
+        _build_report_context_block(report_context, chunks)
+        if scope == "report"
+        else _build_context_block(chunks)
+    )
     history_text = _build_chat_history(chat_history or [])
     chat_history_section = (
         _CHAT_HISTORY_SECTION.format(history=history_text) if history_text else ""
@@ -128,10 +151,11 @@ def query(
     # Step 4: Call Gemini with retry.
     last_error: Exception | None = None
     delay = settings.GEMINI_RETRY_DELAY
+    model = get_chat_model(model_name)
 
     for attempt in range(1, settings.GEMINI_MAX_RETRIES + 1):
         try:
-            answer = chat_model.generate_text(prompt)
+            answer = model.generate_text(prompt)
             break
         except Exception as exc:
             last_error = exc
@@ -152,6 +176,8 @@ def query(
             "file_name": chunk["file_name"],
             "snippet": chunk["content"][:300] + ("..." if len(chunk["content"]) > 300 else ""),
             "similarity": chunk["similarity"],
+            "chunk_index": chunk.get("chunk_index"),
+            "page_number": chunk.get("metadata", {}).get("page_number") or chunk.get("metadata", {}).get("page"),
             "retrieval_debug": chunk.get("retrieval_debug", {}),
         }
         for chunk in chunks

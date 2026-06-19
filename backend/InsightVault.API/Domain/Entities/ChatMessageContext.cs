@@ -10,6 +10,7 @@ public sealed class ChatMessageContext
     public ChatContextType ContextType { get; set; }
     public Guid? FolderId { get; set; }
     public Guid? DocumentId { get; set; }
+    public Guid? ReportId { get; set; }
     public bool IncludeSubfolders { get; set; } = true;
     public int ContextOrder { get; set; }
     public string? ContextDisplayName { get; set; }
@@ -19,4 +20,5 @@ public sealed class ChatMessageContext
     public ChatMessage ChatMessage { get; set; } = null!;
     public Folder? Folder { get; set; }
     public Document? Document { get; set; }
+    public Report? Report { get; set; }
 }

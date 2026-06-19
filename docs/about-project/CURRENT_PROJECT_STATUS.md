@@ -1,6 +1,6 @@
 # InsightVault AI - Current Project Status
 
-Last updated: 2026-06-15.
+Last updated: 2026-06-17.
 
 This page is the current status anchor for the repository. Code, migrations,
 runtime logs, and test output remain the source of truth; this document distills
@@ -15,7 +15,8 @@ workspace:
   and admin pages.
 - ASP.NET Core backend for auth, workspace/member permissions, folder/document
   orchestration, MinIO upload, AI jobs, reports/compare, admin/dashboard
-  metadata, billing, PayOS checkout, SMTP email queue, and EF Core migrations.
+  metadata, Chat/RAG sessions, billing, PayOS checkout, SMTP email queue, and
+  EF Core migrations.
 - FastAPI AI service for document extraction, chunking, embeddings, RAG query,
   compare, and Markdown report generation.
 - Docker Compose stack with frontend, backend, AI service, PostgreSQL +
@@ -44,7 +45,7 @@ Observed healthy endpoints:
 Backend automated tests passed:
 
 ```text
-Passed: 14, Failed: 0, Skipped: 0
+Passed: 19, Failed: 0, Skipped: 0
 ```
 
 ## Implemented Backend Capabilities
@@ -59,6 +60,8 @@ Passed: 14, Failed: 0, Skipped: 0
 - RabbitMQ-backed workers for document processing and AI jobs.
 - AI service client calls for document processing, compare, and report
   generation.
+- Workspace-scoped Chat/RAG APIs for private chat sessions, persisted
+  messages, per-message folder/document/report context, and source citations.
 - AI job list/detail/retry APIs.
 - Report and compare APIs with async job polling and backend-owned report
   persistence/versioning.
@@ -70,9 +73,9 @@ Passed: 14, Failed: 0, Skipped: 0
 
 - `/process-document`: reads source files from MinIO, extracts text, chunks,
   embeds, writes `document_chunks`, and returns document intelligence output.
-- `/rag/query`: performs RAG over workspace/folder/document scope or explicit
-  `document_ids`; backend should prefer explicit `document_ids` for new chat
-  flows.
+- `/rag/query`: performs RAG over workspace/folder/document/report scope or
+  explicit `document_ids`; report scope accepts current report Markdown as
+  context and can still retrieve related source chunks.
 - `/compare`: compares documents and returns structured differences, gaps,
   conflicts, recommendations, and Markdown fallback content.
 - `/generate-report`: returns Markdown report content and structured metadata.
@@ -84,7 +87,9 @@ Passed: 14, Failed: 0, Skipped: 0
 - Public landing and login routes.
 - Protected user dashboard.
 - Protected workspace page.
-- Chat and compare pages/components are present.
+- Chat, compare, and report workspace components are present.
+- AI Inspector Ask mode is connected to backend Chat/RAG sessions and can
+  narrow scope from the active document, folder, or report tab.
 - Admin dashboard/users/jobs routes are protected by system admin checks.
 - Workspace member management modal supports search, pagination, role update,
   and remove actions.
@@ -93,21 +98,13 @@ Passed: 14, Failed: 0, Skipped: 0
 
 These are not done yet and should not be presented as completed:
 
-- Backend Chat/RAG API layer is still missing. The database and AI service
-  support the model, and frontend has chat UI/API files, but there is no
-  `ChatController`/`ChatService` exposing:
-  - `GET /api/workspaces/{workspaceId}/chat-sessions`
-  - `POST /api/workspaces/{workspaceId}/chat-sessions`
-  - `GET /api/chat-sessions/{sessionId}/messages`
-  - `POST /api/chat-sessions/{sessionId}/messages`
-  - `DELETE /api/chat-sessions/{sessionId}`
 - Billing UI is not complete. Backend billing APIs exist, but frontend routes
   for pricing/billing/success/cancel and top-up checkout are still needed.
 - Real external-provider testing is still pending for Google OAuth, Gemini,
   PayOS webhook, and SMTP.
 - Manual acceptance testing is still needed for owner/editor/viewer boundaries,
-  upload through MinIO, async report/compare, admin privacy, billing debit/refund
-  behavior, and failure/retry paths.
+  upload through MinIO, Chat/RAG answers with real Gemini, async report/compare,
+  admin privacy, billing debit/refund behavior, and failure/retry paths.
 - `google.generativeai` in the AI service emits a deprecation warning and should
   be migrated to `google.genai`.
 
@@ -117,7 +114,8 @@ The project is no longer a skeleton. It is a runnable MVP candidate with most
 backend and infrastructure flows in place. The largest product gaps before a
 clean demo are:
 
-1. Implement backend Chat/RAG APIs and connect the chat UI to them.
+1. Run a manual Chat/RAG E2E pass with completed documents and real Gemini
+   credentials, including report-context questions and citation navigation.
 2. Add billing/subscription/top-up UI around the existing backend APIs.
 3. Run a full manual E2E pass using real Google/Gemini/PayOS/SMTP credentials.
 4. Polish frontend flows for document readiness, compare/report polling, report
@@ -131,5 +129,5 @@ clean demo are:
   source until the team decides where generated OpenAPI should live.
 - `docs/backend/BACKEND_MVP_MANUAL_TEST_CHECKLIST.md` is the manual acceptance
   checklist for integrated runtime behavior.
-- `docs/frontend-docs/API_CONTRACT_MVP.md` describes target FE/BE contracts; it
-  marks Chat/RAG backend endpoints as target/pending.
+- `docs/frontend-docs/API_CONTRACT_MVP.md` describes the active FE/BE
+  contract, including Chat/RAG session/message endpoints.

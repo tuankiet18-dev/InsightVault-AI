@@ -9,6 +9,7 @@ public sealed class AiServiceClient(HttpClient httpClient) : IAiServiceClient
 {
     public async Task<ProcessDocumentResult> ProcessDocumentAsync(
         Document document,
+        string? modelName = null,
         CancellationToken cancellationToken = default)
     {
         var request = new ProcessDocumentRequest(
@@ -18,7 +19,8 @@ public sealed class AiServiceClient(HttpClient httpClient) : IAiServiceClient
             document.MinioBucket,
             document.MinioObjectKey,
             document.FileType,
-            document.OriginalFileName);
+            document.OriginalFileName,
+            modelName);
 
         var response = await httpClient.PostAsJsonAsync(
             "/process-document",
@@ -72,7 +74,8 @@ public sealed class AiServiceClient(HttpClient httpClient) : IAiServiceClient
                 request.ReportType,
                 request.Title,
                 request.CustomPrompt,
-                request.StoreReport),
+                request.StoreReport,
+                request.ModelName),
             cancellationToken);
         var result = await response.Content.ReadFromJsonAsync<GenerateReportResponse>(
             cancellationToken: cancellationToken);
@@ -108,7 +111,8 @@ public sealed class AiServiceClient(HttpClient httpClient) : IAiServiceClient
                 request.DocumentIds,
                 request.DocumentNames,
                 request.Title,
-                request.StoreReport),
+                request.StoreReport,
+                request.ModelName),
             cancellationToken);
         var result = await response.Content.ReadFromJsonAsync<CompareDocumentsResponse>(
             cancellationToken: cancellationToken);
@@ -148,13 +152,15 @@ public sealed class AiServiceClient(HttpClient httpClient) : IAiServiceClient
                 request.Scope,
                 request.FolderId,
                 request.DocumentIds,
+                request.ReportContext,
                 request.TopK,
                 request.ChatHistory.Select(message => new RagChatHistoryRequest(
                     message.Role,
                     message.Content)).ToList(),
+                request.ModelName,
                 new RagWebSearchOptionsRequest(
-                    Enabled: false,
-                    Provider: null,
+                    request.WebSearchEnabled,
+                    request.WebSearchProvider,
                     MaxResults: 5)),
             cancellationToken);
 
@@ -180,6 +186,8 @@ public sealed class AiServiceClient(HttpClient httpClient) : IAiServiceClient
                 source.FileName,
                 source.Snippet,
                 source.Similarity,
+                source.ChunkIndex,
+                source.PageNumber,
                 source.RetrievalDebug)).ToList(),
             result.WebSources.Select(source => new RagWebSourceResult(
                 source.Title,
@@ -195,7 +203,8 @@ public sealed class AiServiceClient(HttpClient httpClient) : IAiServiceClient
         [property: JsonPropertyName("minio_bucket")] string MinioBucket,
         [property: JsonPropertyName("minio_object_key")] string MinioObjectKey,
         [property: JsonPropertyName("file_type")] string FileType,
-        [property: JsonPropertyName("file_name")] string FileName);
+        [property: JsonPropertyName("file_name")] string FileName,
+        [property: JsonPropertyName("model_name")] string? ModelName);
 
     private sealed record ProcessDocumentResponse(
         [property: JsonPropertyName("status")] string Status,
@@ -226,7 +235,8 @@ public sealed class AiServiceClient(HttpClient httpClient) : IAiServiceClient
         [property: JsonPropertyName("report_type")] string ReportType,
         [property: JsonPropertyName("title")] string? Title,
         [property: JsonPropertyName("custom_prompt")] string? CustomPrompt,
-        [property: JsonPropertyName("store_report")] bool StoreReport);
+        [property: JsonPropertyName("store_report")] bool StoreReport,
+        [property: JsonPropertyName("model_name")] string? ModelName);
 
     private sealed record GenerateReportResponse(
         [property: JsonPropertyName("report_type")] string ReportType,
@@ -241,7 +251,8 @@ public sealed class AiServiceClient(HttpClient httpClient) : IAiServiceClient
         [property: JsonPropertyName("document_ids")] IReadOnlyList<Guid> DocumentIds,
         [property: JsonPropertyName("document_names")] IReadOnlyList<string> DocumentNames,
         [property: JsonPropertyName("title")] string? Title,
-        [property: JsonPropertyName("store_report")] bool StoreReport);
+        [property: JsonPropertyName("store_report")] bool StoreReport,
+        [property: JsonPropertyName("model_name")] string? ModelName);
 
     private sealed record CompareDocumentsResponse(
         [property: JsonPropertyName("objectives")] string Objectives,
@@ -260,8 +271,10 @@ public sealed class AiServiceClient(HttpClient httpClient) : IAiServiceClient
         [property: JsonPropertyName("scope")] string Scope,
         [property: JsonPropertyName("folder_id")] Guid? FolderId,
         [property: JsonPropertyName("document_ids")] IReadOnlyList<Guid>? DocumentIds,
+        [property: JsonPropertyName("report_context")] string? ReportContext,
         [property: JsonPropertyName("top_k")] int TopK,
         [property: JsonPropertyName("chat_history")] IReadOnlyList<RagChatHistoryRequest> ChatHistory,
+        [property: JsonPropertyName("model_name")] string? ModelName,
         [property: JsonPropertyName("web_search_options")] RagWebSearchOptionsRequest WebSearchOptions);
 
     private sealed record RagChatHistoryRequest(
@@ -284,6 +297,8 @@ public sealed class AiServiceClient(HttpClient httpClient) : IAiServiceClient
         [property: JsonPropertyName("file_name")] string FileName,
         [property: JsonPropertyName("snippet")] string Snippet,
         [property: JsonPropertyName("similarity")] double? Similarity,
+        [property: JsonPropertyName("chunk_index")] int? ChunkIndex,
+        [property: JsonPropertyName("page_number")] int? PageNumber,
         [property: JsonPropertyName("retrieval_debug")] object? RetrievalDebug);
 
     private sealed record RagWebSourceResponse(

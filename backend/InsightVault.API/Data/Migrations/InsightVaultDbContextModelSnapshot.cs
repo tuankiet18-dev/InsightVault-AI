@@ -253,6 +253,10 @@ namespace InsightVault.API.Data.Migrations
                         .HasDefaultValue(true)
                         .HasColumnName("include_subfolders");
 
+                    b.Property<Guid?>("ReportId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("report_id");
+
                     b.Property<Guid>("WorkspaceId")
                         .HasColumnType("uuid")
                         .HasColumnName("workspace_id");
@@ -268,6 +272,9 @@ namespace InsightVault.API.Data.Migrations
 
                     b.HasIndex("FolderId")
                         .HasDatabaseName("ix_chat_message_contexts_folder_id");
+
+                    b.HasIndex("ReportId")
+                        .HasDatabaseName("ix_chat_message_contexts_report_id");
 
                     b.HasIndex("WorkspaceId")
                         .HasDatabaseName("ix_chat_message_contexts_workspace_id");
@@ -288,9 +295,14 @@ namespace InsightVault.API.Data.Migrations
                         .HasDatabaseName("ix_chat_message_contexts_chat_message_id_context_type_folder_id")
                         .HasFilter("folder_id IS NOT NULL");
 
+                    b.HasIndex("ChatMessageId", "ContextType", "ReportId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_chat_message_contexts_chat_message_id_context_type_report_id")
+                        .HasFilter("report_id IS NOT NULL");
+
                     b.ToTable("chat_message_contexts", null, t =>
                         {
-                            t.HasCheckConstraint("ck_chat_message_contexts_context_shape", "(context_type = 'Folder' AND document_id IS NULL) OR (context_type = 'Document' AND folder_id IS NULL)");
+                            t.HasCheckConstraint("ck_chat_message_contexts_context_shape", "(context_type = 'Folder' AND document_id IS NULL AND report_id IS NULL) OR (context_type = 'Document' AND folder_id IS NULL AND report_id IS NULL) OR (context_type = 'Report' AND folder_id IS NULL AND document_id IS NULL)");
                         });
                 });
 
@@ -1350,6 +1362,78 @@ namespace InsightVault.API.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("InsightVault.API.Domain.Entities.SystemSetting", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("key");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("value");
+
+                    b.Property<string>("ValueType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("value_type");
+
+                    b.HasKey("Key")
+                        .HasName("pk_system_settings");
+
+                    b.ToTable("system_settings", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Key = "ai.default_model",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 19, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Description = "Default AI model used by configurable AI workflows.",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 6, 19, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Value = "gemini-1.5-flash",
+                            ValueType = "string"
+                        },
+                        new
+                        {
+                            Key = "billing.default_workspace_credits",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 19, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Description = "Default credits granted to a newly provisioned workspace when no plan override applies.",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 6, 19, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Value = "100",
+                            ValueType = "int"
+                        },
+                        new
+                        {
+                            Key = "ai.web_search_enabled",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 6, 19, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Description = "Feature flag for AI web search augmentation.",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 6, 19, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Value = "false",
+                            ValueType = "bool"
+                        });
+                });
+
             modelBuilder.Entity("InsightVault.API.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1808,6 +1892,12 @@ namespace InsightVault.API.Data.Migrations
                         .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("fk_chat_message_contexts_folders_folder_id");
 
+                    b.HasOne("InsightVault.API.Domain.Entities.Report", "Report")
+                        .WithMany()
+                        .HasForeignKey("ReportId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_chat_message_contexts_reports_report_id");
+
                     b.HasOne("InsightVault.API.Domain.Entities.ChatMessage", "ChatMessage")
                         .WithMany("Contexts")
                         .HasForeignKey("ChatMessageId", "WorkspaceId")
@@ -1821,6 +1911,8 @@ namespace InsightVault.API.Data.Migrations
                     b.Navigation("Document");
 
                     b.Navigation("Folder");
+
+                    b.Navigation("Report");
                 });
 
             modelBuilder.Entity("InsightVault.API.Domain.Entities.ChatMessageSource", b =>

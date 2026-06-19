@@ -57,17 +57,24 @@ class GroqChatProvider:
         return payload["choices"][0]["message"]["content"].strip()
 
 
-def create_chat_provider() -> ChatModelProvider:
+def create_chat_provider(model_name: str | None = None) -> ChatModelProvider:
     provider = settings.CHAT_PROVIDER
     if provider == "gemini":
-        return GeminiChatProvider(settings.GEMINI_CHAT_MODEL)
+        return GeminiChatProvider(model_name or settings.GEMINI_CHAT_MODEL)
     if provider == "groq":
-        return GroqChatProvider(settings.GROQ_CHAT_MODEL)
+        return GroqChatProvider(model_name or settings.GROQ_CHAT_MODEL)
     raise ValueError(f"Unsupported CHAT_PROVIDER: {provider}")
 
 
 chat_model = create_chat_provider()
 
 
-def get_chat_model_name() -> str:
-    return current_chat_model_name()
+def get_chat_model(model_name: str | None = None) -> ChatModelProvider:
+    normalized_model_name = model_name.strip() if model_name else None
+    if not normalized_model_name or normalized_model_name == chat_model.model_name:
+        return chat_model
+    return create_chat_provider(normalized_model_name)
+
+
+def get_chat_model_name(model_name: str | None = None) -> str:
+    return model_name.strip() if model_name else current_chat_model_name()

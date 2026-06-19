@@ -9,6 +9,7 @@ using InsightVault.API.Domain.Enums;
 using InsightVault.API.Infrastructure.Payments;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.Text.Json;
 
 namespace InsightVault.API.Tests;
 
@@ -137,7 +138,7 @@ public sealed class BillingPostgresIntegrationTests
                     CreditPackageId = packageId,
                     PurchaseType = PaymentPurchaseType.CreditTopUp,
                     Status = PaymentOrderStatus.Pending,
-                    Provider = "vnpay",
+                    Provider = "payos",
                     ProviderOrderCode = orderCode,
                     AmountVnd = 39_000,
                     CreatedAt = DateTimeOffset.UtcNow,
@@ -164,9 +165,9 @@ public sealed class BillingPostgresIntegrationTests
                     new StubWorkspacePermissionService(),
                     CreateCreditService(db),
                     gateway,
-                    Options.Create(new VnPayOptions { Enabled = true }));
+                    Options.Create(new PayOsOptions { Enabled = true }));
 
-                return await service.HandlePaymentNotificationAsync(
+                return await service.HandlePaymentReturnAsync(
                     new Dictionary<string, string>());
             }));
 
@@ -305,7 +306,7 @@ public sealed class BillingPostgresIntegrationTests
 
     private sealed class StubPaymentGateway(VerifiedPayment payment) : IPaymentGateway
     {
-        public string ProviderName => "vnpay";
+        public string ProviderName => "payos";
 
         public Task<PaymentCheckoutResult> CreateCheckoutAsync(
             PaymentCheckoutRequest request,
@@ -314,7 +315,14 @@ public sealed class BillingPostgresIntegrationTests
             throw new NotSupportedException();
         }
 
-        public Task<VerifiedPayment> VerifyNotificationAsync(
+        public Task<VerifiedPayment> VerifyWebhookAsync(
+            JsonElement payload,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(payment);
+        }
+
+        public Task<VerifiedPayment> VerifyReturnAsync(
             IReadOnlyDictionary<string, string> parameters,
             CancellationToken cancellationToken = default)
         {

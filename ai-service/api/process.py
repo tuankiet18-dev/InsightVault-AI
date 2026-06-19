@@ -90,7 +90,7 @@ def _process_document(req: ProcessDocumentRequest) -> ProcessDocumentResponse:
         logger.error("pgvector insert failed for %s: %s", req.document_id, exc)
         raise HTTPException(status_code=500, detail=f"Vector store error: {exc}")
 
-    summary_result = generate_summary(text, req.file_name)
+    summary_result = generate_summary(text, req.file_name, req.model_name)
 
     logger.info(
         "Document %s processed successfully: %d chunks, summary %d chars",

@@ -25,6 +25,7 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
     public DbSet<WorkspaceSubscription> WorkspaceSubscriptions => Set<WorkspaceSubscription>();
     public DbSet<CreditLedgerEntry> CreditLedgerEntries => Set<CreditLedgerEntry>();
     public DbSet<PaymentOrder> PaymentOrders => Set<PaymentOrder>();
+    public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -53,6 +54,7 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
         ConfigureWorkspaceSubscriptions(modelBuilder);
         ConfigureCreditLedgerEntries(modelBuilder);
         ConfigurePaymentOrders(modelBuilder);
+        ConfigureSystemSettings(modelBuilder);
     }
 
     private static void ConfigureUsers(ModelBuilder modelBuilder)
@@ -425,8 +427,9 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
         {
             entity.ToTable(table => table.HasCheckConstraint(
                 "ck_chat_message_contexts_context_shape",
-                "(context_type = 'Folder' AND document_id IS NULL) OR " +
-                "(context_type = 'Document' AND folder_id IS NULL)"));
+                "(context_type = 'Folder' AND document_id IS NULL AND report_id IS NULL) OR " +
+                "(context_type = 'Document' AND folder_id IS NULL AND report_id IS NULL) OR " +
+                "(context_type = 'Report' AND folder_id IS NULL AND document_id IS NULL)"));
 
             entity.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.Property(x => x.ContextType).HasConversion(contextTypeConverter).HasMaxLength(50).IsRequired();
@@ -451,10 +454,16 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
                 .HasForeignKey(x => x.DocumentId)
                 .OnDelete(DeleteBehavior.SetNull);
 
+            entity.HasOne(x => x.Report)
+                .WithMany()
+                .HasForeignKey(x => x.ReportId)
+                .OnDelete(DeleteBehavior.SetNull);
+
             entity.HasIndex(x => x.WorkspaceId);
             entity.HasIndex(x => x.ChatMessageId);
             entity.HasIndex(x => x.FolderId);
             entity.HasIndex(x => x.DocumentId);
+            entity.HasIndex(x => x.ReportId);
             entity.HasIndex(x => new { x.ChatMessageId, x.ContextOrder });
             entity.HasIndex(x => new { x.ChatMessageId, x.ContextType, x.FolderId })
                 .IsUnique()
@@ -462,6 +471,9 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
             entity.HasIndex(x => new { x.ChatMessageId, x.ContextType, x.DocumentId })
                 .IsUnique()
                 .HasFilter("document_id IS NOT NULL");
+            entity.HasIndex(x => new { x.ChatMessageId, x.ContextType, x.ReportId })
+                .IsUnique()
+                .HasFilter("report_id IS NOT NULL");
         });
     }
 
@@ -794,6 +806,51 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
                 .HasFilter("provider_reference IS NOT NULL");
             entity.HasIndex(x => new { x.WorkspaceId, x.CreatedAt });
             entity.HasIndex(x => x.Status);
+        });
+    }
+
+    private static void ConfigureSystemSettings(ModelBuilder modelBuilder)
+    {
+        var seededAt = new DateTimeOffset(2026, 6, 19, 0, 0, 0, TimeSpan.Zero);
+
+        modelBuilder.Entity<SystemSetting>(entity =>
+        {
+            entity.HasKey(x => x.Key);
+            entity.Property(x => x.Key).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.Value).HasMaxLength(2000).IsRequired();
+            entity.Property(x => x.ValueType).HasMaxLength(50).IsRequired();
+            entity.Property(x => x.Description).HasMaxLength(500).IsRequired();
+            entity.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(x => x.UpdatedAt).HasDefaultValueSql("now()");
+
+            entity.HasData(
+                new SystemSetting
+                {
+                    Key = "ai.default_model",
+                    Value = "gemini-1.5-flash",
+                    ValueType = "string",
+                    Description = "Default AI model used by configurable AI workflows.",
+                    CreatedAt = seededAt,
+                    UpdatedAt = seededAt
+                },
+                new SystemSetting
+                {
+                    Key = "billing.default_workspace_credits",
+                    Value = "100",
+                    ValueType = "int",
+                    Description = "Default credits granted to a newly provisioned workspace when no plan override applies.",
+                    CreatedAt = seededAt,
+                    UpdatedAt = seededAt
+                },
+                new SystemSetting
+                {
+                    Key = "ai.web_search_enabled",
+                    Value = "false",
+                    ValueType = "bool",
+                    Description = "Feature flag for AI web search augmentation.",
+                    CreatedAt = seededAt,
+                    UpdatedAt = seededAt
+                });
         });
     }
 }

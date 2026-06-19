@@ -192,12 +192,13 @@ export interface ChatSessionDto {
   updatedAt: string;
 }
 
-export type ChatContextType = "folder" | "document";
+export type ChatContextType = "folder" | "document" | "report";
 
 export interface ChatMessageContextRequest {
   contextType: ChatContextType;
   folderId?: string | null;
   documentId?: string | null;
+  reportId?: string | null;
   includeSubfolders?: boolean;
 }
 
@@ -205,17 +206,20 @@ export interface ChatMessageContextDto {
   contextType: ChatContextType;
   folderId?: string | null;
   documentId?: string | null;
+  reportId?: string | null;
   includeSubfolders: boolean;
   contextDisplayName?: string | null;
   contextPath?: string | null;
 }
 
 export interface ChatSourceDto {
-  documentId: string;
+  documentId?: string | null;
   documentChunkId?: string | null;
   fileName: string;
   snippet: string;
   similarity?: number | null;
+  chunkIndex?: number | null;
+  pageNumber?: number | null;
 }
 
 export interface WebSourceDto {
@@ -308,6 +312,40 @@ export interface DocumentOriginalTextResponse {
   fileName: string;
   contentType: string;
   content: string;
+}
+
+export interface DocumentChunkDto {
+  id: string;
+  documentId: string;
+  workspaceId: string;
+  folderId?: string | null;
+  chunkIndex: number;
+  content: string;
+  tokenCount?: number | null;
+  charStart?: number | null;
+  charEnd?: number | null;
+  embeddingModel: string;
+  metadata: string;
+  createdAt: string;
+}
+
+export interface DocumentExtractedTextResponse {
+  documentId: string;
+  fileName: string;
+  chunkCount: number;
+  content: string;
+}
+
+export interface WorkspaceSearchResultDto {
+  type: "document" | "report" | "chunk";
+  title: string;
+  subtitle?: string | null;
+  snippet?: string | null;
+  documentId?: string | null;
+  documentChunkId?: string | null;
+  reportId?: string | null;
+  chunkIndex?: number | null;
+  updatedAt: string;
 }
 
 // Billing
