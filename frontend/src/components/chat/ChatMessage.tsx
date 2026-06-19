@@ -1,36 +1,38 @@
-import { FileText } from 'lucide-react'
+import { FileText, Copy, Check } from 'lucide-react'
 import type { ChatMessageDto } from '@/types/api-contract'
 import { cn } from '@/lib/utils'
 import { useTabStore } from '@/stores/tabStore'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { createDocumentTab } from '@/lib/documentTabs'
+import { useState } from 'react'
 
 export function ChatMessage({ message }: { message: ChatMessageDto }) {
   const isUser = message.role === 'user'
   const { openTab } = useTabStore()
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(message.content)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <div className={cn('w-full flex', isUser ? 'justify-end' : 'justify-start')}>
       <div className={cn(
-        'max-w-3xl flex gap-3 rounded-2xl border p-4',
+        'max-w-3xl flex gap-3 rounded-xl border p-4 relative group',
         isUser
-          ? 'ml-auto w-fit max-w-[82%] border-primary-100 bg-primary-50 text-primary-950'
-          : 'w-full border-border bg-surface-0',
+          ? 'ml-auto w-fit max-w-[82%] border-transparent bg-transparent text-foreground'
+          : 'w-full border-border bg-slate-50/50 dark:bg-slate-900/50',
       )}>
-        {!isUser && (
-          <div className="w-8 h-8 rounded-lg bg-ai-100 text-ai-600 flex items-center justify-center shrink-0 mt-1">
-            <span className="text-sm font-bold">AI</span>
-          </div>
-        )}
+
 
         <div className="flex-1 min-w-0">
-          {isUser && (
-            <div className="text-xs font-semibold text-primary-600 mb-1 uppercase tracking-wider">You</div>
-          )}
+
 
           {isUser ? (
-            <div className="whitespace-pre-wrap text-sm leading-6 text-primary-950">
+            <div className="whitespace-pre-wrap text-sm leading-6 text-foreground">
               {message.content}
             </div>
           ) : (
@@ -69,6 +71,13 @@ export function ChatMessage({ message }: { message: ChatMessageDto }) {
           )}
         </div>
 
+        <button
+          onClick={handleCopy}
+          title="Copy message"
+          className="absolute top-3 right-3 p-1.5 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
+        >
+          {copied ? <Check className="h-3.5 w-3.5 text-success-500" /> : <Copy className="h-3.5 w-3.5" />}
+        </button>
       </div>
     </div>
   )

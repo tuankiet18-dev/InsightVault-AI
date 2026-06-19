@@ -1,20 +1,17 @@
-import { AiModeSelector } from './AiModeSelector'
 import { PromptInput } from './PromptInput'
-import { AiAnswer } from './AiAnswer'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useFolder } from '@/hooks/useFolders'
 import { useDocument } from '@/hooks/useDocuments'
 import { useTabStore } from '@/stores/tabStore'
 import { useAiStore } from '@/stores/aiStore'
 import { useChatStore } from '@/stores/chatStore'
-import { useChatMessages, useChatSessions } from '@/hooks/useChat'
+import { useChatMessages, useChatSessions, useCreateChatSession } from '@/hooks/useChat'
 import { ChatMessage } from '@/components/chat/ChatMessage'
-import { FileText, GitCompare, Sparkles } from 'lucide-react'
+import { FileText, GitCompare, Sparkles, Plus } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 
 export function AiInspector() {
   const { selectedDocumentId, selectedFolderId, activeWorkspaceId } = useWorkspaceStore()
-  const { mode } = useAiStore()
   const { getActiveTab } = useTabStore()
   const activeTab = getActiveTab()
   const activeDocumentId = selectedDocumentId
@@ -58,10 +55,8 @@ export function AiInspector() {
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col">
-        <AiModeSelector />
-        <ModeHint />
         <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
-          {mode === 'Ask' ? <InspectorChatTranscript workspaceId={activeWorkspaceId} /> : <AiAnswer />}
+          <InspectorChatTranscript workspaceId={activeWorkspaceId} />
         </div>
         <PromptInput />
       </div>
@@ -69,20 +64,6 @@ export function AiInspector() {
   )
 }
 
-function ModeHint() {
-  const { mode } = useAiStore()
-  const message = mode === 'Ask'
-    ? 'Ask answers from the current scope.'
-    : mode === 'Compare'
-      ? 'Compare needs 2+ documents or a folder.'
-      : 'Report creates a saved AI report.'
-
-  return (
-    <div className="mx-2 mb-2 rounded-md bg-muted/70 px-2.5 py-1.5 text-xs text-muted-foreground">
-      {message}
-    </div>
-  )
-}
 
 function InspectorChatTranscript({ workspaceId }: { workspaceId: string }) {
   const { activeSessionId, setActiveSession } = useChatStore()
@@ -93,7 +74,19 @@ function InspectorChatTranscript({ workspaceId }: { workspaceId: string }) {
     ? activeSessionId
     : latestSession?.id ?? null
   const { data: messages = [] } = useChatMessages(sessionId)
+  const createSession = useCreateChatSession(workspaceId)
   const scrollRef = useRef<HTMLDivElement | null>(null)
+
+  const handleNewChat = () => {
+    createSession.mutate(
+      { title: 'Workspace chat' },
+      {
+        onSuccess: (newSession) => {
+          setActiveSession(newSession.id)
+        }
+      }
+    )
+  }
 
   useEffect(() => {
     if (sessionId && sessionId !== activeSessionId) {
@@ -111,16 +104,34 @@ function InspectorChatTranscript({ workspaceId }: { workspaceId: string }) {
 
   return (
     <div className="mt-3 space-y-3">
-      <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Workspace chat history
+      <div className="flex items-center justify-between">
+        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Workspace chat
+        </div>
+        <button
+          onClick={handleNewChat}
+          disabled={createSession.isPending}
+          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50"
+          title="Start new chat"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          <span>New Chat</span>
+        </button>
       </div>
       <div className="space-y-3">
         {messages.map(message => (
           <ChatMessage key={message.id} message={message} />
         ))}
         {isLoading && (
-          <div className="rounded-md border border-border bg-surface-0 px-3 py-2 text-xs text-muted-foreground">
-            AI is reading the selected context...
+          <div className="w-full flex justify-start">
+            <div className="w-full max-w-3xl border border-border bg-slate-50/50 dark:bg-slate-900/50 flex gap-3 rounded-xl p-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
+                  AI is thinking...
+                </div>
+              </div>
+            </div>
           </div>
         )}
         <div ref={scrollRef} />

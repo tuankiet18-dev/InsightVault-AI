@@ -4,7 +4,6 @@ import { useChatStore } from '@/stores/chatStore'
 import { useTabStore } from '@/stores/tabStore'
 import { Send } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useCompareDocuments, useGenerateReport } from '@/hooks/useReports'
 import { chatApi } from '@/api/chatApi'
 import { chatKeys, useChatSessions } from '@/hooks/useChat'
 import { useQueryClient } from '@tanstack/react-query'
@@ -13,7 +12,7 @@ import { buildChatContexts } from '@/lib/chatContext'
 import type { ChatSourceDto } from '@/types/api'
 
 export function PromptInput() {
-  const { prompt, setPrompt, mode, setAnswer, setCitations, setSuggestions, isLoading, setIsLoading } = useAiStore()
+  const { prompt, setPrompt, setAnswer, setCitations, setSuggestions, isLoading, setIsLoading } = useAiStore()
   const { activeWorkspaceId, selectedDocumentId, selectedFolderId } = useWorkspaceStore()
   const { activeSessionId, setActiveSession } = useChatStore()
   const { getActiveTab, openTab } = useTabStore()
@@ -21,13 +20,7 @@ export function PromptInput() {
   const queryClient = useQueryClient()
   const { data: sessions = [] } = useChatSessions(activeWorkspaceId)
   
-  const compareMutation = useCompareDocuments()
-  const generateReportMutation = useGenerateReport(activeWorkspaceId || '')
-  const placeholder = mode === 'Ask'
-    ? 'Ask about the selected document, folder, or workspace...'
-    : mode === 'Compare'
-      ? 'Describe what you want to compare...'
-      : 'Describe the report you want AI to generate...'
+  const placeholder = 'Ask about the selected document, folder, or workspace...'
   
   const handleRun = async () => {
     if (!prompt.trim() || isLoading || !activeWorkspaceId) return
@@ -42,7 +35,9 @@ export function PromptInput() {
     const documentIds = activeDocumentId ? [activeDocumentId] : []
     const folderId = selectedFolderId
 
-    if (mode === 'Ask') {
+      const currentPrompt = prompt
+      setPrompt('') // Clear input early for optimistic UI
+
       try {
         const activeSession = sessions.find(session => session.id === activeSessionId)
         const session = activeSession ?? sessions[0] ?? await chatApi.createSession(activeWorkspaceId, {
@@ -53,9 +48,28 @@ export function PromptInput() {
           setActiveSession(session.id)
         }
 
+        // Optimistic UI update
+        const optimisticMessage: any = {
+          id: `temp-${Date.now()}`,
+          sessionId: session.id,
+          role: 'user',
+          content: currentPrompt,
+          sources: [],
+          createdAt: new Date().toISOString()
+        }
+
+        queryClient.setQueryData(chatKeys.messages(session.id), (old: any) => {
+          return [...(old || []), optimisticMessage]
+        })
+
         const response = await chatApi.sendMessage(session.id, {
-          content: prompt,
+          content: currentPrompt,
           contexts: buildChatContexts(activeTab, selectedDocumentId, selectedFolderId),
+        })
+
+        // Instantly show the AI response in the UI
+        queryClient.setQueryData(chatKeys.messages(session.id), (old: any) => {
+          return [...(old || []), response.assistantMessage]
         })
 
         queryClient.invalidateQueries({ queryKey: chatKeys.sessions(activeWorkspaceId) })
@@ -85,71 +99,12 @@ export function PromptInput() {
             ? ['Open cited source', 'Ask a follow-up in the same workspace chat']
             : ['Try asking about a completed document', 'Open a report or document to narrow the scope']
         )
-        setPrompt('')
       } catch (error) {
         setAnswer(formatChatError(error))
         setSuggestions(['Check that at least one source document is completed', 'Try again after the AI service is ready'])
       } finally {
         setIsLoading(false)
       }
-      return
-    }
-
-    if (mode === 'Compare') {
-      if (!folderId && documentIds.length < 2) {
-        openTab({
-          id: 'compare-workspace',
-          label: 'Compare',
-          type: 'compare',
-          closable: true,
-        })
-        setAnswer('Compare needs 2+ completed documents. I opened Compare for manual selection.')
-        setSuggestions(['Select documents in Compare', 'Or select a folder and run Compare here'])
-        setIsLoading(false)
-        return
-      }
-
-      compareMutation.mutate(
-        { 
-          workspaceId: activeWorkspaceId, 
-          data: { documentIds, folderId: folderId || undefined, title: prompt }
-        },
-        {
-          onSuccess: (res) => {
-            setAnswer(`Compare queued: ${res.status}.`)
-            setSuggestions(['Open Reports after it completes'])
-            setIsLoading(false)
-            setPrompt('')
-          },
-          onError: () => setIsLoading(false)
-        }
-      )
-    } else {
-      if (documentIds.length === 0 && !folderId) {
-        setAnswer('Report needs a document or folder scope.')
-        setSuggestions(['Open a completed document', 'Select a folder'])
-        setIsLoading(false)
-        return
-      }
-
-      generateReportMutation.mutate(
-        { 
-          documentIds, 
-          folderId: folderId || undefined, 
-          reportType: 'custom_report', 
-          customPrompt: prompt 
-        },
-        {
-          onSuccess: (res) => {
-            setAnswer(`Report queued: ${res.status}.`)
-            setSuggestions(['Open Reports after it completes'])
-            setIsLoading(false)
-            setPrompt('')
-          },
-          onError: () => setIsLoading(false)
-        }
-      )
-    }
   }
   
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -181,7 +136,7 @@ export function PromptInput() {
               ? "bg-primary/40 text-primary-foreground/70 cursor-not-allowed"
               : "bg-primary text-primary-foreground hover:bg-primary/90"
           )}
-          aria-label={`Run ${mode.toLowerCase()}`}
+          aria-label="Send message"
         >
           {isLoading ? (
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
