@@ -1,5 +1,4 @@
-import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react'
-import { useCallback, useState } from 'react'
+import type { ReactNode } from 'react'
 import { ActivityRail } from './ActivityRail'
 import { TopBar } from './TopBar'
 import { StatusBar } from './StatusBar'
@@ -10,42 +9,10 @@ import { CreateFolderModal } from '../workspace/CreateFolderModal'
 import { InviteMemberModal } from '../workspace/InviteMemberModal'
 import { CommandPalette } from '../search/CommandPalette'
 import { useUiStore } from '@/stores/uiStore'
-import { cn } from '@/lib/utils'
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 
 export function AppShell({ children, rightPanel }: { children: ReactNode; rightPanel?: ReactNode }) {
-  const { explorerOpen, inspectorOpen, mobileDrawer, setMobileDrawer } = useUiStore()
-  const [explorerWidth, setExplorerWidth] = useState(280)
-  const [inspectorWidth, setInspectorWidth] = useState(340)
-
-  const startResize = useCallback((
-    side: 'explorer' | 'inspector',
-    event: ReactPointerEvent<HTMLDivElement>,
-  ) => {
-    event.preventDefault()
-    const startX = event.clientX
-    const startWidth = side === 'explorer' ? explorerWidth : inspectorWidth
-
-    const handlePointerMove = (moveEvent: globalThis.PointerEvent) => {
-      const delta = moveEvent.clientX - startX
-      if (side === 'explorer') {
-        setExplorerWidth(Math.min(420, Math.max(220, startWidth + delta)))
-      } else {
-        setInspectorWidth(Math.min(520, Math.max(280, startWidth - delta)))
-      }
-    }
-
-    const stopResize = () => {
-      window.removeEventListener('pointermove', handlePointerMove)
-      window.removeEventListener('pointerup', stopResize)
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-    }
-
-    document.body.style.cursor = 'col-resize'
-    document.body.style.userSelect = 'none'
-    window.addEventListener('pointermove', handlePointerMove)
-    window.addEventListener('pointerup', stopResize)
-  }, [explorerWidth, inspectorWidth])
+  const { explorerOpen, inspectorOpen, mobileDrawer, setMobileDrawer, focusMode } = useUiStore()
 
   return (
     <div className="flex h-[100dvh] w-screen flex-col overflow-hidden bg-background text-foreground">
@@ -54,53 +21,31 @@ export function AppShell({ children, rightPanel }: { children: ReactNode; rightP
         <div className="flex min-w-0 flex-1 flex-col">
           <TopBar />
 
-          <div className="flex min-h-0 flex-1">
-            <div
-              className={cn(
-                "hidden shrink-0 overflow-hidden transition-[width] duration-200 ease-out lg:block",
-                !explorerOpen && "lg:w-0"
-              )}
-              style={explorerOpen ? { width: explorerWidth } : undefined}
-            >
-              <ExplorerPanel />
-            </div>
-            {explorerOpen && (
-              <div
-                className="hidden w-1 shrink-0 cursor-col-resize bg-border/40 transition-colors hover:bg-primary/50 lg:block"
-                onPointerDown={(event) => startResize('explorer', event)}
-                role="separator"
-                aria-label="Resize explorer"
-              />
+          <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1 w-full">
+            {explorerOpen && !focusMode && (
+              <ResizablePanel id="explorer-panel" defaultSize={20} minSize={15} maxSize={40} className="min-w-0 hidden lg:block">
+                <div className="h-full w-full overflow-hidden">
+                  <ExplorerPanel />
+                </div>
+              </ResizablePanel>
             )}
+            {explorerOpen && !focusMode && <ResizableHandle className="hidden lg:flex" withHandle />}
 
-            <main className="flex min-w-0 flex-1 flex-col bg-background">
-              {children}
-            </main>
+            <ResizablePanel id="main-panel" defaultSize={60} minSize={30} className="min-w-0">
+              <main className="flex h-full w-full flex-col bg-background min-h-0 min-w-0 overflow-hidden">
+                {children}
+              </main>
+            </ResizablePanel>
 
-            {rightPanel && (
-              <>
-              {inspectorOpen && (
-                <div
-                  className="hidden w-1 shrink-0 cursor-col-resize bg-border/40 transition-colors hover:bg-primary/50 xl:block"
-                  onPointerDown={(event) => startResize('inspector', event)}
-                  role="separator"
-                  aria-label="Resize AI inspector"
-                />
-              )}
-              <div
-                className={cn(
-                  "hidden shrink-0 overflow-hidden transition-[width] duration-200 ease-out xl:block",
-                  !inspectorOpen && "xl:w-0"
-                )}
-                style={inspectorOpen ? { width: inspectorWidth } : undefined}
-              >
-                <aside className="flex h-full w-full min-w-0 flex-col border-l border-border bg-card">
+            {rightPanel && inspectorOpen && !focusMode && <ResizableHandle className="hidden xl:flex" withHandle />}
+            {rightPanel && inspectorOpen && !focusMode && (
+              <ResizablePanel id="inspector-panel" defaultSize={20} minSize={15} maxSize={40} className="min-w-0 hidden xl:block">
+                <aside className="flex h-full w-full flex-col border-l border-border bg-card overflow-hidden">
                   {rightPanel}
                 </aside>
-              </div>
-              </>
+              </ResizablePanel>
             )}
-          </div>
+          </ResizablePanelGroup>
 
           <StatusBar />
         </div>

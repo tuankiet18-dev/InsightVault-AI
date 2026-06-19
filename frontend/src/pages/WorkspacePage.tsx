@@ -13,7 +13,6 @@ import { useDocuments } from '@/hooks/useDocuments'
 import { useReports } from '@/hooks/useReports'
 import { useAiJobs } from '@/hooks/useAiJobs'
 import { useUiStore } from '@/stores/uiStore'
-import { useAiStore } from '@/stores/aiStore'
 import { StatusChip } from '@/components/document/StatusChip'
 import { Button } from '@/components/ui/button'
 import {
@@ -197,7 +196,6 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
   const { data: reports = [] } = useReports(workspaceId)
   const { data: jobs = [] } = useAiJobs(workspaceId)
   const { inspectorOpen, openUploadModal, setCommandPaletteOpen, setActiveNavItem, toggleInspector } = useUiStore()
-  const { setMode } = useAiStore()
   const { openTab } = useTabStore()
 
   const completed = documents.filter((doc) => doc.status === 'completed').length
@@ -290,7 +288,6 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
               type="button"
               onClick={() => {
                 setActiveNavItem('chat')
-                setMode('Ask')
                 if (window.innerWidth < 1280) {
                   useUiStore.getState().setMobileDrawer('inspector')
                   return

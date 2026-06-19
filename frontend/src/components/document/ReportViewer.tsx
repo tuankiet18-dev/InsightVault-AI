@@ -1,16 +1,25 @@
 import { useTabStore } from '@/stores/tabStore'
 import { FileText, Download, Share2 } from 'lucide-react'
 import { useReport } from '@/hooks/useReports'
+import { useDocuments } from '@/hooks/useDocuments'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import rehypeRaw from 'rehype-raw'
+import { createDocumentTab } from '@/lib/documentTabs'
 
 export function ReportViewer() {
-  const { getActiveTab } = useTabStore()
+  const { getActiveTab, openTab } = useTabStore()
   const activeTab = getActiveTab()
+  const { activeWorkspaceId } = useWorkspaceStore()
   
   const reportId = activeTab?.type === 'report' ? (activeTab.reportId || '1') : null
   const { data: report, isLoading } = useReport(reportId)
+  const { data: documents = [] } = useDocuments(activeWorkspaceId)
 
+  const compareDocIds = activeTab?.type === 'report' ? activeTab.compareDocumentIds : undefined
+  const compareDocs = compareDocIds ? documents.filter(d => compareDocIds.includes(d.id)) : []
+  
   if (!activeTab || activeTab.type !== 'report') return null
 
   if (isLoading) {
@@ -19,6 +28,51 @@ export function ReportViewer() {
 
   if (!report) {
     return <div className="flex-1 p-8 text-surface-500">Report not found.</div>
+  }
+
+  const cleanTitle = report.title.replace(/\s*-\s*\d+\s*documents?/i, '')
+
+  const handlePrint = () => {
+    const printWindow = window.open('', '', 'width=800,height=600')
+    if (!printWindow) return
+
+    const reportContent = document.getElementById('report-content')
+    if (!reportContent) return
+
+    const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+      .map(el => el.outerHTML)
+      .join('\n')
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${cleanTitle}</title>
+          ${styles}
+          <style>
+            body { background-color: white; color: black; }
+            @media print {
+              @page { margin: 1cm; }
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
+          </style>
+        </head>
+        <body class="p-8">
+          <div class="max-w-4xl mx-auto">
+            <h1 class="text-3xl font-bold mb-8">${cleanTitle}</h1>
+            ${reportContent.innerHTML}
+          </div>
+        </body>
+      </html>
+    `)
+
+    printWindow.document.close()
+    printWindow.focus()
+
+    setTimeout(() => {
+      printWindow.print()
+      printWindow.close()
+    }, 250)
   }
 
   return (
@@ -33,7 +87,25 @@ export function ReportViewer() {
               <div className="text-[11px] font-medium text-surface-400 uppercase tracking-wider mb-0.5">
                 AI Generated Report
               </div>
-              <h1 className="text-xl font-bold text-surface-900">{report.title}</h1>
+              <h1 className="text-xl font-bold text-surface-900 flex items-center flex-wrap gap-1.5">
+                {cleanTitle}
+                {compareDocs.length > 0 && (
+                  <>
+                    <span className="text-surface-400 mx-1">:</span>
+                    {compareDocs.map((doc, i) => (
+                      <span key={doc.id} className="inline-flex items-center">
+                        <button
+                          onClick={() => openTab(createDocumentTab({ documentId: doc.id, fileName: doc.originalFileName }))}
+                          className="text-primary-600 hover:text-primary-700 hover:underline transition-colors text-lg"
+                        >
+                          {doc.originalFileName}
+                        </button>
+                        {i < compareDocs.length - 1 && <span className="mx-1.5 text-surface-400 text-lg">vs</span>}
+                      </span>
+                    ))}
+                  </>
+                )}
+              </h1>
             </div>
           </div>
           
@@ -42,7 +114,10 @@ export function ReportViewer() {
               <Share2 className="w-4 h-4" />
               Share
             </button>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium bg-primary-500 text-white hover:bg-primary-600 transition-colors shadow-sm">
+            <button 
+              onClick={handlePrint}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+            >
               <Download className="w-4 h-4" />
               Export PDF
             </button>
@@ -50,10 +125,12 @@ export function ReportViewer() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-6 lg:p-8">
-        <div className="max-w-4xl mx-auto bg-surface-0 p-8 md:p-12 rounded-2xl shadow-sm border border-border">
-          <article className="prose prose-sm md:prose-base prose-slate dark:prose-invert max-w-none">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{report.markdownContent}</ReactMarkdown>
+      <div className="flex-1 overflow-y-auto p-6 lg:p-10 bg-surface-0">
+        <div className="max-w-4xl mx-auto">
+          <article id="report-content" className="prose prose-sm md:prose-base prose-slate dark:prose-invert max-w-none font-sans leading-relaxed text-surface-900">
+            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+              {report.markdownContent}
+            </ReactMarkdown>
           </article>
         </div>
       </div>

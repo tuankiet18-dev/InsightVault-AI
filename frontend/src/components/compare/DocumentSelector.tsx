@@ -6,16 +6,18 @@ import { cn, getFileTypeColor } from '@/lib/utils'
 
 export function DocumentSelector({ 
   selectedIds, 
-  onChange 
+  onChange,
+  maxSelections = 5
 }: { 
   selectedIds: string[], 
-  onChange: (ids: string[]) => void 
+  onChange: (ids: string[]) => void,
+  maxSelections?: number
 }) {
   const { activeWorkspaceId } = useWorkspaceStore()
   const { data: documents = [] } = useDocuments(activeWorkspaceId)
   const [search, setSearch] = useState('')
   
-  const completedDocs = documents.filter(d => d.status === 'completed')
+  const completedDocs = documents.filter(d => d.status === 'completed' && d.folderId !== null)
   const filteredDocs = completedDocs.filter(d => 
     d.originalFileName.toLowerCase().includes(search.toLowerCase())
   )
@@ -24,7 +26,9 @@ export function DocumentSelector({
     if (selectedIds.includes(id)) {
       onChange(selectedIds.filter(i => i !== id))
     } else {
-      if (selectedIds.length < 5) { // Limit to 5 for MVP
+      if (maxSelections === 1) {
+        onChange([id])
+      } else if (selectedIds.length < maxSelections) {
         onChange([...selectedIds, id])
       }
     }
@@ -33,7 +37,7 @@ export function DocumentSelector({
   return (
     <div className="flex flex-col h-full bg-surface-0 border border-border rounded-xl shadow-sm overflow-hidden">
       <div className="p-3 border-b border-border bg-surface-50">
-        <div className="text-sm font-semibold text-surface-900 mb-2">Select Documents ({selectedIds.length}/5)</div>
+        <div className="text-sm font-semibold text-surface-900 mb-2">Select Documents {maxSelections > 1 ? `(${selectedIds.length}/${maxSelections})` : ''}</div>
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
           <input

@@ -1,16 +1,35 @@
-import { FileBarChart2, GitCompare, FileText } from 'lucide-react'
+import { FileBarChart2, GitCompare, FileText, Maximize2, Minimize2, MoreVertical, ExternalLink, Download } from 'lucide-react'
 import type { DocumentDto } from '@/types/api-contract'
 import { StatusChip } from './StatusChip'
 import { useAiStore } from '@/stores/aiStore'
 import { useTabStore } from '@/stores/tabStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { useDocumentOriginalAccess } from '@/hooks/useDocuments'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { cn } from '@/lib/utils'
 
-export function DocumentHeader({ document }: { document: DocumentDto }) {
+export function DocumentHeader({ 
+  document,
+  viewMode,
+  setViewMode
+}: { 
+  document: DocumentDto
+  viewMode: 'original' | 'summary'
+  setViewMode: (mode: 'original' | 'summary') => void
+}) {
   const { openTab } = useTabStore()
-  const { setMode, setScope } = useAiStore()
-  const { inspectorOpen, setActiveNavItem, toggleInspector } = useUiStore()
+  const { setScope } = useAiStore()
+  const { inspectorOpen, focusMode, setFocusMode, setActiveNavItem, toggleInspector } = useUiStore()
   const { setSelectedDocument } = useWorkspaceStore()
+  
+  const accessQuery = useDocumentOriginalAccess(document.id)
+  const accessUrl = accessQuery.data?.downloadUrl
 
   const startCompare = () => {
     openTab({
@@ -24,7 +43,6 @@ export function DocumentHeader({ document }: { document: DocumentDto }) {
   const prepareReport = () => {
     setSelectedDocument(document.id)
     setScope('document')
-    setMode('Report')
     setActiveNavItem('chat')
     if (!inspectorOpen) {
       toggleInspector()
@@ -32,21 +50,40 @@ export function DocumentHeader({ document }: { document: DocumentDto }) {
   }
 
   return (
-    <header className="shrink-0 border-b border-border bg-card px-4 py-3">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <div className="min-w-0">
-            <h1 className="text-sm font-semibold leading-5 tracking-tight text-foreground">{document.originalFileName}</h1>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusChip status={document.status} />
-            <span className="hidden text-[11px] text-muted-foreground md:inline">
-              Updated {new Date(document.updatedAt).toLocaleDateString()}
-            </span>
-          </div>
+    <header className="shrink-0 border-b border-border bg-surface-0 px-4 py-2 grid grid-cols-[1fr_auto_1fr] items-center gap-4 z-10">
+      {/* Left section */}
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <h1 className="text-sm font-semibold leading-5 tracking-tight text-foreground truncate">{document.originalFileName}</h1>
+        <StatusChip status={document.status} />
+      </div>
+      
+      {/* Center section */}
+      <div className="hidden md:flex justify-center">
+        <div className="inline-flex items-center rounded-full bg-muted p-0.5 shadow-sm">
+          <button
+            onClick={() => setViewMode('original')}
+            className={cn(
+              "rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-200",
+              viewMode === 'original' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            Original
+          </button>
+          <button
+            onClick={() => setViewMode('summary')}
+            className={cn(
+              "rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-200",
+              viewMode === 'summary' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            AI Summary
+          </button>
         </div>
-        
+      </div>
+
+      {/* Right section */}
+      <div className="flex flex-1 items-center justify-end gap-1">
         <div className="hidden shrink-0 items-center gap-1 sm:flex">
           <button 
             disabled={document.status !== 'completed'}
@@ -65,6 +102,40 @@ export function DocumentHeader({ document }: { document: DocumentDto }) {
             <FileBarChart2 className="w-4 h-4" />
             Report
           </button>
+          
+          <div className="mx-1 h-4 w-px bg-border" />
+          
+          <button
+            onClick={() => setFocusMode(!focusMode)}
+            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+            title={focusMode ? "Exit Focus Mode" : "Enter Focus Mode"}
+          >
+            {focusMode ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </button>
+          
+          {accessUrl && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground">
+                  <MoreVertical className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuItem asChild>
+                  <a href={accessUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 cursor-pointer">
+                    <ExternalLink className="h-4 w-4" />
+                    <span>Open in new tab</span>
+                  </a>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <a href={accessUrl} download className="flex items-center gap-2 cursor-pointer">
+                    <Download className="h-4 w-4" />
+                    <span>Download</span>
+                  </a>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
     </header>

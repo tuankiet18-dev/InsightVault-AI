@@ -26,6 +26,7 @@ export type DocumentTabItem = BaseTabItem & {
 export type ReportTabItem = BaseTabItem & {
   type: 'report'
   reportId: string
+  compareDocumentIds?: string[]
 }
 
 export type CompareTabItem = BaseTabItem & {

@@ -13,7 +13,7 @@ import type { ReactNode } from 'react'
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAuthStore } from '@/stores/authStore'
-import { useAiStore } from '@/stores/aiStore'
+
 import { useTabStore } from '@/stores/tabStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
@@ -39,7 +39,6 @@ export function ActivityRail() {
   const { activeWorkspaceId } = useWorkspaceStore()
   const { openTab } = useTabStore()
   const { user } = useAuthStore()
-  const { setMode } = useAiStore()
 
   const actions: RailAction[] = [
     {
@@ -70,7 +69,6 @@ export function ActivityRail() {
       icon: Sparkles,
       onSelect: () => {
         setActiveNavItem('chat')
-        setMode('Ask')
         if (window.innerWidth < 1280) {
           setMobileDrawer('inspector')
           return

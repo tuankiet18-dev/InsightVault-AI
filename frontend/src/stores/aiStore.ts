@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import type { AiMode } from '../lib/constants'
 
 export type Citation = {
   documentId: string
@@ -13,7 +12,6 @@ export type Citation = {
 }
 
 type AiState = {
-  mode: AiMode
   prompt: string
   scope: 'workspace' | 'folder' | 'document'
   answer: string | null
@@ -21,7 +19,6 @@ type AiState = {
   suggestions: string[]
   isLoading: boolean
 
-  setMode: (mode: AiMode) => void
   setPrompt: (prompt: string) => void
   setScope: (scope: 'workspace' | 'folder' | 'document') => void
   setAnswer: (answer: string | null) => void
@@ -31,7 +28,6 @@ type AiState = {
 }
 
 export const useAiStore = create<AiState>((set) => ({
-  mode: 'Ask',
   prompt: '',
   scope: 'document',
   answer: null,
@@ -39,7 +35,6 @@ export const useAiStore = create<AiState>((set) => ({
   suggestions: [],
   isLoading: false,
 
-  setMode: (mode) => set({ mode }),
   setPrompt: (prompt) => set({ prompt }),
   setScope: (scope) => set({ scope }),
   setAnswer: (answer) => set({ answer }),
