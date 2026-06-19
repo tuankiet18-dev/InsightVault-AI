@@ -9,6 +9,12 @@ class ProcessDocumentRequest(BaseModel):
     minio_object_key: str = Field(..., description="MinIO object key")
     file_type: str = Field(..., description="File type: pdf, docx, txt, md")
     file_name: str = Field(..., description="Display/original file name")
+    model_name: str | None = Field(
+        None,
+        max_length=128,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$",
+        description="Optional chat model override for document intelligence",
+    )
 
 
 class DocumentInsights(BaseModel):

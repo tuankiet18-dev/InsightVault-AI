@@ -41,6 +41,8 @@ async def rag_chat(req: RagQueryRequest) -> RagQueryResponse:
             report_context=req.report_context,
             top_k=req.top_k,
             chat_history=[m.model_dump() for m in req.chat_history],
+            model_name=req.model_name,
+            web_search_options=req.web_search_options.model_dump() if req.web_search_options else None,
         )
     except RuntimeError as exc:
         logger.error("RAG query failed: %s", exc)
@@ -52,4 +54,5 @@ async def rag_chat(req: RagQueryRequest) -> RagQueryResponse:
     return RagQueryResponse(
         answer=result["answer"],
         sources=[RagSource(**s) for s in result["sources"]],
+        web_sources=result.get("web_sources", []),
     )

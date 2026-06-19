@@ -10,7 +10,7 @@ from typing import Literal
 
 from core.config import settings
 from core.database import get_connection
-from core.chat_provider import chat_model
+from core.chat_provider import chat_model, get_chat_model
 from services.report_store import insert_report
 
 logger = logging.getLogger(__name__)
@@ -144,6 +144,7 @@ def generate_report(
     title: str | None = None,
     custom_prompt: str | None = None,
     store_report: bool = False,
+    model_name: str | None = None,
 ) -> dict:
     """
     Generate a Markdown report using the configured chat provider.
@@ -185,10 +186,11 @@ def generate_report(
 
     last_error: Exception | None = None
     delay = settings.GEMINI_RETRY_DELAY
+    model = get_chat_model(model_name)
 
     for attempt in range(1, settings.GEMINI_MAX_RETRIES + 1):
         try:
-            markdown_content = chat_model.generate_text(prompt)
+            markdown_content = model.generate_text(prompt)
             report_id = None
             if store_report:
                 report_id = insert_report(

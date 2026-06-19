@@ -28,6 +28,12 @@ class RagQueryRequest(BaseModel):
     )
     top_k: int = Field(5, ge=1, le=20)
     chat_history: list[ChatHistoryMessage] = Field(default_factory=list)
+    model_name: str | None = Field(
+        None,
+        max_length=128,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$",
+        description="Optional chat model override for this request",
+    )
     web_search_options: WebSearchOptions | None = Field(
         None,
         description="Reserved for later web search phase. Current AI service ignores it.",

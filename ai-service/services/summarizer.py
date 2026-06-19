@@ -7,7 +7,7 @@ import logging
 import time
 from typing import Any
 
-from core.chat_provider import chat_model
+from core.chat_provider import chat_model, get_chat_model
 from core.config import settings
 from services.document_classifier import classify_document
 from services.prompt_templates import build_summary_prompt
@@ -50,7 +50,11 @@ def _normalize_insights(value: Any) -> dict[str, list[str]]:
     }
 
 
-def generate_summary(text: str, file_name: str | None = None) -> dict[str, Any]:
+def generate_summary(
+    text: str,
+    file_name: str | None = None,
+    model_name: str | None = None,
+) -> dict[str, Any]:
     """Generate a document-aware summary with structured insights."""
     truncated = _truncate_for_summary(text)
     classification = classify_document(text, file_name)
@@ -58,10 +62,11 @@ def generate_summary(text: str, file_name: str | None = None) -> dict[str, Any]:
 
     last_error: Exception | None = None
     delay = settings.GEMINI_RETRY_DELAY
+    model = get_chat_model(model_name)
 
     for attempt in range(1, settings.GEMINI_MAX_RETRIES + 1):
         try:
-            raw = chat_model.generate_text(prompt)
+            raw = model.generate_text(prompt)
             result = json.loads(_clean_json_text(raw))
 
             return {

@@ -7,7 +7,7 @@ import logging
 import time
 
 from core.config import settings
-from core.chat_provider import chat_model
+from core.chat_provider import chat_model, get_chat_model
 from services.embedder import embed_query
 from services.vector_store import hybrid_search
 
@@ -84,6 +84,8 @@ def query(
     report_context: str | None = None,
     top_k: int = settings.RAG_TOP_K,
     chat_history: list[dict] | None = None,
+    model_name: str | None = None,
+    web_search_options: dict | None = None,
 ) -> dict:
     """
     Execute the full RAG pipeline.
@@ -100,7 +102,14 @@ def query(
     Returns:
         dict with keys: answer (str), sources (list[dict])
     """
-    logger.info("RAG query: scope=%s workspace=%s question=%r", scope, workspace_id, question[:80])
+    logger.info(
+        "RAG query: scope=%s workspace=%s model=%s web_search=%s question=%r",
+        scope,
+        workspace_id,
+        model_name or chat_model.model_name,
+        bool(web_search_options and web_search_options.get("enabled")),
+        question[:80],
+    )
 
     # Step 1: Embed the question.
     query_vector = embed_query(question)
@@ -142,10 +151,11 @@ def query(
     # Step 4: Call Gemini with retry.
     last_error: Exception | None = None
     delay = settings.GEMINI_RETRY_DELAY
+    model = get_chat_model(model_name)
 
     for attempt in range(1, settings.GEMINI_MAX_RETRIES + 1):
         try:
-            answer = chat_model.generate_text(prompt)
+            answer = model.generate_text(prompt)
             break
         except Exception as exc:
             last_error = exc

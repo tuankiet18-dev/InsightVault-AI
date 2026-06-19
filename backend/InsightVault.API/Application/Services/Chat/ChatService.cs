@@ -3,7 +3,9 @@ using InsightVault.API.Application.Abstractions.Ai;
 using InsightVault.API.Application.Abstractions.Repositories;
 using InsightVault.API.Application.Abstractions.Services.Auth;
 using InsightVault.API.Application.Abstractions.Services.Chat;
+using InsightVault.API.Application.Abstractions.Services.SystemSettings;
 using InsightVault.API.Application.Abstractions.Services.Workspaces;
+using InsightVault.API.Application.Services.SystemSettings;
 using InsightVault.API.Common.Errors;
 using InsightVault.API.Data;
 using InsightVault.API.Domain.Entities;
@@ -20,7 +22,8 @@ public sealed class ChatService(
     IWorkspacePermissionService workspacePermissionService,
     IDocumentRepository documentRepository,
     IFolderRepository folderRepository,
-    IAiServiceClient aiServiceClient) : IChatService
+    IAiServiceClient aiServiceClient,
+    ISystemSettingReader systemSettingReader) : IChatService
 {
     private const int DefaultTopK = 5;
     private const int MaxTitleLength = 255;
@@ -105,6 +108,7 @@ public sealed class ChatService(
             session.WorkspaceId,
             request.Contexts,
             cancellationToken);
+        var aiSettings = await GetAiRuntimeSettingsAsync(cancellationToken);
         var chatHistory = await GetChatHistoryAsync(session, cancellationToken);
         var now = DateTimeOffset.UtcNow;
         var userMessage = new ChatMessage
@@ -147,14 +151,17 @@ public sealed class ChatService(
         {
             ragResult = await aiServiceClient.QueryRagAsync(
                 new RagQueryAiRequest(
-                    session.WorkspaceId,
-                    content,
-                    resolvedScope.Scope,
+                    WorkspaceId: session.WorkspaceId,
+                    Question: content,
+                    Scope: resolvedScope.Scope,
                     FolderId: null,
-                    resolvedScope.DocumentIds,
-                    resolvedScope.ReportContext,
-                    DefaultTopK,
-                    chatHistory),
+                    DocumentIds: resolvedScope.DocumentIds,
+                    ReportContext: resolvedScope.ReportContext,
+                    TopK: DefaultTopK,
+                    ChatHistory: chatHistory,
+                    ModelName: aiSettings.ModelName,
+                    WebSearchEnabled: aiSettings.WebSearchEnabled,
+                    WebSearchProvider: null),
                 cancellationToken);
         }
         catch (InvalidOperationException exception)
@@ -172,6 +179,7 @@ public sealed class ChatService(
             ChatSessionId = session.Id,
             Role = ChatMessageRole.Assistant,
             Content = ragResult.Answer,
+            ModelName = aiSettings.ModelName,
             Metadata = "{}",
             CreatedAt = now.AddMilliseconds(1),
             Sources = ragResult.Sources.Select((source, index) => new ChatMessageSource
@@ -611,6 +619,20 @@ public sealed class ChatService(
                 "A valid authenticated user is required.");
     }
 
+    private async Task<AiRuntimeSettings> GetAiRuntimeSettingsAsync(CancellationToken cancellationToken)
+    {
+        var modelName = await systemSettingReader.GetStringAsync(
+            SystemSettingKeys.DefaultAiModel,
+            SystemSettingKeys.DefaultAiModelFallback,
+            cancellationToken);
+        var webSearchEnabled = await systemSettingReader.GetBoolAsync(
+            SystemSettingKeys.WebSearchEnabled,
+            fallback: false,
+            cancellationToken);
+
+        return new AiRuntimeSettings(modelName, webSearchEnabled);
+    }
+
     private static string NormalizeMessageContent(string content)
     {
         if (string.IsNullOrWhiteSpace(content))
@@ -808,4 +830,8 @@ public sealed class ChatService(
         IReadOnlyList<Guid> DocumentIds,
         string ReportContext,
         ResolvedContext Context);
+
+    private sealed record AiRuntimeSettings(
+        string ModelName,
+        bool WebSearchEnabled);
 }

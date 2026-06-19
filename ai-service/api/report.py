@@ -26,6 +26,7 @@ async def report(req: GenerateReportRequest) -> GenerateReportResponse:
             title=req.title,
             custom_prompt=req.custom_prompt,
             store_report=req.store_report and settings.AI_ALLOW_REPORT_PERSISTENCE,
+            model_name=req.model_name,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))

@@ -17,6 +17,12 @@ class CompareRequest(BaseModel):
     document_names: list[str] = Field(..., description="Display names matching document_ids")
     title: str | None = Field(None, description="Report title when persisted")
     store_report: bool = Field(False, description="Persist comparison result into reports table")
+    model_name: str | None = Field(
+        None,
+        max_length=128,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$",
+        description="Optional chat model override for this request",
+    )
     web_search_options: WebSearchOptions | None = Field(
         None,
         description="Reserved for later web search phase. Current AI service ignores it.",

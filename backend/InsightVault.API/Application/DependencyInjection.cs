@@ -6,6 +6,7 @@ using InsightVault.API.Application.Abstractions.Services.Billing;
 using InsightVault.API.Application.Abstractions.Services.Documents;
 using InsightVault.API.Application.Abstractions.Services.Folders;
 using InsightVault.API.Application.Abstractions.Services.Reports;
+using InsightVault.API.Application.Abstractions.Services.SystemSettings;
 using InsightVault.API.Application.Services.Admin;
 using InsightVault.API.Application.Services.AiJobs;
 using InsightVault.API.Application.Services.Chat;
@@ -14,6 +15,7 @@ using InsightVault.API.Application.Services.Billing;
 using InsightVault.API.Application.Services.Documents;
 using InsightVault.API.Application.Services.Folders;
 using InsightVault.API.Application.Services.Reports;
+using InsightVault.API.Application.Services.SystemSettings;
 
 namespace InsightVault.API.Application;
 
@@ -31,6 +33,7 @@ public static class DependencyInjection
         services.AddScoped<IFolderService, FolderService>();
         services.AddScoped<IDocumentService, DocumentService>();
         services.AddScoped<IReportService, ReportService>();
+        services.AddScoped<ISystemSettingReader, SystemSettingReader>();
 
         return services;
     }
