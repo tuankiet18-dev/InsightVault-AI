@@ -34,12 +34,14 @@ export function TopBar() {
     toggleInspector,
     setCommandPaletteOpen,
     setInviteModalOpen,
+    setMobileDrawer,
   } = useUiStore()
   const { user, logout } = useAuthStore()
   const deleteWorkspaceMutation = useDeleteWorkspace()
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isDeleteWsModalOpen, setIsDeleteWsModalOpen] = useState(false)
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false)
   const role = activeWs?.currentUserRole
 
   const isOwner = role === 'owner'
@@ -54,13 +56,31 @@ export function TopBar() {
     })
   }
 
+  const openExplorer = () => {
+    if (window.innerWidth < 1024) {
+      setMobileDrawer('explorer')
+      return
+    }
+
+    toggleExplorer()
+  }
+
+  const openInspector = () => {
+    if (window.innerWidth < 1280) {
+      setMobileDrawer('inspector')
+      return
+    }
+
+    toggleInspector()
+  }
+
   return (
     <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-card px-3">
       <Button
         variant="ghost"
         size="icon"
         className="h-8 w-8"
-        onClick={toggleExplorer}
+        onClick={openExplorer}
         aria-label="Toggle explorer"
       >
         {explorerOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
@@ -123,7 +143,7 @@ export function TopBar() {
         variant="ghost"
         size="icon"
         className="h-8 w-8"
-        onClick={toggleInspector}
+        onClick={openInspector}
         aria-label="Toggle AI inspector"
       >
         {inspectorOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
@@ -152,7 +172,7 @@ export function TopBar() {
             Delete workspace
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem onClick={() => logout()} icon={<LogOut className="h-4 w-4" />} destructive>
+        <DropdownMenuItem onClick={() => setIsLogoutConfirmOpen(true)} icon={<LogOut className="h-4 w-4" />} destructive>
           Log out
         </DropdownMenuItem>
       </DropdownMenu>
@@ -167,6 +187,18 @@ export function TopBar() {
         title="Delete Workspace?"
         description={`Are you sure you want to delete workspace "${activeWs?.name}"? All folders, documents, and reports inside this workspace will be permanently removed.`}
         confirmText="Delete Workspace"
+      />
+      <ConfirmModal
+        isOpen={isLogoutConfirmOpen}
+        onClose={() => setIsLogoutConfirmOpen(false)}
+        onConfirm={() => {
+          setIsLogoutConfirmOpen(false)
+          logout()
+        }}
+        title="Log out?"
+        description="You will need to sign in again to access this workspace."
+        confirmText="Log out"
+        isDestructive
       />
     </header>
   )

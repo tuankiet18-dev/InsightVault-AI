@@ -215,7 +215,7 @@ export type ChatMessageContextDto = {
 }
 
 export type ChatSourceDto = {
-  documentId: string
+  documentId?: string | null
   documentChunkId?: string | null
   fileName: string
   snippet: string

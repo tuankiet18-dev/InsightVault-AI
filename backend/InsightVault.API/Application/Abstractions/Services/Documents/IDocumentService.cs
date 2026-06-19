@@ -23,6 +23,14 @@ public interface IDocumentService
         Guid documentId,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<DocumentChunkDto>> ListChunksAsync(
+        Guid documentId,
+        CancellationToken cancellationToken = default);
+
+    Task<DocumentExtractedTextResponse> GetExtractedTextAsync(
+        Guid documentId,
+        CancellationToken cancellationToken = default);
+
     Task<DocumentDto> UpdateAsync(
         Guid documentId,
         UpdateDocumentRequest request,

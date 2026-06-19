@@ -16,6 +16,6 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   selectedDocumentId: null,
 
   setActiveWorkspace: (id) => set({ activeWorkspaceId: id, selectedFolderId: null, selectedDocumentId: null }),
-  setSelectedFolder: (id) => set({ selectedFolderId: id }),
-  setSelectedDocument: (id) => set({ selectedDocumentId: id }),
+  setSelectedFolder: (id) => set({ selectedFolderId: id, selectedDocumentId: null }),
+  setSelectedDocument: (id) => set({ selectedDocumentId: id, selectedFolderId: null }),
 }))

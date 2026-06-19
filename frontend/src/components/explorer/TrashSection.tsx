@@ -26,7 +26,7 @@ export function TrashSection() {
   // Let's keep it visible so they know items are deleted, but they won't have actions.
 
   return (
-    <div className="mt-4 flex flex-col">
+    <div className="mt-2 flex flex-col">
       <button
         onClick={() => setExpanded(!expanded)}
         className="flex w-full items-center gap-1.5 rounded px-2 py-1.5 text-sm font-semibold text-surface-600 transition-colors hover:bg-surface-100 hover:text-surface-900"

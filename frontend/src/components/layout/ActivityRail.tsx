@@ -13,6 +13,7 @@ import type { ReactNode } from 'react'
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAuthStore } from '@/stores/authStore'
+import { useAiStore } from '@/stores/aiStore'
 import { useTabStore } from '@/stores/tabStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
@@ -28,16 +29,17 @@ type RailAction = {
 export function ActivityRail() {
   const {
     activeNavItem,
-    explorerOpen,
     inspectorOpen,
     setActiveNavItem,
     setCommandPaletteOpen,
+    setMobileDrawer,
     toggleExplorer,
     toggleInspector,
   } = useUiStore()
   const { activeWorkspaceId } = useWorkspaceStore()
   const { openTab } = useTabStore()
   const { user } = useAuthStore()
+  const { setMode } = useAiStore()
 
   const actions: RailAction[] = [
     {
@@ -46,7 +48,11 @@ export function ActivityRail() {
       icon: FolderTree,
       onSelect: () => {
         setActiveNavItem('explorer')
-        if (!explorerOpen) toggleExplorer()
+        if (window.innerWidth < 1024) {
+          setMobileDrawer('explorer')
+          return
+        }
+        toggleExplorer()
       },
     },
     {
@@ -64,7 +70,13 @@ export function ActivityRail() {
       icon: Sparkles,
       onSelect: () => {
         setActiveNavItem('chat')
+        setMode('Ask')
+        if (window.innerWidth < 1280) {
+          setMobileDrawer('inspector')
+          return
+        }
         if (!inspectorOpen) toggleInspector()
+        window.setTimeout(() => document.getElementById('ai-prompt')?.focus(), 0)
       },
     },
     {
@@ -132,6 +144,27 @@ export function ActivityRail() {
           )}
         </div>
       </aside>
+      <nav className="fixed inset-x-0 bottom-0 z-40 flex h-14 items-center justify-around border-t border-border bg-rail px-2 text-rail-foreground md:hidden">
+        <RailLink label="Dashboard" to="/dashboard">
+          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary font-mono text-sm font-bold text-primary-foreground">
+            IV
+          </div>
+        </RailLink>
+        {actions.slice(0, 5).map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={item.onSelect}
+            className={cn(
+              'flex h-10 w-10 items-center justify-center rounded-md transition-colors',
+              activeNavItem === item.id ? 'bg-white/10 text-white' : 'text-rail-foreground/80'
+            )}
+            aria-label={item.label}
+          >
+            <item.icon className="h-5 w-5" />
+          </button>
+        ))}
+      </nav>
     </TooltipProvider>
   )
 }

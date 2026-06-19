@@ -52,8 +52,8 @@ export function FolderTree() {
   }
   
   return (
-    <section 
-      className={cn("min-h-[100px] transition-colors rounded-md", isDragOver && "bg-surface-100 ring-2 ring-primary ring-inset")}
+    <section
+      className={cn("rounded-md transition-colors", isDragOver && "bg-surface-100 ring-2 ring-primary ring-inset")}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -77,6 +77,7 @@ import { DropdownMenu, DropdownMenuItem } from '../ui/DropdownMenu'
 import { ConfirmModal } from '../ui/ConfirmModal'
 import { useDeleteFolder } from '@/hooks/useFolders'
 import { useDeleteDocument } from '@/hooks/useDocuments'
+import { createDocumentTab } from '@/lib/documentTabs'
 
 function FolderRow({
   folder,
@@ -271,13 +272,10 @@ function DocumentRow({
   
   const handleOpen = () => {
     setSelectedDocument(document.id)
-    openTab({
-      id: `tab-${document.id}`,
-      label: document.originalFileName,
-      type: 'document',
+    openTab(createDocumentTab({
       documentId: document.id,
-      closable: true
-    })
+      fileName: document.originalFileName,
+    }))
   }
 
   const handleDelete = () => {
@@ -285,6 +283,7 @@ function DocumentRow({
       onSuccess: () => {
         setIsDeleteModalOpen(false)
         closeTab(`tab-${document.id}`)
+        closeTab(`doc-${document.id}`)
       }
     })
   }

@@ -78,7 +78,7 @@ export function DocumentOriginalViewer({
         </div>
         <h2 className="text-sm font-semibold text-foreground">Inline preview is not available</h2>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          DOCX files are download-only in the MVP. You can still review the AI Summary tab after processing completes.
+          This file type cannot be rendered as the original browser preview. Use Extracted Text or Chunks after processing, or download the original file.
         </p>
         <a
           href={access.downloadUrl}

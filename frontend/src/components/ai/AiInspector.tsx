@@ -2,6 +2,7 @@ import { AiModeSelector } from './AiModeSelector'
 import { PromptInput } from './PromptInput'
 import { AiAnswer } from './AiAnswer'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { useFolder } from '@/hooks/useFolders'
 import { useDocument } from '@/hooks/useDocuments'
 import { useTabStore } from '@/stores/tabStore'
 import { useAiStore } from '@/stores/aiStore'
@@ -12,18 +13,27 @@ import { FileText, GitCompare, Sparkles } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 
 export function AiInspector() {
-  const { selectedDocumentId, activeWorkspaceId } = useWorkspaceStore()
+  const { selectedDocumentId, selectedFolderId, activeWorkspaceId } = useWorkspaceStore()
   const { mode } = useAiStore()
   const { getActiveTab } = useTabStore()
   const activeTab = getActiveTab()
-  const activeDocumentId = activeTab?.type === 'document' ? activeTab.documentId : selectedDocumentId
+  const activeDocumentId = selectedDocumentId
+    ?? (!selectedFolderId && activeTab?.type === 'document' ? activeTab.documentId : null)
   const { data: doc } = useDocument(activeDocumentId)
+  const { data: folder } = useFolder(selectedFolderId)
 
   if (!activeWorkspaceId) return null
 
   const scopeLabel = doc?.originalFileName
-    ?? (activeTab?.type === 'report' ? activeTab.label : 'Workspace')
-  const scopeType = doc ? 'Document' : activeTab?.type === 'report' ? 'Report' : 'Workspace'
+    ?? folder?.name
+    ?? (!selectedDocumentId && !selectedFolderId && activeTab?.type === 'report' ? activeTab.label : 'Workspace')
+  const scopeType = doc
+    ? 'Document'
+    : folder
+      ? 'Folder'
+      : !selectedDocumentId && !selectedFolderId && activeTab?.type === 'report'
+        ? 'Report'
+        : 'Workspace'
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-card">
@@ -49,17 +59,27 @@ export function AiInspector() {
 
       <div className="flex min-h-0 flex-1 flex-col">
         <AiModeSelector />
-        <div className="min-h-0 flex-1 overflow-y-auto p-3">
-          <div className="rounded-md border border-border bg-surface-50 px-3 py-3 text-sm leading-6 text-foreground">
-            <div className="text-xs font-semibold text-muted-foreground">Current scope</div>
-            <p className="mt-1">
-              Ask uses the active workspace context. Open a document or report to narrow retrieval before asking.
-            </p>
-          </div>
+        <ModeHint />
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
           {mode === 'Ask' ? <InspectorChatTranscript workspaceId={activeWorkspaceId} /> : <AiAnswer />}
         </div>
         <PromptInput />
       </div>
+    </div>
+  )
+}
+
+function ModeHint() {
+  const { mode } = useAiStore()
+  const message = mode === 'Ask'
+    ? 'Ask answers from the current scope.'
+    : mode === 'Compare'
+      ? 'Compare needs 2+ documents or a folder.'
+      : 'Report creates a saved AI report.'
+
+  return (
+    <div className="mx-2 mb-2 rounded-md bg-muted/70 px-2.5 py-1.5 text-xs text-muted-foreground">
+      {message}
     </div>
   )
 }

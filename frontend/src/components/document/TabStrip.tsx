@@ -1,12 +1,19 @@
 import { X } from 'lucide-react'
 import { useTabStore } from '@/stores/tabStore'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { cn } from '@/lib/utils'
 import type { TabItem } from '@/types/ui'
 
 export function TabStrip() {
-  const { tabs, activeTabId, setActiveTab, closeTab } = useTabStore()
+  const { tabs, activeTabId, setActiveTab, closeTab, resetTabs } = useTabStore()
+  const { setSelectedDocument } = useWorkspaceStore()
 
   if (tabs.length === 0) return null
+
+  const selectTab = (tab: TabItem) => {
+    setActiveTab(tab.id)
+    setSelectedDocument(tab.type === 'document' ? tab.documentId : null)
+  }
 
   return (
     <nav className="flex h-9 w-full items-center border-b border-border bg-card select-none overflow-x-auto [&::-webkit-scrollbar]:hidden">
@@ -15,13 +22,25 @@ export function TabStrip() {
           key={tab.id} 
           tab={tab} 
           isActive={activeTabId === tab.id}
-          onSelect={() => setActiveTab(tab.id)}
+          onSelect={() => selectTab(tab)}
           onClose={(e) => {
             e.stopPropagation()
             closeTab(tab.id)
           }}
         />
       ))}
+      {tabs.length > 1 && (
+        <button
+          type="button"
+          onClick={() => {
+            resetTabs()
+            setSelectedDocument(null)
+          }}
+          className="sticky right-0 ml-auto h-9 shrink-0 border-l border-border bg-card px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        >
+          Close all
+        </button>
+      )}
     </nav>
   )
 }
