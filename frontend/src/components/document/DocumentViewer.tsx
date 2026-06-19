@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { DocumentHeader } from './DocumentHeader'
+import { DocumentChunksViewer } from './DocumentChunksViewer'
+import { DocumentExtractedTextViewer } from './DocumentExtractedTextViewer'
 import { DocumentOriginalViewer } from './DocumentOriginalViewer'
 import { DocumentSummary } from './DocumentSummary'
 import { useTabStore } from '@/stores/tabStore'
@@ -7,7 +9,7 @@ import { useDocument } from '@/hooks/useDocuments'
 import { cn } from '@/lib/utils'
 import type { DocumentDto } from '@/types/api'
 
-type DocumentViewMode = 'original' | 'summary'
+type DocumentViewMode = 'original' | 'extracted' | 'chunks' | 'summary'
 
 export function DocumentViewer() {
   const { getActiveTab } = useTabStore()
@@ -28,14 +30,24 @@ export function DocumentViewer() {
     )
   }
 
-  return <DocumentViewerContent key={document.id} document={document} />
+  const viewerKey = activeTab.type === 'document'
+    ? `${document.id}-${activeTab.preferredView ?? 'default'}-${activeTab.sourceChunkId ?? activeTab.sourceChunkIndex ?? 'none'}`
+    : document.id
+
+  return <DocumentViewerContent key={viewerKey} document={document} />
 }
 
 function DocumentViewerContent({ document }: { document: DocumentDto }) {
   const { getActiveTab } = useTabStore()
   const activeTab = getActiveTab()
   const [viewMode, setViewMode] = useState<DocumentViewMode>(
-    canPreviewOriginal(document.originalFileName, document.fileType) ? 'original' : 'summary'
+    activeTab?.type === 'document' && activeTab.preferredView
+      ? activeTab.preferredView
+      : canPreviewOriginal(document.originalFileName, document.fileType)
+      ? 'original'
+      : canShowExtractedText(document.originalFileName, document.fileType)
+        ? 'extracted'
+        : 'summary'
   )
 
   return (
@@ -47,15 +59,19 @@ function DocumentViewerContent({ document }: { document: DocumentDto }) {
           <ViewModeButton active={viewMode === 'original'} onClick={() => setViewMode('original')}>
             Original
           </ViewModeButton>
+          <ViewModeButton active={viewMode === 'extracted'} onClick={() => setViewMode('extracted')}>
+            Extracted Text
+          </ViewModeButton>
+          <ViewModeButton active={viewMode === 'chunks'} onClick={() => setViewMode('chunks')}>
+            Chunks
+          </ViewModeButton>
           <ViewModeButton active={viewMode === 'summary'} onClick={() => setViewMode('summary')}>
             AI Summary
           </ViewModeButton>
         </div>
-        <p className="hidden text-xs text-muted-foreground md:block">
-          {viewMode === 'original'
-            ? 'Read the uploaded source file. PDF, TXT, and Markdown support inline preview.'
-            : 'Review AI-generated summary, findings, and structured document intelligence.'}
-        </p>
+        <span className="hidden rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground md:inline-flex">
+          {viewMode === 'chunks' ? 'Index view' : viewMode === 'extracted' ? 'Processed text' : viewMode === 'summary' ? 'AI output' : 'Source file'}
+        </span>
       </div>
       
       <div className="flex-1 overflow-y-auto">
@@ -66,6 +82,14 @@ function DocumentViewerContent({ document }: { document: DocumentDto }) {
                 document={document}
                 sourceSnippet={activeTab?.type === 'document' ? activeTab.sourceSnippet : undefined}
                 sourcePageNumber={activeTab?.type === 'document' ? activeTab.sourcePageNumber : undefined}
+              />
+            ) : viewMode === 'extracted' ? (
+              <DocumentExtractedTextViewer document={document} />
+            ) : viewMode === 'chunks' ? (
+              <DocumentChunksViewer
+                document={document}
+                sourceChunkId={activeTab?.type === 'document' ? activeTab.sourceChunkId : undefined}
+                sourceChunkIndex={activeTab?.type === 'document' ? activeTab.sourceChunkIndex : undefined}
               />
             ) : (
               <DocumentSummary document={document} />
@@ -104,6 +128,16 @@ function ViewModeButton({
 function canPreviewOriginal(fileName: string, fileType: string) {
   const normalized = `${fileName}.${fileType}`.toLowerCase()
   return normalized.endsWith('.pdf')
+    || normalized.endsWith('.txt')
+    || normalized.endsWith('.md')
+    || normalized.endsWith('.markdown')
+}
+
+function canShowExtractedText(fileName: string, fileType: string) {
+  const normalized = `${fileName}.${fileType}`.toLowerCase()
+  return normalized.endsWith('.docx')
+    || normalized.endsWith('.doc')
+    || normalized.endsWith('.pdf')
     || normalized.endsWith('.txt')
     || normalized.endsWith('.md')
     || normalized.endsWith('.markdown')

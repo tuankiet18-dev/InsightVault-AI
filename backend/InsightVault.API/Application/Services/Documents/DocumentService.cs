@@ -166,6 +166,68 @@ public sealed class DocumentService(
             content);
     }
 
+    public async Task<IReadOnlyList<DocumentChunkDto>> ListChunksAsync(
+        Guid documentId,
+        CancellationToken cancellationToken = default)
+    {
+        var document = await GetActiveDocumentAsync(documentId, cancellationToken);
+        var userId = GetRequiredUserId();
+        await workspacePermissionService.EnsureCanViewWorkspaceAsync(document.WorkspaceId, userId, cancellationToken);
+
+        var chunks = await db.DocumentChunks
+            .AsNoTracking()
+            .Where(chunk => chunk.DocumentId == document.Id
+                && chunk.WorkspaceId == document.WorkspaceId)
+            .OrderBy(chunk => chunk.ChunkIndex)
+            .Select(chunk => new DocumentChunkDto(
+                chunk.Id,
+                chunk.DocumentId,
+                chunk.WorkspaceId,
+                chunk.FolderId,
+                chunk.ChunkIndex,
+                chunk.Content,
+                chunk.TokenCount,
+                chunk.CharStart,
+                chunk.CharEnd,
+                chunk.EmbeddingModel,
+                chunk.Metadata,
+                chunk.CreatedAt))
+            .ToListAsync(cancellationToken);
+
+        return chunks;
+    }
+
+    public async Task<DocumentExtractedTextResponse> GetExtractedTextAsync(
+        Guid documentId,
+        CancellationToken cancellationToken = default)
+    {
+        var document = await GetActiveDocumentAsync(documentId, cancellationToken);
+        var userId = GetRequiredUserId();
+        await workspacePermissionService.EnsureCanViewWorkspaceAsync(document.WorkspaceId, userId, cancellationToken);
+
+        var chunks = await db.DocumentChunks
+            .AsNoTracking()
+            .Where(chunk => chunk.DocumentId == document.Id
+                && chunk.WorkspaceId == document.WorkspaceId)
+            .OrderBy(chunk => chunk.ChunkIndex)
+            .Select(chunk => chunk.Content)
+            .ToListAsync(cancellationToken);
+
+        if (chunks.Count == 0)
+        {
+            throw new ApiException(
+                StatusCodes.Status404NotFound,
+                "document.extracted_text_not_found",
+                "Extracted text is not available yet. Wait for document processing to complete.");
+        }
+
+        return new DocumentExtractedTextResponse(
+            document.Id,
+            document.OriginalFileName,
+            chunks.Count,
+            string.Join($"{Environment.NewLine}{Environment.NewLine}", chunks));
+    }
+
     public async Task<DocumentDto> UpdateAsync(
         Guid documentId,
         UpdateDocumentRequest request,

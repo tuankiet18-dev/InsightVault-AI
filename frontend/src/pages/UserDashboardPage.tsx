@@ -1,99 +1,23 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
-import type { UserDashboardDto } from '@/types/api'
-import { Folder, FileText, Settings, LogOut, Plus, ChevronRight, Activity, CheckCircle, AlertTriangle, Clock, WalletCards, CreditCard, Mail } from 'lucide-react'
+import { Folder, FileText, Settings, LogOut, Plus, ChevronRight, Activity, CheckCircle, AlertTriangle, Clock, WalletCards, CreditCard, Mail, MoreHorizontal } from 'lucide-react'
 import { useUiStore } from '@/stores/uiStore'
 import { CreateWorkspaceModal } from '@/components/workspace/CreateWorkspaceModal'
 import { useWorkspaces } from '@/hooks/useWorkspaces'
 import { useMyWorkspaceInvitations } from '@/hooks/useWorkspaceInvitations'
-import { documentApi } from '@/api/documentApi'
-import { reportApi } from '@/api/reportApi'
+import { useDashboardStats } from '@/hooks/useDashboardStats'
+import { DropdownMenu, DropdownMenuItem } from '@/components/ui/DropdownMenu'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 
 export function UserDashboardPage() {
   const { user, logout } = useAuthStore()
+  const navigate = useNavigate()
   const { data: workspaces = [], isLoading: isWorkspacesLoading } = useWorkspaces()
   const { data: invitations = [] } = useMyWorkspaceInvitations()
-  const [stats, setStats] = useState<UserDashboardDto | null>(null)
-  const [isStatsLoading, setIsStatsLoading] = useState(true)
+  const { data: stats, isLoading: isStatsLoading } = useDashboardStats()
   const { setCreateWorkspaceModalOpen } = useUiStore()
-
-  useEffect(() => {
-    let isMounted = true;
-    const fetchStats = async () => {
-      if (isWorkspacesLoading) return;
-
-      if (!workspaces || workspaces.length === 0) {
-        if (isMounted) {
-          setStats({
-            workspaceCount: 0,
-            folderCount: 0,
-            documentCount: 0,
-            completedDocumentCount: 0,
-            processingDocumentCount: 0,
-            failedDocumentCount: 0,
-            reportCount: 0,
-            recentJobs: []
-          })
-          setIsStatsLoading(false)
-        }
-        return;
-      }
-
-      try {
-        let totalDocs = 0;
-        let totalReports = 0;
-
-        let completedDocs = 0;
-        let processingDocs = 0;
-        let failedDocs = 0;
-
-        await Promise.all(
-          workspaces.map(async (ws) => {
-            try {
-              const [docs, reports] = await Promise.all([
-                documentApi.getDocuments(ws.id),
-                reportApi.getReports(ws.id)
-              ]);
-              totalDocs += docs.length;
-              docs.forEach(doc => {
-                if (doc.status === 'completed')
-                  completedDocs++;
-
-                if (doc.status === 'processing')
-                  processingDocs++;
-
-                if (doc.status === 'failed')
-                  failedDocs++;
-              });
-              totalReports += reports.length;
-            } catch (err) {
-              console.error(`Failed to fetch stats for workspace ${ws.id}`, err);
-            }
-          })
-        );
-
-        if (isMounted) {
-          setStats({
-            workspaceCount: workspaces.length,
-            folderCount: 0,
-            documentCount: totalDocs,
-            completedDocumentCount: completedDocs,
-            processingDocumentCount: processingDocs,
-            failedDocumentCount: failedDocs,
-            reportCount: totalReports,
-            recentJobs: []
-          });
-        }
-      } catch (error) {
-        console.error('Failed to aggregate dashboard data', error);
-      } finally {
-        if (isMounted) setIsStatsLoading(false);
-      }
-    }
-    fetchStats()
-    return () => { isMounted = false; }
-  }, [workspaces, isWorkspacesLoading])
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false)
 
   const isLoading = isWorkspacesLoading || isStatsLoading
 
@@ -107,36 +31,44 @@ export function UserDashboardPage() {
           </div>
           <span className="font-semibold">InsightVault</span>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-sm text-[var(--color-muted-foreground)]">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="hidden items-center gap-2 text-sm text-[var(--color-muted-foreground)] sm:flex">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-secondary)]">
               {user?.fullName?.charAt(0) || 'U'}
             </div>
             <span>{user?.fullName}</span>
           </div>
-          {user?.systemRole === 'admin' && (
-            <Link to="/admin" className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/10">
-              <Settings className="h-4 w-4" />
-              Admin Portal
-            </Link>
-          )}
-          <Link to="/invitations" className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/10">
-            <Mail className="h-4 w-4" />
-            Invitations
-            {invitations.length > 0 && (
-              <span className="rounded-full bg-[var(--color-primary)] px-2 py-0.5 text-xs font-semibold text-white">
-                {invitations.length}
-              </span>
+          <DropdownMenu
+            trigger={
+              <button className="flex h-9 w-9 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-secondary)]">
+                <MoreHorizontal className="h-5 w-5" />
+              </button>
+            }
+          >
+            <div className="border-b border-border px-3 py-2 sm:hidden">
+              <p className="text-sm font-medium text-foreground">{user?.fullName}</p>
+              <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
+            </div>
+            {user?.systemRole === 'admin' && (
+              <DropdownMenuItem onClick={() => navigate('/admin')} icon={<Settings className="h-4 w-4" />}>
+                Admin
+              </DropdownMenuItem>
             )}
-          </Link>
-          <Link to="/billing" className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/10">
-            <CreditCard className="h-4 w-4 pointer-events-none" />
-            Billing
-          </Link>
-          <button onClick={logout} className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-red-500 transition-colors hover:bg-red-500/10">
-            <LogOut className="h-4 w-4" />
-            Sign out
-          </button>
+            <DropdownMenuItem onClick={() => navigate('/invitations')} icon={<Mail className="h-4 w-4" />}>
+              Invitations
+              {invitations.length > 0 && (
+                <span className="ml-auto rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                  {invitations.length}
+                </span>
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/billing')} icon={<CreditCard className="h-4 w-4" />}>
+              Billing
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setIsLogoutConfirmOpen(true)} icon={<LogOut className="h-4 w-4" />} destructive>
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenu>
         </div>
       </header>
 
@@ -225,10 +157,9 @@ export function UserDashboardPage() {
               workspaces.map(ws => (
                 <article
                   key={ws.id}
-                  className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-sm transition-all hover:border-[var(--color-primary)] hover:shadow-md"
+                  className="group flex flex-col justify-between overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-sm transition-all hover:border-[var(--color-primary)] hover:shadow-md"
                 >
-                  <Link to={`/workspaces/${ws.id}`} className="absolute inset-0" aria-label={`Open ${ws.name}`} />
-                  <div className="pointer-events-none relative">
+                  <div>
                     <div className="mb-2 flex items-center justify-between">
                       <h3 className="text-lg font-semibold">{ws.name}</h3>
                       <span className="rounded-full bg-[var(--color-secondary)] px-2.5 py-0.5 text-xs font-medium capitalize text-[var(--color-foreground)]">
@@ -239,18 +170,23 @@ export function UserDashboardPage() {
                       {ws.description || 'No description provided.'}
                     </p>
                   </div>
-                  <div className="pointer-events-none relative mt-6 flex items-center text-sm font-medium text-[var(--color-primary)] opacity-0 transition-opacity group-hover:opacity-100">
-                    Open workspace <ChevronRight className="ml-1 h-4 w-4" />
-                  </div>
-                  {ws.currentUserRole === 'owner' && (
+                  <div className="mt-6 flex flex-wrap items-center gap-2">
                     <Link
-                      to={`/workspaces/${ws.id}/billing`}
-                      className="relative z-10 mt-4 flex w-fit items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-muted-foreground)] transition-colors hover:text-[var(--color-primary)]"
+                      to={`/workspaces/${ws.id}`}
+                      className="inline-flex items-center rounded-md bg-[var(--color-primary)] px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--color-primary)]/90"
                     >
-                      <WalletCards className="h-3.5 w-3.5" />
-                      Billing
+                      Open <ChevronRight className="ml-1 h-4 w-4" />
                     </Link>
-                  )}
+                    {ws.currentUserRole === 'owner' && (
+                      <Link
+                        to={`/workspaces/${ws.id}/billing`}
+                        className="inline-flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm font-medium text-[var(--color-muted-foreground)] transition-colors hover:text-[var(--color-primary)]"
+                      >
+                        <WalletCards className="h-4 w-4" />
+                        Billing
+                      </Link>
+                    )}
+                  </div>
                 </article>
               ))
             )}
@@ -258,6 +194,18 @@ export function UserDashboardPage() {
         </section>
       </main>
       <CreateWorkspaceModal />
+      <ConfirmModal
+        isOpen={isLogoutConfirmOpen}
+        onClose={() => setIsLogoutConfirmOpen(false)}
+        onConfirm={() => {
+          setIsLogoutConfirmOpen(false)
+          logout()
+        }}
+        title="Sign out?"
+        description="You will need to sign in again to access your workspaces."
+        confirmText="Sign out"
+        isDestructive
+      />
     </div>
   )
 }

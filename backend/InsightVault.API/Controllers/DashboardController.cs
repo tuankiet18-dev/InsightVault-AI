@@ -17,4 +17,13 @@ public sealed class DashboardController(IDashboardService dashboardService) : Co
 
         return Ok(dashboard);
     }
+
+    [HttpGet("api/workspaces/dashboard-stats")]
+    public async Task<ActionResult<UserDashboardDto>> GetWorkspaceDashboardStats(
+        CancellationToken cancellationToken)
+    {
+        var dashboard = await dashboardService.GetCurrentUserDashboardAsync(cancellationToken);
+
+        return Ok(dashboard);
+    }
 }

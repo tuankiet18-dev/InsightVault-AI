@@ -13,6 +13,8 @@ export const documentKeys = {
   detail: (id: string) => [...documentKeys.details(), id] as const,
   originalAccess: (id: string) => [...documentKeys.detail(id), 'original-access'] as const,
   originalText: (id: string) => [...documentKeys.detail(id), 'original-text'] as const,
+  chunks: (id: string) => [...documentKeys.detail(id), 'chunks'] as const,
+  extractedText: (id: string) => [...documentKeys.detail(id), 'extracted-text'] as const,
   trashLists: (workspaceId: string) => [...documentKeys.workspace(workspaceId), 'trash'] as const,
 };
 
@@ -59,6 +61,27 @@ export const useDocumentOriginalText = (documentId: string | null, enabled: bool
   return useQuery({
     queryKey: documentKeys.originalText(documentId!),
     queryFn: () => documentApi.getOriginalText(documentId!),
+    enabled: !!documentId && enabled,
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
+export const useDocumentChunks = (documentId: string | null) => {
+  return useQuery({
+    queryKey: documentKeys.chunks(documentId!),
+    queryFn: () => documentApi.getChunks(documentId!),
+    enabled: !!documentId,
+    refetchInterval: (query) => {
+      const chunks = query.state.data;
+      return chunks && chunks.length > 0 ? false : 5000;
+    },
+  });
+};
+
+export const useDocumentExtractedText = (documentId: string | null, enabled: boolean) => {
+  return useQuery({
+    queryKey: documentKeys.extractedText(documentId!),
+    queryFn: () => documentApi.getExtractedText(documentId!),
     enabled: !!documentId && enabled,
     staleTime: 5 * 60 * 1000,
   });

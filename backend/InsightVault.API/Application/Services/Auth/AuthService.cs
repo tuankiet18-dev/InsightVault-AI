@@ -2,8 +2,10 @@ using InsightVault.API.Application.Abstractions.Repositories;
 using InsightVault.API.Application.Abstractions.Services.Auth;
 using InsightVault.API.Data;
 using InsightVault.API.Domain.Entities;
+using InsightVault.API.Domain.Enums;
 using InsightVault.API.DTOs.Auth;
 using InsightVault.API.Application.Abstractions.Services.Emails;
+using Microsoft.EntityFrameworkCore;
 
 namespace InsightVault.API.Application.Services.Auth;
 
@@ -35,12 +37,14 @@ public sealed class AuthService(
 
         if (user is null)
         {
+            var isFirstUser = !await db.Users.AnyAsync(cancellationToken);
             user = new User
             {
                 GoogleId = googleUser.GoogleId,
                 Email = normalizedEmail,
                 FullName = googleUser.FullName,
                 AvatarUrl = googleUser.AvatarUrl,
+                SystemRole = isFirstUser ? SystemRole.Admin : SystemRole.User,
                 LastLoginAt = now,
                 CreatedAt = now,
                 UpdatedAt = now

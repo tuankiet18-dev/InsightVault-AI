@@ -7,6 +7,7 @@ type TabState = {
   openTab: (tab: TabItem) => void
   closeTab: (id: string) => void
   setActiveTab: (id: string) => void
+  resetTabs: () => void
   getActiveTab: () => TabItem | undefined
 }
 
@@ -40,6 +41,8 @@ export const useTabStore = create<TabState>((set, get) => ({
   },
 
   setActiveTab: (id) => set({ activeTabId: id }),
+
+  resetTabs: () => set({ tabs: [], activeTabId: null }),
 
   getActiveTab: () => {
     const { tabs, activeTabId } = get()

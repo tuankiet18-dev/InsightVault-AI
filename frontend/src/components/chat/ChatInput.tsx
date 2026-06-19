@@ -1,17 +1,24 @@
 import { SendHorizontal, Sparkles } from 'lucide-react'
 import { useChatStore } from '@/stores/chatStore'
 import { useSendMessage } from '@/hooks/useChat'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { useTabStore } from '@/stores/tabStore'
+import { buildChatContexts } from '@/lib/chatContext'
 
 export function ChatInput() {
   const { inputValue, setInputValue, activeSessionId } = useChatStore()
+  const { selectedDocumentId, selectedFolderId } = useWorkspaceStore()
+  const { getActiveTab } = useTabStore()
   const sendMessageMutation = useSendMessage(activeSessionId || '')
   const isLoading = sendMessageMutation.isPending
+  const activeTab = getActiveTab()
+  const contexts = buildChatContexts(activeTab, selectedDocumentId, selectedFolderId)
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       if (inputValue.trim() && !isLoading && activeSessionId) {
-        sendMessageMutation.mutate({ content: inputValue })
+        sendMessageMutation.mutate({ content: inputValue, contexts })
         setInputValue('')
       }
     }
@@ -19,7 +26,7 @@ export function ChatInput() {
 
   const handleSend = () => {
     if (inputValue.trim() && !isLoading && activeSessionId) {
-      sendMessageMutation.mutate({ content: inputValue })
+      sendMessageMutation.mutate({ content: inputValue, contexts })
       setInputValue('')
     }
   }
@@ -53,7 +60,7 @@ export function ChatInput() {
         </button>
       </div>
       <div className="max-w-3xl mx-auto mt-2 text-center text-xs text-surface-400">
-        AI responses are based on the documents in your selected scope. Verify critical information.
+        {selectedFolderId ? 'Folder scope is active.' : selectedDocumentId ? 'Document scope is active.' : 'Workspace scope is active.'}
       </div>
     </div>
   )

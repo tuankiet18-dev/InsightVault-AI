@@ -213,7 +213,7 @@ export interface ChatMessageContextDto {
 }
 
 export interface ChatSourceDto {
-  documentId: string;
+  documentId?: string | null;
   documentChunkId?: string | null;
   fileName: string;
   snippet: string;
@@ -312,6 +312,40 @@ export interface DocumentOriginalTextResponse {
   fileName: string;
   contentType: string;
   content: string;
+}
+
+export interface DocumentChunkDto {
+  id: string;
+  documentId: string;
+  workspaceId: string;
+  folderId?: string | null;
+  chunkIndex: number;
+  content: string;
+  tokenCount?: number | null;
+  charStart?: number | null;
+  charEnd?: number | null;
+  embeddingModel: string;
+  metadata: string;
+  createdAt: string;
+}
+
+export interface DocumentExtractedTextResponse {
+  documentId: string;
+  fileName: string;
+  chunkCount: number;
+  content: string;
+}
+
+export interface WorkspaceSearchResultDto {
+  type: "document" | "report" | "chunk";
+  title: string;
+  subtitle?: string | null;
+  snippet?: string | null;
+  documentId?: string | null;
+  documentChunkId?: string | null;
+  reportId?: string | null;
+  chunkIndex?: number | null;
+  updatedAt: string;
 }
 
 // Billing

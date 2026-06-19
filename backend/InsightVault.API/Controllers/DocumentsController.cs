@@ -83,6 +83,26 @@ public sealed class DocumentsController(IDocumentService documentService) : Cont
         return Ok(response);
     }
 
+    [HttpGet("api/documents/{documentId:guid}/chunks")]
+    public async Task<ActionResult<IReadOnlyList<DocumentChunkDto>>> ListChunks(
+        Guid documentId,
+        CancellationToken cancellationToken)
+    {
+        var chunks = await documentService.ListChunksAsync(documentId, cancellationToken);
+
+        return Ok(chunks);
+    }
+
+    [HttpGet("api/documents/{documentId:guid}/extracted-text")]
+    public async Task<ActionResult<DocumentExtractedTextResponse>> GetExtractedText(
+        Guid documentId,
+        CancellationToken cancellationToken)
+    {
+        var response = await documentService.GetExtractedTextAsync(documentId, cancellationToken);
+
+        return Ok(response);
+    }
+
     [HttpPatch("api/documents/{documentId:guid}")]
     public async Task<ActionResult<DocumentDto>> UpdateDocument(
         Guid documentId,

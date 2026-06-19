@@ -1,7 +1,7 @@
 import { FolderTree } from './FolderTree'
 import { TrashSection } from './TrashSection'
-import { useEffect } from 'react'
-import { ChevronDown, Plus, FolderPlus } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ChevronDown, ChevronRight, Plus, FolderPlus } from 'lucide-react'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useWorkspaces } from '@/hooks/useWorkspaces'
@@ -12,6 +12,7 @@ export function ExplorerPanel() {
   const { data: workspaces = [] } = useWorkspaces()
   const activeWorkspace = workspaces.find((ws) => ws.id === activeWorkspaceId) ?? workspaces[0]
   const { setCreateWorkspaceModalOpen, openCreateFolderModal } = useUiStore()
+  const [workspaceExpanded, setWorkspaceExpanded] = useState(true)
 
   useEffect(() => {
     if (!activeWorkspaceId && workspaces.length > 0) {
@@ -37,8 +38,16 @@ export function ExplorerPanel() {
       </div>
       <div className="flex-1 overflow-y-auto px-3 py-3">
         <div className="mb-1 flex w-full items-center justify-between gap-1.5 rounded px-1 text-left group">
-          <button className="flex-1 flex items-center gap-1.5 py-1 text-sm font-semibold text-foreground hover:bg-accent rounded">
-            <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+          <button
+            type="button"
+            onClick={() => setWorkspaceExpanded((expanded) => !expanded)}
+            className="flex flex-1 items-center gap-1.5 rounded py-1 text-sm font-semibold text-foreground hover:bg-accent"
+          >
+            {workspaceExpanded ? (
+              <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+            )}
             <span className="truncate">{activeWorkspace?.name ?? 'Workspace'}</span>
           </button>
           {canEdit && (
@@ -51,7 +60,7 @@ export function ExplorerPanel() {
             </button>
           )}
         </div>
-        <FolderTree />
+        {workspaceExpanded && <FolderTree />}
         <TrashSection />
       </div>
     </aside>
