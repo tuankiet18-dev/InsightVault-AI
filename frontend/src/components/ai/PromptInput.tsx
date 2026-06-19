@@ -15,7 +15,7 @@ export function PromptInput() {
   const { prompt, setPrompt, setAnswer, setCitations, setSuggestions, isLoading, setIsLoading } = useAiStore()
   const { activeWorkspaceId, selectedDocumentId, selectedFolderId } = useWorkspaceStore()
   const { activeSessionId, setActiveSession } = useChatStore()
-  const { getActiveTab, openTab } = useTabStore()
+  const { getActiveTab } = useTabStore()
   const activeTab = getActiveTab()
   const queryClient = useQueryClient()
   const { data: sessions = [] } = useChatSessions(activeWorkspaceId)
@@ -30,36 +30,43 @@ export function PromptInput() {
     setCitations([])
     setSuggestions([])
 
-    const activeDocumentId = selectedDocumentId
-      ?? (!selectedFolderId && activeTab?.type === 'document' ? activeTab.documentId : null)
-    const documentIds = activeDocumentId ? [activeDocumentId] : []
-    const folderId = selectedFolderId
-
       const currentPrompt = prompt
       setPrompt('') // Clear input early for optimistic UI
 
       try {
-        const activeSession = sessions.find(session => session.id === activeSessionId)
-        const session = activeSession ?? sessions[0] ?? await chatApi.createSession(activeWorkspaceId, {
-          title: 'Workspace chat',
-        })
+        const activeDocumentId = selectedDocumentId
+          ?? (!selectedFolderId && activeTab?.type === 'document' ? activeTab.documentId : null)
+        const sessionTitle = activeDocumentId 
+          ? `doc-${activeDocumentId}`
+          : selectedFolderId
+            ? `folder-${selectedFolderId}`
+            : 'Workspace chat'
 
+        let session = sessions.find(s => s.title === sessionTitle)
+        
+        if (!session) {
+          session = await chatApi.createSession(activeWorkspaceId, {
+            title: sessionTitle,
+          })
+        }
+        
         if (session.id !== activeSessionId) {
           setActiveSession(session.id)
         }
 
         // Optimistic UI update
-        const optimisticMessage: any = {
+        const optimisticMessage = {
           id: `temp-${Date.now()}`,
           sessionId: session.id,
-          role: 'user',
+          role: 'user' as const,
           content: currentPrompt,
           sources: [],
           createdAt: new Date().toISOString()
         }
 
-        queryClient.setQueryData(chatKeys.messages(session.id), (old: any) => {
-          return [...(old || []), optimisticMessage]
+        queryClient.setQueryData(chatKeys.messages(session.id), (old: unknown) => {
+          const oldMessages = Array.isArray(old) ? old : []
+          return [...oldMessages, optimisticMessage]
         })
 
         const response = await chatApi.sendMessage(session.id, {
@@ -68,8 +75,9 @@ export function PromptInput() {
         })
 
         // Instantly show the AI response in the UI
-        queryClient.setQueryData(chatKeys.messages(session.id), (old: any) => {
-          return [...(old || []), response.assistantMessage]
+        queryClient.setQueryData(chatKeys.messages(session.id), (old: unknown) => {
+          const oldMessages = Array.isArray(old) ? old : []
+          return [...oldMessages, response.assistantMessage]
         })
 
         queryClient.invalidateQueries({ queryKey: chatKeys.sessions(activeWorkspaceId) })

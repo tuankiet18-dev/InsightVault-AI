@@ -56,7 +56,11 @@ export function AiInspector() {
 
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
-          <InspectorChatTranscript workspaceId={activeWorkspaceId} />
+          <InspectorChatTranscript 
+            workspaceId={activeWorkspaceId} 
+            sessionTitle={activeDocumentId ? `doc-${activeDocumentId}` : selectedFolderId ? `folder-${selectedFolderId}` : 'Workspace chat'}
+            scopeLabel={scopeLabel}
+          />
         </div>
         <PromptInput />
       </div>
@@ -65,21 +69,21 @@ export function AiInspector() {
 }
 
 
-function InspectorChatTranscript({ workspaceId }: { workspaceId: string }) {
+function InspectorChatTranscript({ workspaceId, sessionTitle, scopeLabel }: { workspaceId: string, sessionTitle: string, scopeLabel: string }) {
   const { activeSessionId, setActiveSession } = useChatStore()
   const { isLoading } = useAiStore()
   const { data: sessions = [] } = useChatSessions(workspaceId)
-  const latestSession = sessions[0]
-  const sessionId = sessions.some(session => session.id === activeSessionId)
-    ? activeSessionId
-    : latestSession?.id ?? null
+  
+  const currentScopeSession = sessions.find(session => session.title === sessionTitle)
+  const sessionId = currentScopeSession?.id ?? null
+  
   const { data: messages = [] } = useChatMessages(sessionId)
   const createSession = useCreateChatSession(workspaceId)
   const scrollRef = useRef<HTMLDivElement | null>(null)
 
   const handleNewChat = () => {
     createSession.mutate(
-      { title: 'Workspace chat' },
+      { title: sessionTitle },
       {
         onSuccess: (newSession) => {
           setActiveSession(newSession.id)
@@ -99,23 +103,29 @@ function InspectorChatTranscript({ workspaceId }: { workspaceId: string }) {
   }, [messages.length, isLoading])
 
   if (!sessionId || messages.length === 0) {
-    return null
+    return (
+      <div className="mt-8 flex flex-col items-center justify-center text-center text-surface-500">
+        <Sparkles className="h-8 w-8 text-surface-300 mb-3" />
+        <p className="text-sm">No chat history for this {sessionTitle.startsWith('doc') ? 'document' : sessionTitle.startsWith('folder') ? 'folder' : 'workspace'}.</p>
+        <p className="text-xs mt-1">Send a message below to start chatting.</p>
+      </div>
+    )
   }
 
   return (
     <div className="mt-3 space-y-3">
       <div className="flex items-center justify-between">
-        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Workspace chat
+        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground truncate pr-2">
+          Chat: {scopeLabel}
         </div>
         <button
           onClick={handleNewChat}
           disabled={createSession.isPending}
-          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50"
-          title="Start new chat"
+          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50 shrink-0"
+          title="Clear chat history"
         >
           <Plus className="h-3.5 w-3.5" />
-          <span>New Chat</span>
+          <span>Clear</span>
         </button>
       </div>
       <div className="space-y-3">

@@ -28,6 +28,7 @@ Nguyên tắc:
 - Nếu một nhận định là suy luận từ nhiều tài liệu, thêm "^[inferred]".
 - recommendations phải cụ thể và có thể hành động.
 - Không bịa thông tin ngoài tài liệu.
+- QUAN TRỌNG: Hãy sử dụng HTML tag `<mark class="bg-warning-200 text-warning-900 rounded px-1">` để bọc quanh các từ khóa, số liệu, hoặc đoạn văn bản thể hiện rõ nhất sự khác biệt hoặc mâu thuẫn (áp dụng cho differences và potential_conflicts, cũng như trong raw_markdown).
 
 Trả về JSON với cấu trúc sau, KHÔNG có text ngoài JSON:
 {{
