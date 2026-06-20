@@ -33,7 +33,8 @@ services:
       MinIO__PublicEndpoint: ${MINIO_PUBLIC_ENDPOINT:?Set MINIO_PUBLIC_ENDPOINT in infra/.env}
       MinIO__BucketName: ${MINIO_BUCKET_NAME:-insightvault-documents}
       MinIO__PresignedUploadMinutes: ${MINIO_PRESIGNED_UPLOAD_MINUTES:-10}
-      MinIO__UseSsl: ${MINIO_USE_SSL:-false}
+      MinIO__UseSsl: false
+      MinIO__PublicUseSsl: ${MINIO_USE_SSL:-true}
       MinIO__AccessKey: ${MINIO_ROOT_USER:-admin}
       MinIO__SecretKey: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in infra/.env}
       RabbitMQ__Host: rabbitmq

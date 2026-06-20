@@ -25,14 +25,17 @@ public sealed class ConfiguredObjectStorageService(
         {
             ["Content-Type"] = request.ContentType
         };
-        var minioClient = CreateClient(storageOptions, storageOptions.Endpoint);
+        var minioClient = CreateClient(storageOptions, storageOptions.Endpoint, storageOptions.UseSsl);
 
         await EnsureBucketExistsAsync(minioClient, request.BucketName, cancellationToken);
 
         var presignEndpoint = string.IsNullOrWhiteSpace(storageOptions.PublicEndpoint)
             ? storageOptions.Endpoint
             : storageOptions.PublicEndpoint;
-        var presignClient = CreateClient(storageOptions, presignEndpoint);
+        var presignClient = CreateClient(
+            storageOptions,
+            presignEndpoint,
+            storageOptions.PublicUseSsl ?? storageOptions.UseSsl);
         var presignedArgs = new PresignedPutObjectArgs()
             .WithBucket(request.BucketName)
             .WithObject(request.ObjectKey)
@@ -49,14 +52,17 @@ public sealed class ConfiguredObjectStorageService(
         CancellationToken cancellationToken = default)
     {
         var storageOptions = options.Value;
-        var minioClient = CreateClient(storageOptions, storageOptions.Endpoint);
+        var minioClient = CreateClient(storageOptions, storageOptions.Endpoint, storageOptions.UseSsl);
 
         await EnsureBucketExistsAsync(minioClient, request.BucketName, cancellationToken);
 
         var presignEndpoint = string.IsNullOrWhiteSpace(storageOptions.PublicEndpoint)
             ? storageOptions.Endpoint
             : storageOptions.PublicEndpoint;
-        var presignClient = CreateClient(storageOptions, presignEndpoint);
+        var presignClient = CreateClient(
+            storageOptions,
+            presignEndpoint,
+            storageOptions.PublicUseSsl ?? storageOptions.UseSsl);
         var presignedArgs = new PresignedGetObjectArgs()
             .WithBucket(request.BucketName)
             .WithObject(request.ObjectKey)
@@ -72,7 +78,7 @@ public sealed class ConfiguredObjectStorageService(
         string objectKey,
         CancellationToken cancellationToken = default)
     {
-        var minioClient = CreateClient(options.Value, options.Value.Endpoint);
+        var minioClient = CreateClient(options.Value, options.Value.Endpoint, options.Value.UseSsl);
         await using var memoryStream = new MemoryStream();
         var getArgs = new GetObjectArgs()
             .WithBucket(bucketName)
@@ -93,7 +99,7 @@ public sealed class ConfiguredObjectStorageService(
     {
         try
         {
-            var minioClient = CreateClient(options.Value, options.Value.Endpoint);
+            var minioClient = CreateClient(options.Value, options.Value.Endpoint, options.Value.UseSsl);
             var removeArgs = new RemoveObjectArgs()
                 .WithBucket(bucketName)
                 .WithObject(objectKey);
@@ -117,7 +123,7 @@ public sealed class ConfiguredObjectStorageService(
     {
         try
         {
-            var minioClient = CreateClient(options.Value, options.Value.Endpoint);
+            var minioClient = CreateClient(options.Value, options.Value.Endpoint, options.Value.UseSsl);
             var removeArgs = new RemoveObjectArgs()
                 .WithBucket(bucketName)
                 .WithObject(objectKey);
@@ -139,7 +145,7 @@ public sealed class ConfiguredObjectStorageService(
     {
         try
         {
-            var minioClient = CreateClient(options.Value, options.Value.Endpoint);
+            var minioClient = CreateClient(options.Value, options.Value.Endpoint, options.Value.UseSsl);
             var statArgs = new StatObjectArgs()
                 .WithBucket(bucketName)
                 .WithObject(objectKey);
@@ -157,13 +163,16 @@ public sealed class ConfiguredObjectStorageService(
         }
     }
 
-    private static IMinioClient CreateClient(ObjectStorageOptions storageOptions, string endpoint)
+    private static IMinioClient CreateClient(
+        ObjectStorageOptions storageOptions,
+        string endpoint,
+        bool useSsl)
     {
         var builder = new MinioClient()
             .WithEndpoint(endpoint)
             .WithCredentials(storageOptions.AccessKey, storageOptions.SecretKey);
 
-        if (storageOptions.UseSsl)
+        if (useSsl)
         {
             builder = builder.WithSSL();
         }

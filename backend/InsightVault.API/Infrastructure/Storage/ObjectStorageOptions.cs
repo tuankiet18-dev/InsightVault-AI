@@ -10,4 +10,5 @@ public sealed class ObjectStorageOptions
     public int PresignedUploadMinutes { get; set; } = 10;
     public int PresignedReadMinutes { get; set; } = 10;
     public bool UseSsl { get; set; }
+    public bool? PublicUseSsl { get; set; }
 }
