@@ -74,7 +74,9 @@ function InspectorChatTranscript({ workspaceId, sessionTitle, scopeLabel }: { wo
   const { isLoading } = useAiStore()
   const { data: sessions = [] } = useChatSessions(workspaceId)
   
-  const currentScopeSession = sessions.find(session => session.title === sessionTitle)
+  const currentScopeSession = sessions.find(
+    (session) => session.id === activeSessionId && session.title === sessionTitle,
+  ) ?? sessions.find((session) => session.title === sessionTitle)
   const sessionId = currentScopeSession?.id ?? null
   
   const { data: messages = [] } = useChatMessages(sessionId)

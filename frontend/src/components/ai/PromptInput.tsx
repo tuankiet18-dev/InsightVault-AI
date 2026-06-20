@@ -9,7 +9,8 @@ import { chatKeys, useChatSessions } from '@/hooks/useChat'
 import { useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '@/api/http'
 import { buildChatContexts } from '@/lib/chatContext'
-import type { ChatSourceDto } from '@/types/api'
+import { toast } from 'sonner'
+import type { ChatMessageDto, ChatSessionDto, ChatSourceDto } from '@/types/api'
 
 export function PromptInput() {
   const { prompt, setPrompt, setAnswer, setCitations, setSuggestions, isLoading, setIsLoading } = useAiStore()
@@ -30,89 +31,120 @@ export function PromptInput() {
     setCitations([])
     setSuggestions([])
 
-      const currentPrompt = prompt
-      setPrompt('') // Clear input early for optimistic UI
+    const currentPrompt = prompt
+    const optimisticMessageId = `temp-${Date.now()}`
+    let targetSessionId: string | null = null
+    setPrompt('')
 
-      try {
-        const activeDocumentId = selectedDocumentId
-          ?? (!selectedFolderId && activeTab?.type === 'document' ? activeTab.documentId : null)
-        const sessionTitle = activeDocumentId 
-          ? `doc-${activeDocumentId}`
-          : selectedFolderId
-            ? `folder-${selectedFolderId}`
-            : 'Workspace chat'
+    try {
+      const activeDocumentId = selectedDocumentId
+        ?? (!selectedFolderId && activeTab?.type === 'document' ? activeTab.documentId : null)
+      const sessionTitle = activeDocumentId
+        ? `doc-${activeDocumentId}`
+        : selectedFolderId
+          ? `folder-${selectedFolderId}`
+          : 'Workspace chat'
 
-        let session = sessions.find(s => s.title === sessionTitle)
-        
-        if (!session) {
-          session = await chatApi.createSession(activeWorkspaceId, {
-            title: sessionTitle,
-          })
-        }
-        
-        if (session.id !== activeSessionId) {
-          setActiveSession(session.id)
-        }
+      let session = sessions.find((candidate) => candidate.title === sessionTitle)
 
-        // Optimistic UI update
-        const optimisticMessage = {
-          id: `temp-${Date.now()}`,
-          sessionId: session.id,
-          role: 'user' as const,
-          content: currentPrompt,
-          sources: [],
-          createdAt: new Date().toISOString()
-        }
-
-        queryClient.setQueryData(chatKeys.messages(session.id), (old: unknown) => {
-          const oldMessages = Array.isArray(old) ? old : []
-          return [...oldMessages, optimisticMessage]
-        })
-
-        const response = await chatApi.sendMessage(session.id, {
-          content: currentPrompt,
-          contexts: buildChatContexts(activeTab, selectedDocumentId, selectedFolderId),
-        })
-
-        // Instantly show the AI response in the UI
-        queryClient.setQueryData(chatKeys.messages(session.id), (old: unknown) => {
-          const oldMessages = Array.isArray(old) ? old : []
-          return [...oldMessages, response.assistantMessage]
-        })
-
-        queryClient.invalidateQueries({ queryKey: chatKeys.sessions(activeWorkspaceId) })
-        queryClient.invalidateQueries({ queryKey: chatKeys.messages(session.id) })
-
-        setAnswer(response.assistantMessage.content)
-        setCitations(response.assistantMessage.sources
-          .filter(hasDocumentSource)
-          .map(source => ({
-            documentId: source.documentId,
-            documentChunkId: source.documentChunkId,
-            fileName: source.fileName,
-            similarity: source.similarity ?? 0,
-            chunkDetail: source.pageNumber
-              ? `Page ${source.pageNumber}${source.chunkIndex != null ? ` - chunk ${source.chunkIndex}` : ''}`
-              : source.chunkIndex != null
-                ? `Chunk ${source.chunkIndex}`
-                : source.documentChunkId
-                  ? `Chunk ${source.documentChunkId.slice(0, 8)}`
-                  : 'Retrieved source',
-            snippet: source.snippet,
-            chunkIndex: source.chunkIndex,
-            pageNumber: source.pageNumber,
-          })))
-        setSuggestions(
-          response.assistantMessage.sources.length > 0
-            ? ['Open cited source', 'Ask a follow-up in the same workspace chat']
-            : ['Try asking about a completed document', 'Open a report or document to narrow the scope']
-        )
-      } catch (error) {
-        setAnswer(formatChatError(error))
-        setSuggestions(['Check that at least one source document is completed', 'Try again after the AI service is ready'])
-      } finally {
-        setIsLoading(false)
+      if (!session) {
+        session = await chatApi.createSession(activeWorkspaceId, { title: sessionTitle })
       }
+
+      targetSessionId = session.id
+      queryClient.setQueryData<ChatSessionDto[]>(chatKeys.sessions(activeWorkspaceId), (oldSessions = []) => [
+        session,
+        ...oldSessions.filter((candidate) => candidate.id !== session.id),
+      ])
+
+      if (session.id !== activeSessionId) {
+        setActiveSession(session.id)
+      }
+
+      const optimisticMessage: ChatMessageDto = {
+        id: optimisticMessageId,
+        chatSessionId: session.id,
+        role: 'user',
+        content: currentPrompt,
+        contexts: [],
+        sources: [],
+        createdAt: new Date().toISOString(),
+      }
+
+      queryClient.setQueryData<ChatMessageDto[]>(chatKeys.messages(session.id), (oldMessages = []) => [
+        ...oldMessages,
+        optimisticMessage,
+      ])
+
+      const response = await chatApi.sendMessage(session.id, {
+        content: currentPrompt,
+        contexts: buildChatContexts(activeTab, selectedDocumentId, selectedFolderId),
+      })
+
+      queryClient.setQueryData<ChatMessageDto[]>(chatKeys.messages(session.id), (oldMessages = []) => [
+        ...oldMessages.filter((message) =>
+          message.id !== optimisticMessageId
+          && message.id !== response.userMessage.id
+          && message.id !== response.assistantMessage.id
+        ),
+        response.userMessage,
+        response.assistantMessage,
+      ])
+
+      queryClient.invalidateQueries({ queryKey: chatKeys.sessions(activeWorkspaceId) })
+      queryClient.invalidateQueries({ queryKey: chatKeys.messages(session.id) })
+
+      setAnswer(response.assistantMessage.content)
+      setCitations(response.assistantMessage.sources
+        .filter(hasDocumentSource)
+        .map(source => ({
+          documentId: source.documentId,
+          documentChunkId: source.documentChunkId,
+          fileName: source.fileName,
+          similarity: source.similarity ?? 0,
+          chunkDetail: source.pageNumber
+            ? `Page ${source.pageNumber}${source.chunkIndex != null ? ` - chunk ${source.chunkIndex}` : ''}`
+            : source.chunkIndex != null
+              ? `Chunk ${source.chunkIndex}`
+              : source.documentChunkId
+                ? `Chunk ${source.documentChunkId.slice(0, 8)}`
+                : 'Retrieved source',
+          snippet: source.snippet,
+          chunkIndex: source.chunkIndex,
+          pageNumber: source.pageNumber,
+        })))
+      setSuggestions(
+        response.assistantMessage.sources.length > 0
+          ? ['Open cited source', 'Ask a follow-up in the same workspace chat']
+          : ['Try asking about a completed document', 'Open a report or document to narrow the scope']
+      )
+    } catch (error) {
+      const errorMessage = formatChatError(error)
+      setAnswer(errorMessage)
+      setPrompt(currentPrompt)
+      setSuggestions(['Check that at least one source document is completed', 'Try again after the AI service is ready'])
+      toast.error(errorMessage)
+
+      if (targetSessionId) {
+        const localErrorMessage: ChatMessageDto = {
+          id: `error-${Date.now()}`,
+          chatSessionId: targetSessionId,
+          role: 'assistant',
+          content: errorMessage,
+          contexts: [],
+          sources: [],
+          createdAt: new Date().toISOString(),
+        }
+
+        queryClient.setQueryData<ChatMessageDto[]>(chatKeys.messages(targetSessionId), (oldMessages = []) => [
+          ...oldMessages,
+          localErrorMessage,
+        ])
+        queryClient.invalidateQueries({ queryKey: chatKeys.sessions(activeWorkspaceId) })
+      }
+    } finally {
+      setIsLoading(false)
+    }
   }
   
   const handleKeyDown = (e: React.KeyboardEvent) => {
