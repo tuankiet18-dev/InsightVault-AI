@@ -41,6 +41,7 @@ services:
       MinIO__BucketName: insightvault-documents
       MinIO__PresignedUploadMinutes: 10
       MinIO__UseSsl: false
+      MinIO__PublicUseSsl: false
       MinIO__AccessKey: ${MINIO_ROOT_USER:-admin}
       MinIO__SecretKey: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in infra/.env}
       RabbitMQ__Host: rabbitmq
