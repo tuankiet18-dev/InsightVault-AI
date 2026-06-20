@@ -827,7 +827,7 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
                 new SystemSetting
                 {
                     Key = "ai.default_model",
-                    Value = "gemini-1.5-flash",
+                    Value = "gemini-2.5-flash",
                     ValueType = "string",
                     Description = "Default AI model used by configurable AI workflows.",
                     CreatedAt = seededAt,

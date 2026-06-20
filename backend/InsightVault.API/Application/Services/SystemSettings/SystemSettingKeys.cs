@@ -6,5 +6,5 @@ public static class SystemSettingKeys
     public const string WebSearchEnabled = "ai.web_search_enabled";
     public const string DefaultWorkspaceCredits = "billing.default_workspace_credits";
 
-    public const string DefaultAiModelFallback = "gemini-1.5-flash";
+    public const string DefaultAiModelFallback = "gemini-2.5-flash";
 }

@@ -835,7 +835,7 @@ public sealed class AdminService(
         var defaultModel = GetStringSetting(
             settings,
             DefaultAiModelKey,
-            configuration["AI:DefaultModel"] ?? "gemini-1.5-flash");
+            configuration["AI:DefaultModel"] ?? SystemSettingKeys.DefaultAiModelFallback);
         var defaultCredits = GetIntSetting(
             settings,
             DefaultWorkspaceCreditsKey,
