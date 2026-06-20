@@ -13,6 +13,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
+import type { DocumentViewMode } from './DocumentViewer'
+
+const viewModes: Array<{ value: DocumentViewMode; label: string }> = [
+  { value: 'original', label: 'Original' },
+  { value: 'extracted', label: 'Extracted Text' },
+  { value: 'chunks', label: 'Chunks' },
+  { value: 'summary', label: 'AI Summary' },
+]
 
 export function DocumentHeader({ 
   document,
@@ -20,8 +28,8 @@ export function DocumentHeader({
   setViewMode
 }: { 
   document: DocumentDto
-  viewMode: 'original' | 'summary'
-  setViewMode: (mode: 'original' | 'summary') => void
+  viewMode: DocumentViewMode
+  setViewMode: (mode: DocumentViewMode) => void
 }) {
   const { openTab } = useTabStore()
   const { setScope } = useAiStore()
@@ -60,25 +68,23 @@ export function DocumentHeader({
       
       {/* Center section */}
       <div className="hidden md:flex justify-center">
-        <div className="inline-flex items-center rounded-full bg-muted p-0.5 shadow-sm">
-          <button
-            onClick={() => setViewMode('original')}
-            className={cn(
-              "rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-200",
-              viewMode === 'original' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            Original
-          </button>
-          <button
-            onClick={() => setViewMode('summary')}
-            className={cn(
-              "rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-200",
-              viewMode === 'summary' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            AI Summary
-          </button>
+        <div className="inline-flex items-center rounded-full bg-muted p-0.5 shadow-sm" aria-label="Document view">
+          {viewModes.map((mode) => (
+            <button
+              key={mode.value}
+              type="button"
+              onClick={() => setViewMode(mode.value)}
+              aria-pressed={viewMode === mode.value}
+              className={cn(
+                "whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition-all duration-200",
+                viewMode === mode.value
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {mode.label}
+            </button>
+          ))}
         </div>
       </div>
 
