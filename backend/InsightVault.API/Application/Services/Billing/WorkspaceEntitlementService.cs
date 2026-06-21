@@ -14,8 +14,13 @@ public sealed class WorkspaceEntitlementService(
         Guid workspaceId,
         CancellationToken cancellationToken = default)
     {
+        var workspace = await db.Workspaces
+            .AsNoTracking()
+            .FirstOrDefaultAsync(w => w.Id == workspaceId, cancellationToken)
+            ?? throw new ApiException(StatusCodes.Status404NotFound, "workspace.not_found", "Workspace not found.");
+
         var subscription = await creditService.EnsureActiveSubscriptionAsync(
-            workspaceId,
+            workspace.OwnerId,
             cancellationToken);
         var currentMembers = await db.WorkspaceMembers.CountAsync(
             member => member.WorkspaceId == workspaceId
@@ -43,8 +48,13 @@ public sealed class WorkspaceEntitlementService(
         long additionalBytes,
         CancellationToken cancellationToken = default)
     {
+        var workspace = await db.Workspaces
+            .AsNoTracking()
+            .FirstOrDefaultAsync(w => w.Id == workspaceId, cancellationToken)
+            ?? throw new ApiException(StatusCodes.Status404NotFound, "workspace.not_found", "Workspace not found.");
+
         var subscription = await creditService.EnsureActiveSubscriptionAsync(
-            workspaceId,
+            workspace.OwnerId,
             cancellationToken);
         var usedBytes = await db.Documents
             .Where(document => document.WorkspaceId == workspaceId)

@@ -109,6 +109,7 @@ public sealed class WorkspaceRepository(InsightVaultDbContext db)
     {
         return await Db.WorkspaceMembers
             .AsNoTracking()
+            .Include(m => m.User)
             .Where(m => m.WorkspaceId == workspaceId
                 && m.Status != MemberStatus.Removed)
             .OrderBy(m => m.InvitedAt)

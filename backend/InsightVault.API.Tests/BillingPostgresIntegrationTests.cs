@@ -41,6 +41,7 @@ public sealed class BillingPostgresIntegrationTests
                 await using var db = CreateDbContext(connectionString);
                 var service = CreateCreditService(db);
                 await service.ConsumeAsync(
+                    fixture.UserId,
                     fixture.WorkspaceId,
                     jobId,
                     1,
@@ -48,9 +49,9 @@ public sealed class BillingPostgresIntegrationTests
             }));
 
             await using var verificationDb = CreateDbContext(connectionString);
-            var subscription = await verificationDb.WorkspaceSubscriptions
+            var subscription = await verificationDb.UserSubscriptions
                 .AsNoTracking()
-                .SingleAsync(candidate => candidate.WorkspaceId == fixture.WorkspaceId);
+                .SingleAsync(candidate => candidate.UserId == fixture.UserId);
             var debitCount = await verificationDb.CreditLedgerEntries.CountAsync(
                 entry => entry.WorkspaceId == fixture.WorkspaceId
                     && entry.EntryType == CreditEntryType.Debit);
@@ -86,6 +87,7 @@ public sealed class BillingPostgresIntegrationTests
                 var service = CreateCreditService(db);
                 await Assert.ThrowsAsync<DbUpdateException>(() =>
                     service.ConsumeAsync(
+                        fixture.UserId,
                         fixture.WorkspaceId,
                         fixture.JobIds.Single(),
                         1,
@@ -93,9 +95,9 @@ public sealed class BillingPostgresIntegrationTests
             }
 
             await using var verificationDb = CreateDbContext(connectionString);
-            var subscription = await verificationDb.WorkspaceSubscriptions
+            var subscription = await verificationDb.UserSubscriptions
                 .AsNoTracking()
-                .SingleAsync(candidate => candidate.WorkspaceId == fixture.WorkspaceId);
+                .SingleAsync(candidate => candidate.UserId == fixture.UserId);
             var ledgerCount = await verificationDb.CreditLedgerEntries.CountAsync(
                 entry => entry.WorkspaceId == fixture.WorkspaceId);
 
@@ -133,7 +135,6 @@ public sealed class BillingPostgresIntegrationTests
                 seedDb.PaymentOrders.Add(new PaymentOrder
                 {
                     Id = orderId,
-                    WorkspaceId = fixture.WorkspaceId,
                     CreatedById = fixture.UserId,
                     CreditPackageId = packageId,
                     PurchaseType = PaymentPurchaseType.CreditTopUp,
@@ -172,9 +173,9 @@ public sealed class BillingPostgresIntegrationTests
             }));
 
             await using var verificationDb = CreateDbContext(connectionString);
-            var subscription = await verificationDb.WorkspaceSubscriptions
+            var subscription = await verificationDb.UserSubscriptions
                 .AsNoTracking()
-                .SingleAsync(candidate => candidate.WorkspaceId == fixture.WorkspaceId);
+                .SingleAsync(candidate => candidate.UserId == fixture.UserId);
             var grantCount = await verificationDb.CreditLedgerEntries.CountAsync(
                 entry => entry.PaymentOrderId == orderId
                     && entry.EntryType == CreditEntryType.Grant);
@@ -245,10 +246,10 @@ public sealed class BillingPostgresIntegrationTests
             CreatedAt = now,
             UpdatedAt = now
         });
-        db.WorkspaceSubscriptions.Add(new WorkspaceSubscription
+        db.UserSubscriptions.Add(new UserSubscription
         {
             Id = subscriptionId,
-            WorkspaceId = workspaceId,
+            UserId = userId,
             PlanId = freePlanId,
             Status = SubscriptionStatus.Active,
             RecurringCreditsRemaining = recurringCredits,

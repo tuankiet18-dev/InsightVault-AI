@@ -2,6 +2,8 @@ using InsightVault.API.Application.Abstractions.Services.Chat;
 using InsightVault.API.DTOs.Chat;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
+
 
 namespace InsightVault.API.Controllers;
 
@@ -55,6 +57,27 @@ public sealed class ChatController(IChatService chatService) : ControllerBase
             cancellationToken);
 
         return Ok(response);
+    }
+
+    [HttpPost("api/chat-sessions/{sessionId:guid}/messages/stream")]
+    public async Task StreamMessage(
+        Guid sessionId,
+        SendChatMessageRequest request,
+        CancellationToken cancellationToken)
+    {
+        Response.ContentType = "text/event-stream";
+        Response.Headers.CacheControl = "no-cache";
+        Response.Headers.Connection = "keep-alive";
+
+        var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        var streamEnumerable = chatService.StreamMessageAsync(sessionId, request, cancellationToken);
+
+        await foreach (var streamEvent in streamEnumerable)
+        {
+            var data = JsonSerializer.Serialize(streamEvent, jsonOptions);
+            await Response.WriteAsync($"data: {data}\n\n", cancellationToken);
+            await Response.Body.FlushAsync(cancellationToken);
+        }
     }
 
     [HttpPatch("api/chat-sessions/{sessionId:guid}")]

@@ -12,7 +12,10 @@ using InsightVault.API.Domain.Entities;
 using InsightVault.API.Domain.Enums;
 using InsightVault.API.DTOs.Chat;
 using InsightVault.API.DTOs.Common;
+
 using Microsoft.EntityFrameworkCore;
+using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace InsightVault.API.Application.Services.Chat;
 
@@ -251,6 +254,161 @@ public sealed class ChatService(
         return new ChatTurnResponse(
             ToMessageDto(userMessage),
             ToMessageDto(assistantMessage, ragResult.WebSources));
+    }
+
+    public async IAsyncEnumerable<ChatStreamEventDto> StreamMessageAsync(
+        Guid sessionId,
+        SendChatMessageRequest request,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var userId = GetRequiredUserId();
+        var session = await GetActiveSessionForUserAsync(sessionId, userId, cancellationToken);
+        await workspacePermissionService.EnsureCanViewWorkspaceAsync(session.WorkspaceId, userId, cancellationToken);
+
+        var content = NormalizeMessageContent(request.Content);
+        var resolvedScope = await ResolveScopeAsync(
+            session.WorkspaceId,
+            request.Contexts,
+            cancellationToken);
+        var aiSettings = await GetAiRuntimeSettingsAsync(cancellationToken);
+        var chatHistory = await GetChatHistoryAsync(session, cancellationToken);
+        var now = DateTimeOffset.UtcNow;
+
+        var userMessage = new ChatMessage
+        {
+            Id = Guid.NewGuid(),
+            WorkspaceId = session.WorkspaceId,
+            ChatSessionId = session.Id,
+            Role = ChatMessageRole.User,
+            Content = content,
+            Metadata = "{}",
+            CreatedAt = now,
+            Contexts = resolvedScope.Contexts.Select(context => new ChatMessageContext
+            {
+                Id = Guid.NewGuid(),
+                WorkspaceId = session.WorkspaceId,
+                ChatMessageId = Guid.Empty,
+                ContextType = context.ContextType,
+                FolderId = context.FolderId,
+                DocumentId = context.DocumentId,
+                ReportId = context.ReportId,
+                IncludeSubfolders = context.IncludeSubfolders,
+                ContextOrder = context.ContextOrder,
+                ContextDisplayName = context.ContextDisplayName,
+                ContextPath = context.ContextPath,
+                CreatedAt = now
+            }).ToList()
+        };
+
+        foreach (var context in userMessage.Contexts)
+        {
+            context.ChatMessageId = userMessage.Id;
+        }
+
+        session.UpdatedAt = now;
+        await db.ChatMessages.AddAsync(userMessage, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+
+        // Yield user message
+        yield return new ChatStreamEventDto("user_message", JsonSerializer.SerializeToElement(ToMessageDto(userMessage), JsonOptions));
+
+        if (session.Title == "New Chat" && chatHistory.Count == 0)
+        {
+            try
+            {
+                var titleResult = await aiServiceClient.GenerateChatTitleAsync(
+                    content,
+                    aiSettings.ModelName,
+                    cancellationToken);
+                
+                session.Title = NormalizeTitle(titleResult.Title);
+                await db.SaveChangesAsync(cancellationToken);
+            }
+            catch
+            {
+                // Ignore title generation errors
+            }
+        }
+
+        var streamRequest = new RagQueryAiRequest(
+            session.WorkspaceId,
+            content,
+            resolvedScope.Scope,
+            null,
+            resolvedScope.DocumentIds,
+            resolvedScope.ReportContext,
+            DefaultTopK,
+            chatHistory,
+            aiSettings.ModelName,
+            aiSettings.WebSearchEnabled,
+            null);
+
+        var assistantMessage = new ChatMessage
+        {
+            Id = Guid.NewGuid(),
+            WorkspaceId = session.WorkspaceId,
+            ChatSessionId = session.Id,
+            Role = ChatMessageRole.Assistant,
+            Content = string.Empty,
+            ModelName = aiSettings.ModelName,
+            Metadata = "{}",
+            CreatedAt = now.AddMilliseconds(1),
+            Sources = []
+        };
+
+        var answerBuilder = new StringBuilder();
+        var streamEnumerable = aiServiceClient.StreamRagAsync(streamRequest, cancellationToken);
+
+        await foreach (var streamEvent in streamEnumerable)
+        {
+            yield return new ChatStreamEventDto(streamEvent.Event, streamEvent.Data);
+
+            if (streamEvent.Event == "sources")
+            {
+                try
+                {
+                    var snakeCaseOptions = new JsonSerializerOptions(JsonOptions)
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+                    };
+                    var sources = streamEvent.Data.Deserialize<IReadOnlyList<RagSourceResult>>(snakeCaseOptions);
+                    if (sources is not null)
+                    {
+                        assistantMessage.Sources = sources.Select((source, index) => new ChatMessageSource
+                        {
+                            Id = Guid.NewGuid(),
+                            ChatMessageId = assistantMessage.Id,
+                            DocumentId = source.DocumentId,
+                            DocumentChunkId = source.ChunkId,
+                            FileName = string.IsNullOrWhiteSpace(source.FileName) ? "Unknown source" : source.FileName,
+                            Snippet = source.Snippet,
+                            SimilarityScore = source.Similarity,
+                            Metadata = BuildSourceMetadata(source),
+                            SourceOrder = index,
+                            CreatedAt = now
+                        }).ToList();
+                    }
+                }
+                catch (JsonException) { }
+            }
+            else if (streamEvent.Event == "chunk")
+            {
+                try
+                {
+                    var chunkText = streamEvent.Data.Deserialize<string>(JsonOptions);
+                    if (chunkText is not null)
+                    {
+                        answerBuilder.Append(chunkText);
+                    }
+                }
+                catch (JsonException) { }
+            }
+        }
+
+        assistantMessage.Content = answerBuilder.ToString();
+        
+        await db.ChatMessages.AddAsync(assistantMessage, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
     }
 
     public async Task DeleteSessionAsync(

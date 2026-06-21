@@ -5,7 +5,6 @@ namespace InsightVault.API.Domain.Entities;
 public sealed class PaymentOrder
 {
     public Guid Id { get; set; }
-    public Guid WorkspaceId { get; set; }
     public Guid CreatedById { get; set; }
     public Guid? PlanId { get; set; }
     public Guid? CreditPackageId { get; set; }
@@ -22,7 +21,6 @@ public sealed class PaymentOrder
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 
-    public Workspace Workspace { get; set; } = null!;
     public User CreatedBy { get; set; } = null!;
     public SubscriptionPlan? Plan { get; set; }
     public CreditPackage? CreditPackage { get; set; }

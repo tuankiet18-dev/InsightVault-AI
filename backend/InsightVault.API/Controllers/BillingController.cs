@@ -27,25 +27,21 @@ public sealed class BillingController(IBillingService billingService) : Controll
     }
 
     [Authorize]
-    [HttpGet("/api/workspaces/{workspaceId:guid}/billing")]
-    public async Task<ActionResult<BillingSummaryDto>> GetWorkspaceBilling(
-        Guid workspaceId,
+    [HttpGet("summary")]
+    public async Task<ActionResult<BillingSummaryDto>> GetAccountBilling(
         CancellationToken cancellationToken)
     {
-        return Ok(await billingService.GetWorkspaceSummaryAsync(
-            workspaceId,
+        return Ok(await billingService.GetAccountSummaryAsync(
             cancellationToken));
     }
 
     [Authorize]
-    [HttpPost("/api/workspaces/{workspaceId:guid}/billing/checkout")]
+    [HttpPost("checkout")]
     public async Task<ActionResult<CheckoutSessionDto>> CreateCheckout(
-        Guid workspaceId,
         CreateCheckoutRequest request,
         CancellationToken cancellationToken)
     {
         var checkout = await billingService.CreateCheckoutAsync(
-            workspaceId,
             request,
             HttpContext.Connection.RemoteIpAddress?.MapToIPv4().ToString() ?? "127.0.0.1",
             cancellationToken);

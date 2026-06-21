@@ -107,6 +107,7 @@ public sealed class ReportService(
 
         await db.AiJobs.AddAsync(job, cancellationToken);
         await creditService.ConsumeAsync(
+            userId,
             workspaceId,
             job.Id,
             BillingCreditCosts.ForReport(billingOptions.Value),
@@ -164,6 +165,7 @@ public sealed class ReportService(
 
         await db.AiJobs.AddAsync(job, cancellationToken);
         await creditService.ConsumeAsync(
+            userId,
             workspaceId,
             job.Id,
             BillingCreditCosts.ForCompare(sources.Count, billingOptions.Value),
@@ -187,6 +189,69 @@ public sealed class ReportService(
         report.DeletedAt = now;
         report.UpdatedAt = now;
         await db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<ShareReportResponse> ShareReportAsync(
+        Guid workspaceId,
+        Guid reportId,
+        ShareReportRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var report = await GetActiveReportAsync(reportId, cancellationToken);
+        var userId = GetRequiredUserId();
+        await workspacePermissionService.EnsureCanManageWorkspaceAsync(report.WorkspaceId, userId, cancellationToken);
+
+        if (report.WorkspaceId != workspaceId)
+        {
+            throw new ApiException(StatusCodes.Status403Forbidden, "report.forbidden", "Report does not belong to the workspace.");
+        }
+
+        report.IsPublic = request.IsPublic;
+        if (request.IsPublic && string.IsNullOrEmpty(report.PublicToken))
+        {
+            report.PublicToken = Guid.NewGuid().ToString("N");
+        }
+        else if (!request.IsPublic)
+        {
+            report.PublicToken = null;
+            report.SharedExpiresAt = null;
+        }
+
+        if (request.IsPublic && request.ExpireAfterDays.HasValue)
+        {
+            report.SharedExpiresAt = DateTimeOffset.UtcNow.AddDays(request.ExpireAfterDays.Value);
+        }
+        else if (request.IsPublic && !request.ExpireAfterDays.HasValue)
+        {
+            report.SharedExpiresAt = null; // Vĩnh viễn
+        }
+
+        report.UpdatedAt = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync(cancellationToken);
+
+        var shareUrl = report.IsPublic ? $"/shared/reports/{report.PublicToken}" : null;
+        return new ShareReportResponse(report.IsPublic, report.PublicToken, shareUrl, report.SharedExpiresAt);
+    }
+
+    public async Task<ReportDto> GetPublicReportAsync(
+        string publicToken,
+        CancellationToken cancellationToken = default)
+    {
+        var report = await db.Reports
+            .Include(x => x.CreatedBy)
+            .FirstOrDefaultAsync(r => r.PublicToken == publicToken && r.DeletedAt == null, cancellationToken);
+
+        if (report is null || !report.IsPublic)
+        {
+            throw new ApiException(StatusCodes.Status404NotFound, "report.not_found", "Report not found or not public.");
+        }
+
+        if (report.SharedExpiresAt.HasValue && report.SharedExpiresAt.Value < DateTimeOffset.UtcNow)
+        {
+            throw new ApiException(StatusCodes.Status410Gone, "report.expired", "This shared report link has expired.");
+        }
+
+        return ToDto(report);
     }
 
     private async Task<Report> GetActiveReportAsync(
@@ -368,11 +433,15 @@ public sealed class ReportService(
         }
         catch (Exception exception)
         {
-            await creditService.RefundAsync(
-                job.WorkspaceId!.Value,
-                job.Id,
-                $"{usageType}_queue_failure",
-                CancellationToken.None);
+            if (job.CreatedById.HasValue)
+            {
+                await creditService.RefundAsync(
+                    job.CreatedById.Value,
+                    job.WorkspaceId!.Value,
+                    job.Id,
+                    $"{usageType}_queue_failure",
+                    CancellationToken.None);
+            }
 
             var now = DateTimeOffset.UtcNow;
             job.Status = AiJobStatus.Failed;

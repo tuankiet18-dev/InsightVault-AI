@@ -22,7 +22,7 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
     public DbSet<Report> Reports => Set<Report>();
     public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();
     public DbSet<CreditPackage> CreditPackages => Set<CreditPackage>();
-    public DbSet<WorkspaceSubscription> WorkspaceSubscriptions => Set<WorkspaceSubscription>();
+    public DbSet<UserSubscription> UserSubscriptions => Set<UserSubscription>();
     public DbSet<CreditLedgerEntry> CreditLedgerEntries => Set<CreditLedgerEntry>();
     public DbSet<PaymentOrder> PaymentOrders => Set<PaymentOrder>();
     public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
@@ -51,7 +51,7 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
         ConfigureReports(modelBuilder);
         ConfigureSubscriptionPlans(modelBuilder);
         ConfigureCreditPackages(modelBuilder);
-        ConfigureWorkspaceSubscriptions(modelBuilder);
+        ConfigureUserSubscriptions(modelBuilder);
         ConfigureCreditLedgerEntries(modelBuilder);
         ConfigurePaymentOrders(modelBuilder);
         ConfigureSystemSettings(modelBuilder);
@@ -525,6 +525,10 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
             entity.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(x => x.UpdatedAt).HasDefaultValueSql("now()");
 
+            entity.Property(x => x.IsPublic).HasDefaultValue(false);
+            entity.Property(x => x.PublicToken).HasMaxLength(128);
+            entity.HasIndex(x => x.PublicToken).IsUnique();
+
             entity.HasOne(x => x.Workspace)
                 .WithMany(x => x.Reports)
                 .HasForeignKey(x => x.WorkspaceId)
@@ -587,7 +591,7 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
                     PriceVnd = 0,
                     BillingPeriodMonths = 1,
                     IncludedCredits = 100,
-                    MaxMembers = 1,
+                    MaxMembers = 2,
                     StorageLimitBytes = 500L * 1024 * 1024,
                     IsActive = true,
                     DisplayOrder = 1,
@@ -685,28 +689,28 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
         });
     }
 
-    private static void ConfigureWorkspaceSubscriptions(ModelBuilder modelBuilder)
+    private static void ConfigureUserSubscriptions(ModelBuilder modelBuilder)
     {
         var statusConverter = new EnumToStringConverter<SubscriptionStatus>();
 
-        modelBuilder.Entity<WorkspaceSubscription>(entity =>
+        modelBuilder.Entity<UserSubscription>(entity =>
         {
             entity.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.Property(x => x.Status).HasConversion(statusConverter).HasMaxLength(50).IsRequired();
             entity.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(x => x.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(x => x.Workspace)
+            entity.HasOne(x => x.User)
                 .WithOne(x => x.Subscription)
-                .HasForeignKey<WorkspaceSubscription>(x => x.WorkspaceId)
+                .HasForeignKey<UserSubscription>(x => x.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(x => x.Plan)
-                .WithMany(x => x.WorkspaceSubscriptions)
+                .WithMany(x => x.UserSubscriptions)
                 .HasForeignKey(x => x.PlanId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            entity.HasIndex(x => x.WorkspaceId).IsUnique();
+            entity.HasIndex(x => x.UserId).IsUnique();
             entity.HasIndex(x => x.PlanId);
             entity.HasIndex(x => x.Status);
             entity.HasIndex(x => x.CurrentPeriodEnd);
@@ -728,15 +732,20 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
             entity.Property(x => x.Description).HasMaxLength(500);
             entity.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(x => x.WorkspaceSubscription)
+            entity.HasOne(x => x.UserSubscription)
                 .WithMany(x => x.CreditLedgerEntries)
-                .HasForeignKey(x => x.WorkspaceSubscriptionId)
+                .HasForeignKey(x => x.UserSubscriptionId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasOne(x => x.Workspace)
+            entity.HasOne(x => x.User)
                 .WithMany(x => x.CreditLedgerEntries)
-                .HasForeignKey(x => x.WorkspaceId)
+                .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.Workspace)
+                .WithMany()
+                .HasForeignKey(x => x.WorkspaceId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             entity.HasOne(x => x.AiJob)
                 .WithMany(x => x.CreditLedgerEntries)
@@ -749,6 +758,7 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
                 .OnDelete(DeleteBehavior.SetNull);
 
             entity.HasIndex(x => x.IdempotencyKey).IsUnique();
+            entity.HasIndex(x => x.UserId);
             entity.HasIndex(x => new { x.WorkspaceId, x.CreatedAt });
             entity.HasIndex(x => x.AiJobId);
             entity.HasIndex(x => x.PaymentOrderId);
@@ -777,15 +787,10 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
             entity.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(x => x.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(x => x.Workspace)
-                .WithMany(x => x.PaymentOrders)
-                .HasForeignKey(x => x.WorkspaceId)
-                .OnDelete(DeleteBehavior.Cascade);
-
             entity.HasOne(x => x.CreatedBy)
                 .WithMany(x => x.PaymentOrders)
                 .HasForeignKey(x => x.CreatedById)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(x => x.Plan)
                 .WithMany(x => x.PaymentOrders)
@@ -804,7 +809,7 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
             entity.HasIndex(x => x.ProviderReference)
                 .IsUnique()
                 .HasFilter("provider_reference IS NOT NULL");
-            entity.HasIndex(x => new { x.WorkspaceId, x.CreatedAt });
+            entity.HasIndex(x => new { x.CreatedById, x.CreatedAt });
             entity.HasIndex(x => x.Status);
         });
     }

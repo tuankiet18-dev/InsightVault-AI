@@ -15,6 +15,7 @@ import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Mention from '@tiptap/extension-mention'
 import { getMentionSuggestion } from '@/components/chat/MentionSuggestion'
+import { useState } from 'react'
 
 export function PromptInput() {
   const { setAnswer, setCitations, setSuggestions, isLoading, setIsLoading } = useAiStore()
@@ -25,6 +26,8 @@ export function PromptInput() {
   
   const placeholder = 'Ask about the selected document, folder, or workspace...'
   
+  const [isEditorEmpty, setIsEditorEmpty] = useState(true)
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -44,6 +47,9 @@ export function PromptInput() {
       }),
     ],
     content: '',
+    onUpdate: ({ editor }) => {
+      setIsEditorEmpty(editor.isEmpty)
+    },
     editorProps: {
       attributes: {
         class: 'min-h-[60px] w-full resize-none bg-transparent p-3 text-sm focus:outline-none focus:ring-0 prose prose-sm prose-primary max-w-none leading-normal overflow-y-auto max-h-48',
@@ -66,10 +72,10 @@ export function PromptInput() {
     if (!editor || isLoading || !activeWorkspaceId) return
     
     const json = editor.getJSON()
-    let textContent = editor.getText()
+    const textContent = editor.getText()
     const mentionedIds: string[] = []
 
-    const extractMentions = (node: any) => {
+    const extractMentions = (node: Record<string, unknown>) => {
       if (node.type === 'mention' && node.attrs?.id) {
         mentionedIds.push(node.attrs.id)
       }
@@ -126,26 +132,79 @@ export function PromptInput() {
         optimisticMessage,
       ])
 
-      const response = await chatApi.sendMessage(session.id, {
+      const stream = chatApi.streamMessage(session.id, {
         content: currentPrompt,
         contexts: buildChatContexts(mentionedIds),
       })
 
+      const assistantMessageId = `temp-assistant-${Date.now()}`
+      let assistantMessage: ChatMessageDto = {
+        id: assistantMessageId,
+        chatSessionId: session.id,
+        role: 'assistant',
+        content: '',
+        contexts: [],
+        sources: [],
+        createdAt: new Date().toISOString(),
+      }
+
       queryClient.setQueryData<ChatMessageDto[]>(chatKeys.messages(session.id), (oldMessages = []) => [
-        ...oldMessages.filter((message) =>
-          message.id !== optimisticMessageId
-          && message.id !== response.userMessage.id
-          && message.id !== response.assistantMessage.id
-        ),
-        response.userMessage,
-        response.assistantMessage,
+        ...oldMessages,
+        assistantMessage,
       ])
+
+      let fullContent = ''
+      
+      for await (const chunk of stream) {
+        const eventType = chunk.event || chunk.Event
+        const eventData = chunk.data || chunk.Data
+
+        if (eventType === 'user_message') {
+          // Replace optimistic user message with the real one from DB
+          queryClient.setQueryData<ChatMessageDto[]>(chatKeys.messages(session.id), (oldMessages = []) => [
+            ...oldMessages.filter((m) => m.id !== optimisticMessageId && m.id !== eventData.id),
+            eventData,
+            assistantMessage,
+          ])
+        } else if (eventType === 'sources') {
+          const sources = Array.isArray(eventData) ? eventData : []
+          assistantMessage = {
+            ...assistantMessage,
+            sources: sources.map((s: Record<string, unknown>, idx: number) => ({
+              id: `temp-source-${idx}`,
+              chatMessageId: assistantMessageId,
+              documentId: s.documentId || s.DocumentId || s.document_id,
+              documentChunkId: s.chunkId || s.ChunkId || s.chunk_id,
+              fileName: s.fileName || s.FileName || s.file_name || 'Unknown source',
+              snippet: s.snippet || s.Snippet,
+              similarity: s.similarity || s.Similarity,
+              sourceOrder: idx,
+              createdAt: new Date().toISOString(),
+              chunkIndex: s.chunkIndex || s.ChunkIndex || s.chunk_index,
+              pageNumber: s.pageNumber || s.PageNumber || s.page_number,
+            })),
+          }
+          queryClient.setQueryData<ChatMessageDto[]>(chatKeys.messages(session.id), (oldMessages = []) => [
+            ...oldMessages.filter((m) => m.id !== assistantMessageId),
+            assistantMessage,
+          ])
+        } else if (eventType === 'chunk') {
+          fullContent += eventData || ''
+          assistantMessage = { ...assistantMessage, content: fullContent }
+          setAnswer(fullContent)
+          queryClient.setQueryData<ChatMessageDto[]>(chatKeys.messages(session.id), (oldMessages = []) => [
+            ...oldMessages.filter((m) => m.id !== assistantMessageId),
+            assistantMessage,
+          ])
+        } else if (eventType === 'error') {
+          throw new Error(eventData || 'Streaming failed')
+        }
+      }
 
       queryClient.invalidateQueries({ queryKey: chatKeys.sessions(activeWorkspaceId) })
       queryClient.invalidateQueries({ queryKey: chatKeys.messages(session.id) })
 
-      setAnswer(response.assistantMessage.content)
-      setCitations(response.assistantMessage.sources
+      setCitations(assistantMessage.sources
         .filter(hasDocumentSource)
         .map(source => ({
           documentId: source.documentId,
@@ -164,7 +223,7 @@ export function PromptInput() {
           pageNumber: source.pageNumber,
         })))
       setSuggestions(
-        response.assistantMessage.sources.length > 0
+        assistantMessage.sources.length > 0
           ? ['Open cited source', 'Ask a follow-up in the same workspace chat']
           : ['Try asking about a completed document', 'Open a report or document to narrow the scope']
       )
@@ -225,8 +284,6 @@ export function PromptInput() {
       console.error('Failed to parse drop data', err)
     }
   }
-
-  const isEditorEmpty = editor?.isEmpty ?? true
 
   return (
     <div className="border-t border-border p-2">

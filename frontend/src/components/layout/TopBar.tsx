@@ -4,7 +4,6 @@ import {
   PanelLeftOpen,
   PanelRightClose,
   PanelRightOpen,
-  Search,
   Settings as SettingsIcon,
   Trash2,
   UserPlus,
@@ -19,11 +18,15 @@ import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useWorkspace, useWorkspaces, useDeleteWorkspace } from '@/hooks/useWorkspaces'
 import { useUiStore } from '@/stores/uiStore'
 import { useAuthStore } from '@/stores/authStore'
+import { useTabStore } from '@/stores/tabStore'
+import { useChatStore } from '@/stores/chatStore'
+import { useAiStore } from '@/stores/aiStore'
 import { DropdownMenu, DropdownMenuItem } from '../ui/DropdownMenu'
 import { SettingsModal } from '../settings/SettingsModal'
 import { ConfirmModal } from '../ui/ConfirmModal'
 import { Button } from '../ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
+import { GlobalSearch } from '../search/GlobalSearch'
 
 export function TopBar() {
   const navigate = useNavigate()
@@ -35,7 +38,6 @@ export function TopBar() {
     inspectorOpen,
     toggleExplorer,
     toggleInspector,
-    setCommandPaletteOpen,
     setInviteModalOpen,
     setMobileDrawer,
   } = useUiStore()
@@ -49,6 +51,10 @@ export function TopBar() {
   const role = activeWs?.currentUserRole
 
   const isOwner = role === 'owner'
+
+  const handleInviteClick = () => {
+    setInviteModalOpen(true)
+  }
 
   const handleDeleteWorkspace = () => {
     if (!activeWorkspaceId) return
@@ -92,7 +98,14 @@ export function TopBar() {
 
       <Select
         value={activeWorkspaceId ?? undefined}
-        onValueChange={setActiveWorkspace}
+        onValueChange={(val) => {
+          setActiveWorkspace(val)
+          useTabStore.getState().resetTabs()
+          useChatStore.getState().setActiveSession(null)
+          useAiStore.getState().setAnswer(null)
+          useAiStore.getState().setCitations([])
+          navigate(`/workspaces/${val}`)
+        }}
         disabled={!workspaces?.length}
       >
         <SelectTrigger className="h-8 w-[170px] bg-background text-sm sm:w-[210px]">
@@ -107,18 +120,7 @@ export function TopBar() {
         </SelectContent>
       </Select>
 
-      <button
-        onClick={() => setCommandPaletteOpen(true)}
-        className="mx-2 hidden h-8 max-w-xl flex-1 items-center justify-between rounded-md border border-border bg-background px-3 text-sm text-muted-foreground shadow-xs transition-colors hover:bg-accent md:flex"
-      >
-        <span className="flex items-center gap-2">
-          <Search className="h-4 w-4" />
-          <span className="truncate">Search documents, chunks, reports...</span>
-        </span>
-        <kbd className="hidden rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground sm:inline-flex">
-          Ctrl K
-        </kbd>
-      </button>
+      <GlobalSearch />
 
       {role && (
         <span className="hidden rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium capitalize text-muted-foreground md:inline-flex">
@@ -136,7 +138,7 @@ export function TopBar() {
             <WalletCards className="h-4 w-4" />
             Billing
           </Button>
-          <Button variant="ghost" size="sm" className="hidden sm:inline-flex" onClick={() => setInviteModalOpen(true)}>
+          <Button variant="ghost" size="sm" className="hidden sm:inline-flex" onClick={handleInviteClick}>
             <UserPlus className="h-4 w-4" />
             Invite
           </Button>

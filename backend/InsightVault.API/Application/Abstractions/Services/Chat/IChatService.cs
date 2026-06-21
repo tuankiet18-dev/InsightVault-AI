@@ -27,6 +27,11 @@ public interface IChatService
         SendChatMessageRequest request,
         CancellationToken cancellationToken = default);
 
+    IAsyncEnumerable<ChatStreamEventDto> StreamMessageAsync(
+        Guid sessionId,
+        SendChatMessageRequest request,
+        CancellationToken cancellationToken = default);
+
     Task DeleteSessionAsync(
         Guid sessionId,
         CancellationToken cancellationToken = default);

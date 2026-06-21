@@ -7,6 +7,8 @@ public sealed record WorkspaceMemberDto(
     Guid WorkspaceId,
     Guid? UserId,
     string Email,
+    string? FullName,
+    string? AvatarUrl,
     ApiWorkspaceRole Role,
     ApiMemberStatus Status,
     Guid? InvitedById,

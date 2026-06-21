@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
-import { Folder, FileText, Settings, LogOut, Plus, ChevronRight, Activity, CheckCircle, AlertTriangle, Clock, WalletCards, CreditCard, Mail } from 'lucide-react'
+import { Folder, FileText, Settings, LogOut, Plus, ChevronRight, Activity, CheckCircle, AlertTriangle, Clock, CreditCard, Mail } from 'lucide-react'
 import { useUiStore } from '@/stores/uiStore'
 import { CreateWorkspaceModal } from '@/components/workspace/CreateWorkspaceModal'
 import { useWorkspaces } from '@/hooks/useWorkspaces'
@@ -160,7 +160,8 @@ export function UserDashboardPage() {
               workspaces.map(ws => (
                 <article
                   key={ws.id}
-                  className="group flex flex-col justify-between overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-sm transition-all hover:border-[var(--color-primary)] hover:shadow-md"
+                  onClick={() => navigate(`/workspaces/${ws.id}`)}
+                  className="group flex flex-col justify-between overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-sm transition-all hover:border-[var(--color-primary)] hover:shadow-md cursor-pointer"
                 >
                   <div>
                     <div className="mb-2 flex items-center justify-between">
@@ -174,21 +175,11 @@ export function UserDashboardPage() {
                     </p>
                   </div>
                   <div className="mt-6 flex flex-wrap items-center gap-2">
-                    <Link
-                      to={`/workspaces/${ws.id}`}
+                    <span
                       className="inline-flex items-center rounded-md bg-[var(--color-primary)] px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--color-primary)]/90"
                     >
                       Open <ChevronRight className="ml-1 h-4 w-4" />
-                    </Link>
-                    {ws.currentUserRole === 'owner' && (
-                      <Link
-                        to={`/workspaces/${ws.id}/billing`}
-                        className="inline-flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm font-medium text-[var(--color-muted-foreground)] transition-colors hover:text-[var(--color-primary)]"
-                      >
-                        <WalletCards className="h-4 w-4" />
-                        Billing
-                      </Link>
-                    )}
+                    </span>
                   </div>
                 </article>
               ))

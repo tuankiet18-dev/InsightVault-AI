@@ -27,4 +27,14 @@ public interface IReportService
     Task DeleteAsync(
         Guid reportId,
         CancellationToken cancellationToken = default);
+
+    Task<ShareReportResponse> ShareReportAsync(
+        Guid workspaceId,
+        Guid reportId,
+        ShareReportRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<ReportDto> GetPublicReportAsync(
+        string publicToken,
+        CancellationToken cancellationToken = default);
 }

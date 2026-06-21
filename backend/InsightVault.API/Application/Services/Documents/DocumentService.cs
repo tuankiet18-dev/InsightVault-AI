@@ -387,6 +387,7 @@ public sealed class DocumentService(
         var credits = BillingCreditCosts.ForDocument(document.FileSizeBytes, billingOptions.Value);
         await aiJobRepository.AddAsync(aiJob, cancellationToken);
         await creditService.ConsumeAsync(
+            userId,
             document.WorkspaceId,
             aiJob.Id,
             credits,
@@ -739,11 +740,15 @@ public sealed class DocumentService(
         }
         catch (Exception exception)
         {
-            await creditService.RefundAsync(
-                document.WorkspaceId,
-                aiJob.Id,
-                "process_document_queue_failure",
-                CancellationToken.None);
+            if (document.UploadedById.HasValue)
+            {
+                await creditService.RefundAsync(
+                    document.UploadedById.Value,
+                    document.WorkspaceId,
+                    aiJob.Id,
+                    "process_document_queue_failure",
+                    CancellationToken.None);
+            }
             var now = DateTimeOffset.UtcNow;
             aiJob.Status = AiJobStatus.Failed;
             aiJob.ErrorMessage = $"Failed to publish processing job: {exception.Message}";

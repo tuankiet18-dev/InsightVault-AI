@@ -229,6 +229,14 @@ public sealed class WorkspaceService(
         var member = await workspaceRepository.GetMemberByIdAsync(workspaceId, memberId, cancellationToken)
             ?? throw new KeyNotFoundException("Workspace member not found.");
 
+        if (member.UserId == userId)
+        {
+            throw new ApiException(
+                StatusCodes.Status403Forbidden,
+                "member.cannot_modify_self",
+                "You cannot modify your own role or status.");
+        }
+
         // Prevent downgrading/removing the last owner
         if (member.Role == WorkspaceRole.Owner && request.Role.HasValue)
         {
@@ -327,6 +335,14 @@ public sealed class WorkspaceService(
 
         var member = await workspaceRepository.GetMemberByIdAsync(workspaceId, memberId, cancellationToken)
             ?? throw new KeyNotFoundException("Workspace member not found.");
+
+        if (member.UserId == userId)
+        {
+            throw new ApiException(
+                StatusCodes.Status403Forbidden,
+                "member.cannot_remove_self",
+                "You cannot remove yourself from the workspace. Use the leave workspace feature instead.");
+        }
 
         // Prevent removing the last active owner.
         if (member.Role == WorkspaceRole.Owner && member.Status == MemberStatus.Active)

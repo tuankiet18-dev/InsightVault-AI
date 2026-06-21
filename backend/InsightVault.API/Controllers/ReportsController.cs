@@ -79,4 +79,20 @@ public sealed class ReportsController(IReportService reportService) : Controller
 
         return NoContent();
     }
+
+    [HttpPost("api/workspaces/{workspaceId:guid}/reports/{reportId:guid}/share")]
+    public async Task<ActionResult<ShareReportResponse>> ShareReport(
+        Guid workspaceId,
+        Guid reportId,
+        ShareReportRequest request,
+        CancellationToken cancellationToken)
+    {
+        var response = await reportService.ShareReportAsync(
+            workspaceId,
+            reportId,
+            request,
+            cancellationToken);
+
+        return Ok(response);
+    }
 }

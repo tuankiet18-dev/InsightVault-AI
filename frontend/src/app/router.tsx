@@ -17,6 +17,8 @@ import { AdminWorkspacesPage } from '@/pages/admin/AdminWorkspacesPage'
 import { AdminBillingPage } from '@/pages/admin/AdminBillingPage'
 import { AdminSettingsPage } from '@/pages/admin/AdminSettingsPage'
 import { BillingReturnPage } from '@/pages/BillingReturnPage'
+import { PublicReportPage } from '@/pages/PublicReportPage'
+
 const adminNavClass = ({ isActive }: { isActive: boolean }) =>
   isActive
     ? 'rounded-md bg-primary px-3 py-1.5 text-primary-foreground'
@@ -84,12 +86,16 @@ const router = createBrowserRouter([
     element: <ProtectedRoute><WorkspacePage /></ProtectedRoute>,
   },
   {
-    path: '/workspaces/:workspaceId/billing',
+    path: '/billing',
     element: <ProtectedRoute><BillingPage /></ProtectedRoute>,
   },
   {
     path: '/billing/return',
     element: <BillingReturnPage />,
+  },
+  {
+    path: '/shared/reports/:token',
+    element: <PublicReportPage />,
   },
   {
     path: '/chat',

@@ -491,13 +491,17 @@ namespace InsightVault.API.Data.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("usage_type");
 
-                    b.Property<Guid>("WorkspaceId")
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<Guid>("UserSubscriptionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_subscription_id");
+
+                    b.Property<Guid?>("WorkspaceId")
                         .HasColumnType("uuid")
                         .HasColumnName("workspace_id");
-
-                    b.Property<Guid>("WorkspaceSubscriptionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("workspace_subscription_id");
 
                     b.HasKey("Id")
                         .HasName("pk_credit_ledger_entries");
@@ -512,8 +516,11 @@ namespace InsightVault.API.Data.Migrations
                     b.HasIndex("PaymentOrderId")
                         .HasDatabaseName("ix_credit_ledger_entries_payment_order_id");
 
-                    b.HasIndex("WorkspaceSubscriptionId")
-                        .HasDatabaseName("ix_credit_ledger_entries_workspace_subscription_id");
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_credit_ledger_entries_user_id");
+
+                    b.HasIndex("UserSubscriptionId")
+                        .HasDatabaseName("ix_credit_ledger_entries_user_subscription_id");
 
                     b.HasIndex("WorkspaceId", "CreatedAt")
                         .HasDatabaseName("ix_credit_ledger_entries_workspace_id_created_at");
@@ -1059,15 +1066,8 @@ namespace InsightVault.API.Data.Migrations
                         .HasColumnName("updated_at")
                         .HasDefaultValueSql("now()");
 
-                    b.Property<Guid>("WorkspaceId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("workspace_id");
-
                     b.HasKey("Id")
                         .HasName("pk_payment_orders");
-
-                    b.HasIndex("CreatedById")
-                        .HasDatabaseName("ix_payment_orders_created_by_id");
 
                     b.HasIndex("CreditPackageId")
                         .HasDatabaseName("ix_payment_orders_credit_package_id");
@@ -1092,8 +1092,8 @@ namespace InsightVault.API.Data.Migrations
                     b.HasIndex("Status")
                         .HasDatabaseName("ix_payment_orders_status");
 
-                    b.HasIndex("WorkspaceId", "CreatedAt")
-                        .HasDatabaseName("ix_payment_orders_workspace_id_created_at");
+                    b.HasIndex("CreatedById", "CreatedAt")
+                        .HasDatabaseName("ix_payment_orders_created_by_id_created_at");
 
                     b.ToTable("payment_orders", null, t =>
                         {
@@ -1131,6 +1131,12 @@ namespace InsightVault.API.Data.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("folder_id");
 
+                    b.Property<bool>("IsPublic")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_public");
+
                     b.Property<string>("MarkdownContent")
                         .IsRequired()
                         .HasColumnType("text")
@@ -1140,6 +1146,11 @@ namespace InsightVault.API.Data.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)")
                         .HasColumnName("model_name");
+
+                    b.Property<string>("PublicToken")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("public_token");
 
                     b.Property<Guid>("ReportGroupId")
                         .ValueGeneratedOnAdd()
@@ -1152,6 +1163,10 @@ namespace InsightVault.API.Data.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("report_type");
+
+                    b.Property<DateTimeOffset?>("SharedExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("shared_expires_at");
 
                     b.Property<string>("SourceDocuments")
                         .IsRequired()
@@ -1206,6 +1221,10 @@ namespace InsightVault.API.Data.Migrations
 
                     b.HasIndex("FolderId")
                         .HasDatabaseName("ix_reports_folder_id");
+
+                    b.HasIndex("PublicToken")
+                        .IsUnique()
+                        .HasDatabaseName("ix_reports_public_token");
 
                     b.HasIndex("ReportGroupId")
                         .HasDatabaseName("ix_reports_report_group_id");
@@ -1326,7 +1345,7 @@ namespace InsightVault.API.Data.Migrations
                             DisplayOrder = 1,
                             IncludedCredits = 100,
                             IsActive = true,
-                            MaxMembers = 1,
+                            MaxMembers = 2,
                             Name = "Free",
                             PriceVnd = 0L,
                             StorageLimitBytes = 524288000L,
@@ -1511,6 +1530,79 @@ namespace InsightVault.API.Data.Migrations
                         .HasDatabaseName("ix_users_system_role");
 
                     b.ToTable("users", (string)null);
+                });
+
+            modelBuilder.Entity("InsightVault.API.Domain.Entities.UserSubscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<bool>("CancelAtPeriodEnd")
+                        .HasColumnType("boolean")
+                        .HasColumnName("cancel_at_period_end");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<DateTimeOffset>("CurrentPeriodEnd")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("current_period_end");
+
+                    b.Property<DateTimeOffset>("CurrentPeriodStart")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("current_period_start");
+
+                    b.Property<Guid>("PlanId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("plan_id");
+
+                    b.Property<int>("RecurringCreditsRemaining")
+                        .HasColumnType("integer")
+                        .HasColumnName("recurring_credits_remaining");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("status");
+
+                    b.Property<int>("TopUpCreditsRemaining")
+                        .HasColumnType("integer")
+                        .HasColumnName("top_up_credits_remaining");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_user_subscriptions");
+
+                    b.HasIndex("CurrentPeriodEnd")
+                        .HasDatabaseName("ix_user_subscriptions_current_period_end");
+
+                    b.HasIndex("PlanId")
+                        .HasDatabaseName("ix_user_subscriptions_plan_id");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_user_subscriptions_status");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_user_subscriptions_user_id");
+
+                    b.ToTable("user_subscriptions", (string)null);
                 });
 
             modelBuilder.Entity("InsightVault.API.Domain.Entities.Workspace", b =>
@@ -1769,79 +1861,6 @@ namespace InsightVault.API.Data.Migrations
                     b.ToTable("workspace_members", (string)null);
                 });
 
-            modelBuilder.Entity("InsightVault.API.Domain.Entities.WorkspaceSubscription", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("gen_random_uuid()");
-
-                    b.Property<bool>("CancelAtPeriodEnd")
-                        .HasColumnType("boolean")
-                        .HasColumnName("cancel_at_period_end");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<DateTimeOffset>("CurrentPeriodEnd")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("current_period_end");
-
-                    b.Property<DateTimeOffset>("CurrentPeriodStart")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("current_period_start");
-
-                    b.Property<Guid>("PlanId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("plan_id");
-
-                    b.Property<int>("RecurringCreditsRemaining")
-                        .HasColumnType("integer")
-                        .HasColumnName("recurring_credits_remaining");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("status");
-
-                    b.Property<int>("TopUpCreditsRemaining")
-                        .HasColumnType("integer")
-                        .HasColumnName("top_up_credits_remaining");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<Guid>("WorkspaceId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("workspace_id");
-
-                    b.HasKey("Id")
-                        .HasName("pk_workspace_subscriptions");
-
-                    b.HasIndex("CurrentPeriodEnd")
-                        .HasDatabaseName("ix_workspace_subscriptions_current_period_end");
-
-                    b.HasIndex("PlanId")
-                        .HasDatabaseName("ix_workspace_subscriptions_plan_id");
-
-                    b.HasIndex("Status")
-                        .HasDatabaseName("ix_workspace_subscriptions_status");
-
-                    b.HasIndex("WorkspaceId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_workspace_subscriptions_workspace_id");
-
-                    b.ToTable("workspace_subscriptions", (string)null);
-                });
-
             modelBuilder.Entity("InsightVault.API.Domain.Entities.AiJob", b =>
                 {
                     b.HasOne("InsightVault.API.Domain.Entities.User", "CreatedBy")
@@ -1981,27 +2000,35 @@ namespace InsightVault.API.Data.Migrations
                         .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("fk_credit_ledger_entries_payment_orders_payment_order_id");
 
-                    b.HasOne("InsightVault.API.Domain.Entities.Workspace", "Workspace")
+                    b.HasOne("InsightVault.API.Domain.Entities.User", "User")
                         .WithMany("CreditLedgerEntries")
-                        .HasForeignKey("WorkspaceId")
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
-                        .HasConstraintName("fk_credit_ledger_entries_workspaces_workspace_id");
+                        .HasConstraintName("fk_credit_ledger_entries_users_user_id");
 
-                    b.HasOne("InsightVault.API.Domain.Entities.WorkspaceSubscription", "WorkspaceSubscription")
+                    b.HasOne("InsightVault.API.Domain.Entities.UserSubscription", "UserSubscription")
                         .WithMany("CreditLedgerEntries")
-                        .HasForeignKey("WorkspaceSubscriptionId")
+                        .HasForeignKey("UserSubscriptionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_credit_ledger_entries_workspace_subscriptions_workspace_sub");
+                        .HasConstraintName("fk_credit_ledger_entries_user_subscriptions_user_subscription_");
+
+                    b.HasOne("InsightVault.API.Domain.Entities.Workspace", "Workspace")
+                        .WithMany()
+                        .HasForeignKey("WorkspaceId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_credit_ledger_entries_workspaces_workspace_id");
 
                     b.Navigation("AiJob");
 
                     b.Navigation("PaymentOrder");
 
-                    b.Navigation("Workspace");
+                    b.Navigation("User");
 
-                    b.Navigation("WorkspaceSubscription");
+                    b.Navigation("UserSubscription");
+
+                    b.Navigation("Workspace");
                 });
 
             modelBuilder.Entity("InsightVault.API.Domain.Entities.Document", b =>
@@ -2094,7 +2121,7 @@ namespace InsightVault.API.Data.Migrations
                     b.HasOne("InsightVault.API.Domain.Entities.User", "CreatedBy")
                         .WithMany("PaymentOrders")
                         .HasForeignKey("CreatedById")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_payment_orders_users_created_by_id");
 
@@ -2110,20 +2137,11 @@ namespace InsightVault.API.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_payment_orders_subscription_plans_plan_id");
 
-                    b.HasOne("InsightVault.API.Domain.Entities.Workspace", "Workspace")
-                        .WithMany("PaymentOrders")
-                        .HasForeignKey("WorkspaceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_payment_orders_workspaces_workspace_id");
-
                     b.Navigation("CreatedBy");
 
                     b.Navigation("CreditPackage");
 
                     b.Navigation("Plan");
-
-                    b.Navigation("Workspace");
                 });
 
             modelBuilder.Entity("InsightVault.API.Domain.Entities.Report", b =>
@@ -2160,6 +2178,27 @@ namespace InsightVault.API.Data.Migrations
                     b.Navigation("Folder");
 
                     b.Navigation("Workspace");
+                });
+
+            modelBuilder.Entity("InsightVault.API.Domain.Entities.UserSubscription", b =>
+                {
+                    b.HasOne("InsightVault.API.Domain.Entities.SubscriptionPlan", "Plan")
+                        .WithMany("UserSubscriptions")
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_subscriptions_subscription_plans_plan_id");
+
+                    b.HasOne("InsightVault.API.Domain.Entities.User", "User")
+                        .WithOne("Subscription")
+                        .HasForeignKey("InsightVault.API.Domain.Entities.UserSubscription", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_subscriptions_users_user_id");
+
+                    b.Navigation("Plan");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("InsightVault.API.Domain.Entities.Workspace", b =>
@@ -2231,27 +2270,6 @@ namespace InsightVault.API.Data.Migrations
                     b.Navigation("Workspace");
                 });
 
-            modelBuilder.Entity("InsightVault.API.Domain.Entities.WorkspaceSubscription", b =>
-                {
-                    b.HasOne("InsightVault.API.Domain.Entities.SubscriptionPlan", "Plan")
-                        .WithMany("WorkspaceSubscriptions")
-                        .HasForeignKey("PlanId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_workspace_subscriptions_subscription_plans_plan_id");
-
-                    b.HasOne("InsightVault.API.Domain.Entities.Workspace", "Workspace")
-                        .WithOne("Subscription")
-                        .HasForeignKey("InsightVault.API.Domain.Entities.WorkspaceSubscription", "WorkspaceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_workspace_subscriptions_workspaces_workspace_id");
-
-                    b.Navigation("Plan");
-
-                    b.Navigation("Workspace");
-                });
-
             modelBuilder.Entity("InsightVault.API.Domain.Entities.AiJob", b =>
                 {
                     b.Navigation("CreditLedgerEntries");
@@ -2312,7 +2330,7 @@ namespace InsightVault.API.Data.Migrations
                 {
                     b.Navigation("PaymentOrders");
 
-                    b.Navigation("WorkspaceSubscriptions");
+                    b.Navigation("UserSubscriptions");
                 });
 
             modelBuilder.Entity("InsightVault.API.Domain.Entities.User", b =>
@@ -2323,15 +2341,24 @@ namespace InsightVault.API.Data.Migrations
 
                     b.Navigation("CreatedFolders");
 
+                    b.Navigation("CreditLedgerEntries");
+
                     b.Navigation("OwnedWorkspaces");
 
                     b.Navigation("PaymentOrders");
 
                     b.Navigation("Reports");
 
+                    b.Navigation("Subscription");
+
                     b.Navigation("UploadedDocuments");
 
                     b.Navigation("WorkspaceMemberships");
+                });
+
+            modelBuilder.Entity("InsightVault.API.Domain.Entities.UserSubscription", b =>
+                {
+                    b.Navigation("CreditLedgerEntries");
                 });
 
             modelBuilder.Entity("InsightVault.API.Domain.Entities.Workspace", b =>
@@ -2340,24 +2367,13 @@ namespace InsightVault.API.Data.Migrations
 
                     b.Navigation("ChatSessions");
 
-                    b.Navigation("CreditLedgerEntries");
-
                     b.Navigation("Documents");
 
                     b.Navigation("Folders");
 
                     b.Navigation("Members");
 
-                    b.Navigation("PaymentOrders");
-
                     b.Navigation("Reports");
-
-                    b.Navigation("Subscription");
-                });
-
-            modelBuilder.Entity("InsightVault.API.Domain.Entities.WorkspaceSubscription", b =>
-                {
-                    b.Navigation("CreditLedgerEntries");
                 });
 #pragma warning restore 612, 618
         }

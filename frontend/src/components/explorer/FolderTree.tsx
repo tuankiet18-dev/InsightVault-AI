@@ -5,7 +5,6 @@ import { useTabStore } from '@/stores/tabStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useFolders, useUpdateFolder } from '@/hooks/useFolders'
 import { useDocuments, useUpdateDocument } from '@/hooks/useDocuments'
-import { useReports } from '@/hooks/useReports'
 import { useWorkspace } from '@/hooks/useWorkspaces'
 import { getFileTypeColor, cn } from '@/lib/utils'
 import { hasPermission } from '@/utils/permission'
@@ -20,9 +19,6 @@ export function FolderTree() {
   const updateFolder = useUpdateFolder()
   const updateDocument = useUpdateDocument(activeWorkspaceId!)
   const [isDragOver, setIsDragOver] = useState(false)
-  
-  const { data: allReports = [] } = useReports(activeWorkspaceId)
-  const rootReports = allReports.filter(r => r.folderId === null)
 
   if (!activeWorkspaceId) return null
 
@@ -71,9 +67,6 @@ export function FolderTree() {
             canEdit={canEdit}
           />
         ))}
-        {rootReports.map(report => (
-          <ReportRow key={report.id} report={report} workspaceId={activeWorkspaceId} canEdit={canEdit} />
-        ))}
       </div>
     </section>
   )
@@ -101,8 +94,6 @@ function FolderRow({
   const { selectedFolderId, setSelectedFolder } = useWorkspaceStore()
   const { openUploadModal, openCreateFolderModal } = useUiStore()
   const { data: documents = [] } = useDocuments(workspaceId, { folderId: folder.id })
-  const { data: allReports = [] } = useReports(workspaceId)
-  const folderReports = allReports.filter(r => r.folderId === folder.id)
   const { data: childFolders = [] } = useFolders(workspaceId, folder.id)
   const deleteMutation = useDeleteFolder(workspaceId)
   const updateFolder = useUpdateFolder()
@@ -114,7 +105,7 @@ function FolderRow({
   const role = activeWorkspace?.currentUserRole
   const canDeleteFolder = 
     role === 'owner' || 
-    (role === 'editor' && (folder.createdById === user?.id || (documents.length === 0 && childFolders.length === 0 && folderReports.length === 0)))
+    (role === 'editor' && (folder.createdById === user?.id || (documents.length === 0 && childFolders.length === 0)))
 
   const handleDelete = () => {
     deleteMutation.mutate(folder.id, {
@@ -189,7 +180,7 @@ function FolderRow({
           )}
           <Folder className="w-4 h-4 text-surface-400 shrink-0" fill="currentColor" fillOpacity={0.2} />
           <span className="truncate font-medium">{folder.name}</span>
-          <span className="ml-auto text-[10px] text-muted-foreground">{documents.length + folderReports.length}</span>
+          <span className="ml-auto text-[10px] text-muted-foreground">{documents.length}</span>
         </button>
         {canEdit && (
           <div className="flex items-center rounded bg-surface-100/80 opacity-0 backdrop-blur-sm transition-all group-hover:opacity-100 group-has-[data-state=open]:opacity-100">
@@ -229,15 +220,12 @@ function FolderRow({
       
       {expanded && (
         <div className="flex flex-col pl-4 border-l border-border/40 ml-2 mt-0.5">
-          {documents.length === 0 && childFolders.length === 0 && folderReports.length === 0 ? (
+          {documents.length === 0 && childFolders.length === 0 ? (
             <div className="px-2 py-1 text-xs text-muted-foreground italic">Empty</div>
           ) : (
             <>
               {childFolders.map(child => (
                 <FolderRow key={child.id} folder={child} workspaceId={workspaceId} canEdit={canEdit} />
-              ))}
-              {folderReports.map(report => (
-                <ReportRow key={report.id} report={report} workspaceId={workspaceId} canEdit={canEdit} />
               ))}
               {documents.map(doc => (
                 <DocumentRow key={doc.id} document={doc} workspaceId={workspaceId} canEdit={canEdit} />
@@ -354,95 +342,6 @@ function DocumentRow({
         title={`Delete Document?`}
         description={`Are you sure you want to delete "${document.originalFileName}"? This action cannot be undone.`}
         confirmText="Delete Document"
-      />
-    </>
-  )
-}
-
-import { useDeleteReport } from '@/hooks/useReports'
-import type { ReportDto } from '@/types/api'
-
-function ReportRow({
-  report,
-  workspaceId,
-  canEdit,
-}: {
-  report: ReportDto
-  workspaceId: string
-  canEdit: boolean
-}) {
-  const { openTab, closeTab } = useTabStore()
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
-  const deleteMutation = useDeleteReport(workspaceId)
-  const { data: activeWorkspace } = useWorkspace(workspaceId)
-  
-  const role = activeWorkspace?.currentUserRole
-  const canDeleteReport = role === 'owner' || role === 'editor'
-  
-  const handleOpen = () => {
-    openTab({
-      id: `report-${report.id}`,
-      label: 'Comparison report',
-      type: 'report',
-      reportId: report.id,
-      closable: true,
-      compareDocumentIds: report.sourceDocuments
-    })
-  }
-
-  const handleDelete = () => {
-    deleteMutation.mutate(report.id, {
-      onSuccess: () => {
-        setIsDeleteModalOpen(false)
-        closeTab(`report-${report.id}`)
-      }
-    })
-  }
-
-  return (
-    <>
-      <div
-        className={cn(
-          "flex items-center justify-between w-full px-2 py-1.5 rounded-md text-sm text-left transition-colors group relative select-none cursor-pointer",
-          "text-surface-600 hover:bg-surface-100"
-        )}
-        onClick={handleOpen}
-      >
-        <div className="flex items-center gap-1.5 overflow-hidden pr-2">
-          <FileText className="w-4 h-4 shrink-0 text-primary-500" />
-          <span className="truncate font-medium">{report.title}</span>
-        </div>
-        
-        <div className="flex items-center gap-1 shrink-0">
-          <span className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase bg-primary-50 text-primary-600">
-            Report
-          </span>
-          {canEdit && (
-            <div className="flex items-center rounded bg-surface-100/80 opacity-0 backdrop-blur-sm transition-all group-hover:opacity-100 group-has-[data-state=open]:opacity-100">
-              <DropdownMenu align="right">
-                {canDeleteReport && (
-                  <DropdownMenuItem
-                    destructive
-                    onClick={() => setIsDeleteModalOpen(true)}
-                    icon={<Trash2 className="h-4 w-4" />}
-                  >
-                    Delete
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenu>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <ConfirmModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
-        onConfirm={handleDelete}
-        isLoading={deleteMutation.isPending}
-        title={`Delete Report?`}
-        description={`Are you sure you want to delete "${report.title}"? This action cannot be undone.`}
-        confirmText="Delete Report"
       />
     </>
   )

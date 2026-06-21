@@ -1,4 +1,4 @@
-import { AlertCircle, FileText, Loader2 } from 'lucide-react'
+import { AlertCircle, Loader2 } from 'lucide-react'
 import { useDocumentExtractedText } from '@/hooks/useDocuments'
 import type { DocumentDto } from '@/types/api'
 
@@ -27,17 +27,8 @@ export function DocumentExtractedTextViewer({ document }: { document: DocumentDt
   }
 
   return (
-    <section className="overflow-hidden rounded-lg border border-border bg-surface-0">
-      <div className="flex min-h-11 items-center justify-between gap-3 border-b border-border bg-surface-50 px-3">
-        <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
-          <FileText className="h-4 w-4 shrink-0" />
-          <span className="truncate">{data.fileName}</span>
-        </div>
-        <span className="shrink-0 text-xs text-muted-foreground">{data.chunkCount} chunks</span>
-      </div>
-      <pre className="max-h-[calc(100dvh-220px)] overflow-auto whitespace-pre-wrap p-6 font-mono text-[13px] leading-6 text-foreground">
-        {data.content}
-      </pre>
-    </section>
+    <pre className="whitespace-pre-wrap font-mono text-[13px] leading-relaxed text-foreground">
+      {data.content}
+    </pre>
   )
 }

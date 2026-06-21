@@ -1,4 +1,6 @@
 using System.Net.Http.Json;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using InsightVault.API.Application.Abstractions.Ai;
 using InsightVault.API.Domain.Entities;
@@ -194,6 +196,77 @@ public sealed class AiServiceClient(HttpClient httpClient) : IAiServiceClient
                 source.Url,
                 source.Snippet,
                 source.Provider)).ToList());
+    }
+
+    public async IAsyncEnumerable<RagStreamEvent> StreamRagAsync(
+        RagQueryAiRequest request,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/rag/stream");
+        httpRequest.Content = JsonContent.Create(new RagQueryRequest(
+            request.Question,
+            request.WorkspaceId,
+            request.Scope,
+            request.FolderId,
+            request.DocumentIds,
+            request.ReportContext,
+            request.TopK,
+            request.ChatHistory.Select(message => new RagChatHistoryRequest(
+                message.Role,
+                message.Content)).ToList(),
+            request.ModelName,
+            new RagWebSearchOptionsRequest(
+                request.WebSearchEnabled,
+                request.WebSearchProvider,
+                MaxResults: 5)));
+
+        using var response = await httpClient.SendAsync(
+            httpRequest,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new InvalidOperationException($"AI service rag stream failed: {error}");
+        }
+
+        using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var reader = new StreamReader(stream);
+        var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+
+        while (!reader.EndOfStream && !cancellationToken.IsCancellationRequested)
+        {
+            var line = await reader.ReadLineAsync(cancellationToken);
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                continue;
+            }
+
+            if (line.StartsWith("data: "))
+            {
+                var data = line[6..];
+                if (data == "[DONE]")
+                {
+                    break;
+                }
+
+                RagStreamEvent? streamEvent = null;
+                try
+                {
+                    streamEvent = JsonSerializer.Deserialize<RagStreamEvent>(data, jsonOptions);
+                }
+                catch (JsonException)
+                {
+                    continue;
+                }
+
+                if (streamEvent is not null)
+                {
+                    yield return streamEvent;
+                }
+            }
+        }
     }
 
     public async Task<GenerateTitleResult> GenerateChatTitleAsync(

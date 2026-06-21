@@ -4,6 +4,8 @@ import { useState, useMemo } from 'react'
 import { useWorkspaceMembers, useUpdateWorkspaceMember, useRemoveWorkspaceMember } from '@/hooks/useWorkspaceMembers'
 import { useCreateWorkspaceInvitation } from '@/hooks/useWorkspaceInvitations'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { useAuthStore } from '@/stores/authStore'
+import { useAccountBilling } from '@/hooks/useBilling'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import type { WorkspaceRole } from '@/types/api'
@@ -11,6 +13,7 @@ import type { WorkspaceRole } from '@/types/api'
 export function InviteMemberModal() {
   const { inviteModalOpen, setInviteModalOpen } = useUiStore()
   const { activeWorkspaceId } = useWorkspaceStore()
+  const { user } = useAuthStore()
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<WorkspaceRole>('viewer')
   const [errorMsg, setErrorMsg] = useState('')
@@ -39,6 +42,8 @@ export function InviteMemberModal() {
     return filteredMembers.slice(start, start + itemsPerPage)
   }, [filteredMembers, currentPage, itemsPerPage])
 
+  const billing = useAccountBilling()
+
   if (!inviteModalOpen || !activeWorkspaceId) return null
 
   const resetAndClose = () => {
@@ -59,6 +64,21 @@ export function InviteMemberModal() {
     setSuccessMsg('')
 
     if (!email.trim()) return
+
+    const maxMembers = billing.data?.plan.maxMembers || 1
+    const activeMembersCount = members.filter(m => m.status !== 'removed').length
+
+    if (activeMembersCount >= maxMembers) {
+      setInviteModalOpen(false)
+      setTimeout(() => {
+        useUiStore.getState().openUpgradeModal(
+          'Seat Limit Reached',
+          `Your current plan allows up to ${maxMembers} members. Please upgrade your plan to invite more colleagues to this workspace.`,
+          'Invite Member'
+        )
+      }, 300)
+      return
+    }
 
     inviteMemberMutation.mutate(
       { email: email.trim(), role },
@@ -176,9 +196,17 @@ export function InviteMemberModal() {
                 {paginatedMembers.map((member) => (
                   <li key={member.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
-                        {member.email.charAt(0).toUpperCase()}
-                      </div>
+                      {member.avatarUrl ? (
+                        <img 
+                          src={member.avatarUrl} 
+                          alt={member.fullName || member.email} 
+                          className="w-10 h-10 rounded-full object-cover shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold shrink-0">
+                          {member.email.charAt(0).toUpperCase()}
+                        </div>
+                      )}
                       <div>
                         <p className="text-sm font-medium text-card-foreground">{member.email}</p>
                         <div className="flex items-center gap-2 mt-0.5">
@@ -198,7 +226,7 @@ export function InviteMemberModal() {
                     <div className="flex items-center gap-2">
                       <Select
                         value={member.role}
-                        disabled={updateMemberMutation.isPending || member.status === 'removed'}
+                        disabled={updateMemberMutation.isPending || member.status === 'removed' || member.email === user?.email}
                         onValueChange={(value) => updateMemberMutation.mutate({ memberId: member.id, data: { role: value as WorkspaceRole } })}
                       >
                         <SelectTrigger className="h-8 w-[100px] text-xs capitalize">
@@ -211,7 +239,7 @@ export function InviteMemberModal() {
                         </SelectContent>
                       </Select>
                       
-                      {member.status !== 'removed' && (
+                      {member.status !== 'removed' && member.email !== user?.email && (
                         <button
                           type="button"
                           disabled={removeMemberMutation.isPending}

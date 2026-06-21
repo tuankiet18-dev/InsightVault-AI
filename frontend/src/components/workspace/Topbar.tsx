@@ -7,6 +7,9 @@ import { useAuthStore } from "@/stores/authStore";
 import { useThemeStore } from "@/stores/themeStore";
 import { useUiStore } from "@/stores/uiStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
+import { useTabStore } from "@/stores/tabStore";
+import { useChatStore } from "@/stores/chatStore";
+import { useAiStore } from "@/stores/aiStore";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
 import { hasPermission } from "@/utils/permission";
 import { SettingsModal } from "@/components/settings/SettingsModal";
@@ -48,7 +51,16 @@ export function Topbar({
       </Button>
 
       <div className="flex items-center gap-1">
-        <Select value={activeWorkspaceId ?? ''} onValueChange={(val) => setActiveWorkspace(val)}>
+        <Select 
+          value={activeWorkspaceId ?? ''} 
+          onValueChange={(val) => {
+            setActiveWorkspace(val);
+            useTabStore.getState().resetTabs();
+            useChatStore.getState().setActiveSession(null);
+            useAiStore.getState().setAnswer(null);
+            useAiStore.getState().setCitations([]);
+          }}
+        >
           <SelectTrigger className="h-8 w-[200px] text-sm">
             <SelectValue placeholder="Select workspace" />
           </SelectTrigger>

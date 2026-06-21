@@ -185,3 +185,78 @@ def query(
 
     logger.info("RAG query answered with %d sources", len(sources))
     return {"answer": answer, "sources": sources}
+
+def query_stream(
+    question: str,
+    workspace_id: str,
+    scope: str = "workspace",
+    folder_id: str | None = None,
+    document_ids: list[str] | None = None,
+    report_context: str | None = None,
+    top_k: int = settings.RAG_TOP_K,
+    chat_history: list[dict] | None = None,
+    model_name: str | None = None,
+    web_search_options: dict | None = None,
+):
+    import json
+    
+    # Step 1: Embed the question.
+    query_vector = embed_query(question)
+
+    # Step 2: Retrieve relevant chunks with hybrid dense + sparse search.
+    chunks = hybrid_search(
+        query_text=question,
+        query_vector=query_vector,
+        workspace_id=workspace_id,
+        folder_id=folder_id if scope == "folder" else None,
+        document_ids=document_ids if scope in {"document", "report"} else None,
+        top_k=top_k,
+    )
+
+    if not chunks and not report_context:
+        yield f"data: {json.dumps({'event': 'sources', 'data': []})}\n\n"
+        yield f"data: {json.dumps({'event': 'chunk', 'data': 'Tôi không tìm thấy thông tin liên quan trong các tài liệu hiện có trong workspace.'})}\n\n"
+        return
+
+    # Step 3: Format sources and yield them first
+    sources = [
+        {
+            "chunk_id": chunk["chunk_id"],
+            "document_id": chunk["document_id"],
+            "file_name": chunk["file_name"],
+            "snippet": chunk["content"][:300] + ("..." if len(chunk["content"]) > 300 else ""),
+            "similarity": chunk["similarity"],
+            "chunk_index": chunk.get("chunk_index"),
+            "page_number": chunk.get("metadata", {}).get("page_number") or chunk.get("metadata", {}).get("page"),
+            "retrieval_debug": chunk.get("retrieval_debug", {}),
+        }
+        for chunk in chunks
+    ]
+    yield f"data: {json.dumps({'event': 'sources', 'data': sources})}\n\n"
+
+    # Step 4: Build prompt.
+    context_block = (
+        _build_report_context_block(report_context, chunks)
+        if scope == "report"
+        else _build_context_block(chunks)
+    )
+    history_text = _build_chat_history(chat_history or [])
+    chat_history_section = (
+        _CHAT_HISTORY_SECTION.format(history=history_text) if history_text else ""
+    )
+
+    prompt = _RAG_PROMPT_TEMPLATE.format(
+        chat_history_section=chat_history_section,
+        context=context_block,
+        question=question,
+    )
+
+    # Step 5: Stream Gemini chunks
+    model = get_chat_model(model_name)
+    try:
+        for text_chunk in model.generate_text_stream(prompt):
+            yield f"data: {json.dumps({'event': 'chunk', 'data': text_chunk})}\n\n"
+    except Exception as exc:
+        logger.error("RAG Gemini stream failed: %s", exc)
+        yield f"data: {json.dumps({'event': 'error', 'data': str(exc)})}\n\n"
+

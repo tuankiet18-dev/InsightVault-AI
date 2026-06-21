@@ -11,12 +11,10 @@ public interface IBillingService
     Task<IReadOnlyList<CreditPackageDto>> ListCreditPackagesAsync(
         CancellationToken cancellationToken = default);
 
-    Task<BillingSummaryDto> GetWorkspaceSummaryAsync(
-        Guid workspaceId,
+    Task<BillingSummaryDto> GetAccountSummaryAsync(
         CancellationToken cancellationToken = default);
 
     Task<CheckoutSessionDto> CreateCheckoutAsync(
-        Guid workspaceId,
         CreateCheckoutRequest request,
         string clientIp,
         CancellationToken cancellationToken = default);

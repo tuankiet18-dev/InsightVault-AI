@@ -13,6 +13,7 @@ public sealed class CreditService(
     IOptions<BillingOptions> options) : ICreditService
 {
     public async Task ConsumeAsync(
+        Guid userId,
         Guid workspaceId,
         Guid aiJobId,
         int credits,
@@ -30,7 +31,7 @@ public sealed class CreditService(
                 cancellationToken)
             : null;
 
-        await LockWorkspaceAsync(workspaceId, cancellationToken);
+        await LockUserAsync(userId, cancellationToken);
 
         var idempotencyPrefix = $"debit:{aiJobId:N}";
         if (await db.CreditLedgerEntries.AnyAsync(
@@ -45,7 +46,7 @@ public sealed class CreditService(
             return;
         }
 
-        var subscription = await EnsureActiveSubscriptionAsync(workspaceId, cancellationToken);
+        var subscription = await EnsureActiveSubscriptionAsync(userId, cancellationToken);
         var availableCredits = subscription.RecurringCreditsRemaining
             + subscription.TopUpCreditsRemaining;
 
@@ -71,6 +72,8 @@ public sealed class CreditService(
             subscription.RecurringCreditsRemaining -= recurringDebit;
             db.CreditLedgerEntries.Add(CreateLedgerEntry(
                 subscription,
+                userId,
+                workspaceId,
                 aiJobId,
                 CreditBucket.Recurring,
                 -recurringDebit,
@@ -85,6 +88,8 @@ public sealed class CreditService(
             subscription.TopUpCreditsRemaining -= topUpDebit;
             db.CreditLedgerEntries.Add(CreateLedgerEntry(
                 subscription,
+                userId,
+                workspaceId,
                 aiJobId,
                 CreditBucket.TopUp,
                 -topUpDebit,
@@ -104,6 +109,7 @@ public sealed class CreditService(
     }
 
     public async Task RefundAsync(
+        Guid userId,
         Guid workspaceId,
         Guid aiJobId,
         string usageType,
@@ -120,7 +126,7 @@ public sealed class CreditService(
                 cancellationToken)
             : null;
 
-        await LockWorkspaceAsync(workspaceId, cancellationToken);
+        await LockUserAsync(userId, cancellationToken);
 
         var refundPrefix = $"refund:{aiJobId:N}";
         if (await db.CreditLedgerEntries.AnyAsync(
@@ -136,7 +142,7 @@ public sealed class CreditService(
         }
 
         var debitEntries = await db.CreditLedgerEntries
-            .Where(entry => entry.WorkspaceId == workspaceId
+            .Where(entry => entry.UserId == userId
                 && entry.AiJobId == aiJobId
                 && entry.EntryType == CreditEntryType.Debit)
             .ToListAsync(cancellationToken);
@@ -151,7 +157,7 @@ public sealed class CreditService(
             return;
         }
 
-        var subscription = await EnsureActiveSubscriptionAsync(workspaceId, cancellationToken);
+        var subscription = await EnsureActiveSubscriptionAsync(userId, cancellationToken);
         var now = DateTimeOffset.UtcNow;
 
         foreach (var debit in debitEntries)
@@ -168,6 +174,8 @@ public sealed class CreditService(
 
             db.CreditLedgerEntries.Add(CreateLedgerEntry(
                 subscription,
+                userId,
+                workspaceId,
                 aiJobId,
                 debit.Bucket,
                 refundedCredits,
@@ -186,14 +194,14 @@ public sealed class CreditService(
         }
     }
 
-    public async Task<WorkspaceSubscription> EnsureActiveSubscriptionAsync(
-        Guid workspaceId,
+    public async Task<UserSubscription> EnsureActiveSubscriptionAsync(
+        Guid userId,
         CancellationToken cancellationToken = default)
     {
-        var subscription = await db.WorkspaceSubscriptions
+        var subscription = await db.UserSubscriptions
             .Include(candidate => candidate.Plan)
             .FirstOrDefaultAsync(
-                candidate => candidate.WorkspaceId == workspaceId,
+                candidate => candidate.UserId == userId,
                 cancellationToken);
         var now = DateTimeOffset.UtcNow;
 
@@ -209,10 +217,10 @@ public sealed class CreditService(
 
         if (subscription is null)
         {
-            subscription = new WorkspaceSubscription
+            subscription = new UserSubscription
             {
                 Id = Guid.NewGuid(),
-                WorkspaceId = workspaceId,
+                UserId = userId,
                 PlanId = freePlan.Id,
                 Plan = freePlan,
                 Status = SubscriptionStatus.Active,
@@ -222,7 +230,7 @@ public sealed class CreditService(
                 CreatedAt = now,
                 UpdatedAt = now
             };
-            db.WorkspaceSubscriptions.Add(subscription);
+            db.UserSubscriptions.Add(subscription);
         }
         else
         {
@@ -240,8 +248,8 @@ public sealed class CreditService(
         return subscription;
     }
 
-    private async Task LockWorkspaceAsync(
-        Guid workspaceId,
+    private async Task LockUserAsync(
+        Guid userId,
         CancellationToken cancellationToken)
     {
         if (db.Database.ProviderName != "Npgsql.EntityFrameworkCore.PostgreSQL")
@@ -249,22 +257,24 @@ public sealed class CreditService(
             return;
         }
 
-        var workspace = await db.Workspaces
+        var user = await db.Users
             .FromSqlInterpolated(
-                $"SELECT * FROM workspaces WHERE id = {workspaceId} FOR UPDATE")
+                $"SELECT * FROM users WHERE id = {userId} FOR UPDATE")
             .SingleOrDefaultAsync(cancellationToken);
 
-        if (workspace is null)
+        if (user is null)
         {
             throw new ApiException(
                 StatusCodes.Status404NotFound,
-                "workspace.not_found",
-                "Workspace not found.");
+                "user.not_found",
+                "User not found.");
         }
     }
 
     private static CreditLedgerEntry CreateLedgerEntry(
-        WorkspaceSubscription subscription,
+        UserSubscription subscription,
+        Guid userId,
+        Guid workspaceId,
         Guid aiJobId,
         CreditBucket bucket,
         int credits,
@@ -276,8 +286,9 @@ public sealed class CreditService(
         return new CreditLedgerEntry
         {
             Id = Guid.NewGuid(),
-            WorkspaceSubscriptionId = subscription.Id,
-            WorkspaceId = subscription.WorkspaceId,
+            UserSubscriptionId = subscription.Id,
+            UserId = userId,
+            WorkspaceId = workspaceId,
             AiJobId = aiJobId,
             EntryType = entryType,
             Bucket = bucket,

@@ -63,7 +63,7 @@ export function DocumentHeader({
       <div className="flex min-w-0 flex-1 items-center gap-3">
         <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
         <h1 className="text-sm font-semibold leading-5 tracking-tight text-foreground truncate">{document.originalFileName}</h1>
-        <StatusChip status={document.status} />
+        {document.status !== 'completed' && <StatusChip status={document.status} />}
       </div>
       
       {/* Center section */}

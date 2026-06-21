@@ -25,7 +25,7 @@ export function getMentionSuggestion(workspaceId: string | null) {
       let popup: TippyInstance[]
 
       return {
-        onStart: (props: any) => {
+        onStart: (props: Record<string, unknown>) => {
           component = new ReactRenderer(MentionList, {
             props,
             editor: props.editor,
@@ -46,7 +46,7 @@ export function getMentionSuggestion(workspaceId: string | null) {
           })
         },
 
-        onUpdate(props: any) {
+        onUpdate(props: Record<string, unknown>) {
           component.updateProps(props)
 
           if (!props.clientRect) {
@@ -58,7 +58,7 @@ export function getMentionSuggestion(workspaceId: string | null) {
           })
         },
 
-        onKeyDown(props: any) {
+        onKeyDown(props: Record<string, unknown>) {
           if (props.event.key === 'Escape') {
             popup[0].hide()
             return true

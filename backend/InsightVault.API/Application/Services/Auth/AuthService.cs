@@ -33,7 +33,7 @@ public sealed class AuthService(
         var user = await userRepository.GetByGoogleIdAsync(googleUser.GoogleId, cancellationToken)
             ?? await userRepository.GetByEmailAsync(normalizedEmail, cancellationToken);
 
-        var shouldSendLoginNotification = user is null || user.LastLoginAt is null;
+        var shouldSendLoginNotification = true;
 
         if (user is null)
         {

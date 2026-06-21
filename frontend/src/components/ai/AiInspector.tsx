@@ -149,7 +149,7 @@ function ChatHistoryItem({ session, workspaceId }: { session: ChatSessionDto, wo
     setShowActions(false)
   }
 
-  const handleSaveEdit = (e: React.MouseEvent) => {
+  const handleSaveEdit = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation()
     if (editTitle.trim() && editTitle !== session.title) {
       updateSession.mutate({ sessionId: session.id, data: { title: editTitle } })
@@ -157,7 +157,7 @@ function ChatHistoryItem({ session, workspaceId }: { session: ChatSessionDto, wo
     setIsEditing(false)
   }
 
-  const handleCancelEdit = (e: React.MouseEvent) => {
+  const handleCancelEdit = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation()
     setEditTitle(session.title || '')
     setIsEditing(false)
@@ -183,8 +183,8 @@ function ChatHistoryItem({ session, workspaceId }: { session: ChatSessionDto, wo
               className="text-xs w-full bg-background border border-border rounded px-1 py-0.5 outline-none focus:border-primary"
               autoFocus
               onKeyDown={e => {
-                if (e.key === 'Enter') handleSaveEdit(e as any)
-                if (e.key === 'Escape') handleCancelEdit(e as any)
+                if (e.key === 'Enter') handleSaveEdit(e)
+                if (e.key === 'Escape') handleCancelEdit(e)
               }}
               onClick={e => e.stopPropagation()}
             />
