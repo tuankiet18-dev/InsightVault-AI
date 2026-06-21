@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
-import { Folder, FileText, Settings, LogOut, Plus, ChevronRight, Activity, CheckCircle, AlertTriangle, Clock, WalletCards, CreditCard, Mail, MoreHorizontal } from 'lucide-react'
+import { Folder, FileText, Settings, LogOut, Plus, ChevronRight, Activity, CheckCircle, AlertTriangle, Clock, WalletCards, CreditCard, Mail } from 'lucide-react'
 import { useUiStore } from '@/stores/uiStore'
 import { CreateWorkspaceModal } from '@/components/workspace/CreateWorkspaceModal'
 import { useWorkspaces } from '@/hooks/useWorkspaces'
@@ -9,6 +9,7 @@ import { useMyWorkspaceInvitations } from '@/hooks/useWorkspaceInvitations'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
 import { DropdownMenu, DropdownMenuItem } from '@/components/ui/DropdownMenu'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { SettingsModal } from '@/components/settings/SettingsModal'
 
 export function UserDashboardPage() {
   const { user, logout } = useAuthStore()
@@ -17,6 +18,7 @@ export function UserDashboardPage() {
   const { data: invitations = [] } = useMyWorkspaceInvitations()
   const { data: stats, isLoading: isStatsLoading } = useDashboardStats()
   const { setCreateWorkspaceModalOpen } = useUiStore()
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false)
 
   const isLoading = isWorkspacesLoading || isStatsLoading
@@ -32,23 +34,24 @@ export function UserDashboardPage() {
           <span className="font-semibold">InsightVault</span>
         </div>
         <div className="flex min-w-0 items-center gap-2">
-          <div className="hidden items-center gap-2 text-sm text-[var(--color-muted-foreground)] sm:flex">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-secondary)]">
-              {user?.fullName?.charAt(0) || 'U'}
-            </div>
-            <span>{user?.fullName}</span>
-          </div>
           <DropdownMenu
             trigger={
-              <button className="flex h-9 w-9 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-secondary)]">
-                <MoreHorizontal className="h-5 w-5" />
+              <button className="ml-1 flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-muted text-xs font-semibold text-foreground transition-colors hover:bg-accent">
+                {user?.avatarUrl ? (
+                  <img src={user.avatarUrl} alt={user.fullName || 'User'} className="h-full w-full object-cover" />
+                ) : (
+                  <span>{user?.fullName?.charAt(0) || 'U'}</span>
+                )}
               </button>
             }
           >
-            <div className="border-b border-border px-3 py-2 sm:hidden">
+            <div className="border-b border-border px-4 py-2">
               <p className="text-sm font-medium text-foreground">{user?.fullName}</p>
               <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
             </div>
+            <DropdownMenuItem onClick={() => setIsSettingsOpen(true)} icon={<Settings className="h-4 w-4" />}>
+              Profile Settings
+            </DropdownMenuItem>
             {user?.systemRole === 'admin' && (
               <DropdownMenuItem onClick={() => navigate('/admin')} icon={<Settings className="h-4 w-4" />}>
                 Admin
@@ -194,6 +197,7 @@ export function UserDashboardPage() {
         </section>
       </main>
       <CreateWorkspaceModal />
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
       <ConfirmModal
         isOpen={isLogoutConfirmOpen}
         onClose={() => setIsLogoutConfirmOpen(false)}

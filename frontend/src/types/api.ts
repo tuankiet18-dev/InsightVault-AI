@@ -188,6 +188,7 @@ export interface ChatSessionDto {
   title?: string | null;
   webSearchEnabled?: boolean;
   webSearchProvider?: "duckduckgo" | "searxng" | "brave" | null;
+  isPinned: boolean;
   createdAt: string;
   updatedAt: string;
 }

@@ -57,6 +57,16 @@ public sealed class ChatController(IChatService chatService) : ControllerBase
         return Ok(response);
     }
 
+    [HttpPatch("api/chat-sessions/{sessionId:guid}")]
+    public async Task<ActionResult<ChatSessionDto>> UpdateSession(
+        Guid sessionId,
+        UpdateChatSessionRequest request,
+        CancellationToken cancellationToken)
+    {
+        var session = await chatService.UpdateSessionAsync(sessionId, request, cancellationToken);
+        return Ok(session);
+    }
+
     [HttpDelete("api/chat-sessions/{sessionId:guid}")]
     public async Task<IActionResult> DeleteSession(
         Guid sessionId,

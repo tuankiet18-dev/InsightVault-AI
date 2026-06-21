@@ -302,7 +302,7 @@ function DocumentRow({
 
   const handleDragStart = (e: React.DragEvent) => {
     e.stopPropagation()
-    e.dataTransfer.setData('application/json', JSON.stringify({ type: 'document', id: document.id, folderId: document.folderId }))
+    e.dataTransfer.setData('application/json', JSON.stringify({ type: 'document', id: document.id, name: document.originalFileName, folderId: document.folderId }))
     e.dataTransfer.effectAllowed = 'move'
   }
 

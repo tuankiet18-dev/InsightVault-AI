@@ -9,9 +9,12 @@ import {
   Trash2,
   UserPlus,
   WalletCards,
+  Mail,
+  CreditCard,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useMyWorkspaceInvitations } from '@/hooks/useWorkspaceInvitations'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useWorkspace, useWorkspaces, useDeleteWorkspace } from '@/hooks/useWorkspaces'
 import { useUiStore } from '@/stores/uiStore'
@@ -38,6 +41,7 @@ export function TopBar() {
   } = useUiStore()
   const { user, logout } = useAuthStore()
   const deleteWorkspaceMutation = useDeleteWorkspace()
+  const { data: invitations = [] } = useMyWorkspaceInvitations()
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isDeleteWsModalOpen, setIsDeleteWsModalOpen] = useState(false)
@@ -166,6 +170,22 @@ export function TopBar() {
         </div>
         <DropdownMenuItem onClick={() => setIsSettingsOpen(true)} icon={<SettingsIcon className="h-4 w-4" />}>
           Profile Settings
+        </DropdownMenuItem>
+        {user?.systemRole === 'admin' && (
+          <DropdownMenuItem onClick={() => navigate('/admin')} icon={<SettingsIcon className="h-4 w-4" />}>
+            Admin
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem onClick={() => navigate('/invitations')} icon={<Mail className="h-4 w-4" />}>
+          Invitations
+          {invitations.length > 0 && (
+            <span className="ml-auto rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
+              {invitations.length}
+            </span>
+          )}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate('/billing')} icon={<CreditCard className="h-4 w-4" />}>
+          Billing
         </DropdownMenuItem>
         {isOwner && (
           <DropdownMenuItem onClick={() => setIsDeleteWsModalOpen(true)} icon={<Trash2 className="h-4 w-4" />} destructive>

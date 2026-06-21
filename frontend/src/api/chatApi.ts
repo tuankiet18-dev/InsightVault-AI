@@ -24,6 +24,10 @@ export const chatApi = {
     return http.post<ChatSessionDto>(`/workspaces/${workspaceId}/chat-sessions`, data);
   },
 
+  updateSession: (sessionId: string, data: { title?: string, isPinned?: boolean }) => {
+    return http.patch<ChatSessionDto>(`/chat-sessions/${sessionId}`, data);
+  },
+
   deleteSession: (sessionId: string) => {
     return http.delete<void>(`/chat-sessions/${sessionId}`);
   },

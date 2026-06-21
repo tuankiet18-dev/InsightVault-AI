@@ -30,7 +30,7 @@ public sealed class SystemSettingReader(
 
         var normalizedValue = string.IsNullOrWhiteSpace(value)
             ? fallback
-            : value.Trim();
+            : value.Trim().Trim('"', '\'');
 
         cache.Set(cacheKey, normalizedValue, CacheDuration);
         return normalizedValue;

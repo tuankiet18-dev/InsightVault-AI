@@ -1,7 +1,6 @@
 import { useAiStore } from '@/stores/aiStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useChatStore } from '@/stores/chatStore'
-import { useTabStore } from '@/stores/tabStore'
 import { Send } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { chatApi } from '@/api/chatApi'
@@ -11,44 +10,95 @@ import { ApiError } from '@/api/http'
 import { buildChatContexts } from '@/lib/chatContext'
 import { toast } from 'sonner'
 import type { ChatMessageDto, ChatSessionDto, ChatSourceDto } from '@/types/api'
+import { useEditor, EditorContent } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+import Placeholder from '@tiptap/extension-placeholder'
+import Mention from '@tiptap/extension-mention'
+import { getMentionSuggestion } from '@/components/chat/MentionSuggestion'
 
 export function PromptInput() {
-  const { prompt, setPrompt, setAnswer, setCitations, setSuggestions, isLoading, setIsLoading } = useAiStore()
-  const { activeWorkspaceId, selectedDocumentId, selectedFolderId } = useWorkspaceStore()
+  const { setAnswer, setCitations, setSuggestions, isLoading, setIsLoading } = useAiStore()
+  const { activeWorkspaceId } = useWorkspaceStore()
   const { activeSessionId, setActiveSession } = useChatStore()
-  const { getActiveTab } = useTabStore()
-  const activeTab = getActiveTab()
   const queryClient = useQueryClient()
   const { data: sessions = [] } = useChatSessions(activeWorkspaceId)
   
   const placeholder = 'Ask about the selected document, folder, or workspace...'
   
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        heading: false,
+        codeBlock: false,
+        horizontalRule: false,
+      }),
+      Placeholder.configure({
+        placeholder,
+        emptyEditorClass: 'is-editor-empty',
+      }),
+      Mention.configure({
+        HTMLAttributes: {
+          class: 'mention-pill',
+        },
+        suggestion: getMentionSuggestion(activeWorkspaceId),
+      }),
+    ],
+    content: '',
+    editorProps: {
+      attributes: {
+        class: 'min-h-[60px] w-full resize-none bg-transparent p-3 text-sm focus:outline-none focus:ring-0 prose prose-sm prose-primary max-w-none leading-normal overflow-y-auto max-h-48',
+      },
+      handleKeyDown: (_, event) => {
+        if (event.key === 'Enter' && !event.shiftKey) {
+          if (document.querySelector('.tippy-box')) {
+            return false
+          }
+          event.preventDefault()
+          handleRun()
+          return true
+        }
+        return false
+      },
+    },
+  })
+
   const handleRun = async () => {
-    if (!prompt.trim() || isLoading || !activeWorkspaceId) return
+    if (!editor || isLoading || !activeWorkspaceId) return
     
+    const json = editor.getJSON()
+    let textContent = editor.getText()
+    const mentionedIds: string[] = []
+
+    const extractMentions = (node: any) => {
+      if (node.type === 'mention' && node.attrs?.id) {
+        mentionedIds.push(node.attrs.id)
+      }
+      if (node.content) {
+        node.content.forEach(extractMentions)
+      }
+    }
+    
+    if (json.content) {
+      json.content.forEach(extractMentions)
+    }
+
+    if (!textContent.trim() && mentionedIds.length === 0) return
+
     setIsLoading(true)
     setAnswer(null)
     setCitations([])
     setSuggestions([])
 
-    const currentPrompt = prompt
+    const currentPrompt = textContent.trim()
     const optimisticMessageId = `temp-${Date.now()}`
     let targetSessionId: string | null = null
-    setPrompt('')
+    editor.commands.clearContent()
 
     try {
-      const activeDocumentId = selectedDocumentId
-        ?? (!selectedFolderId && activeTab?.type === 'document' ? activeTab.documentId : null)
-      const sessionTitle = activeDocumentId
-        ? `doc-${activeDocumentId}`
-        : selectedFolderId
-          ? `folder-${selectedFolderId}`
-          : 'Workspace chat'
-
-      let session = sessions.find((candidate) => candidate.title === sessionTitle)
+      let session = sessions.find((candidate) => candidate.id === activeSessionId)
 
       if (!session) {
-        session = await chatApi.createSession(activeWorkspaceId, { title: sessionTitle })
+        session = await chatApi.createSession(activeWorkspaceId, { title: 'New Chat' })
       }
 
       targetSessionId = session.id
@@ -78,7 +128,7 @@ export function PromptInput() {
 
       const response = await chatApi.sendMessage(session.id, {
         content: currentPrompt,
-        contexts: buildChatContexts(activeTab, selectedDocumentId, selectedFolderId),
+        contexts: buildChatContexts(mentionedIds),
       })
 
       queryClient.setQueryData<ChatMessageDto[]>(chatKeys.messages(session.id), (oldMessages = []) => [
@@ -121,7 +171,7 @@ export function PromptInput() {
     } catch (error) {
       const errorMessage = formatChatError(error)
       setAnswer(errorMessage)
-      setPrompt(currentPrompt)
+      editor.commands.setContent(currentPrompt)
       setSuggestions(['Check that at least one source document is completed', 'Try again after the AI service is ready'])
       toast.error(errorMessage)
 
@@ -147,32 +197,53 @@ export function PromptInput() {
     }
   }
   
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      if (prompt.trim()) {
-        handleRun()
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    if (!editor) return
+
+    try {
+      const dataStr = e.dataTransfer.getData('application/json')
+      if (dataStr) {
+        const data = JSON.parse(dataStr)
+        if (data.type === 'document' && data.id) {
+          editor.commands.insertContent({
+            type: 'mention',
+            attrs: {
+              id: data.id,
+              label: data.name || 'Document',
+            }
+          })
+          editor.commands.insertContent(' ')
+          editor.commands.focus()
+        }
       }
+    } catch (err) {
+      console.error('Failed to parse drop data', err)
     }
   }
 
+  const isEditorEmpty = editor?.isEmpty ?? true
+
   return (
     <div className="border-t border-border p-2">
-      <div className="relative">
-        <textarea
-          id="ai-prompt"
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          className="min-h-[60px] w-full resize-none rounded-lg border border-border bg-card p-3 pr-11 text-sm focus:outline-none focus:ring-2 focus:ring-ai/40"
-        />
+      <div 
+        className="relative rounded-lg border border-border bg-card focus-within:ring-2 focus-within:ring-ai/40 focus-within:border-transparent transition-all shadow-sm flex items-end min-h-[60px]"
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+      >
+        <div className="flex-1 min-w-0 h-full overflow-hidden">
+          <EditorContent editor={editor} />
+        </div>
         <button
           onClick={handleRun}
-          disabled={isLoading || !prompt.trim()}
+          disabled={isLoading || isEditorEmpty}
           className={cn(
-            "absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center rounded-md text-sm transition-all",
-            isLoading || !prompt.trim()
+            "absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center rounded-md text-sm transition-all shrink-0 z-10",
+            isLoading || isEditorEmpty
               ? "bg-primary/40 text-primary-foreground/70 cursor-not-allowed"
               : "bg-primary text-primary-foreground hover:bg-primary/90"
           )}
@@ -181,7 +252,7 @@ export function PromptInput() {
           {isLoading ? (
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
           ) : (
-            <Send className="h-4 w-4" />
+            <Send className="h-4 w-4 ml-0.5" />
           )}
         </button>
       </div>

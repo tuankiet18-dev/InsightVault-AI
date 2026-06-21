@@ -6,9 +6,37 @@ from fastapi import APIRouter, HTTPException
 
 from models.rag import RagQueryRequest, RagQueryResponse, RagSource
 from services.rag_service import query as rag_query
+from pydantic import BaseModel
+from core.chat_provider import get_chat_model
 
 router = APIRouter(prefix="/rag")
 logger = logging.getLogger(__name__)
+
+class GenerateTitleRequest(BaseModel):
+    question: str
+    model_name: str | None = None
+
+class GenerateTitleResponse(BaseModel):
+    title: str
+
+@router.post("/generate-title", response_model=GenerateTitleResponse)
+async def generate_title(req: GenerateTitleRequest) -> GenerateTitleResponse:
+    """Generate a short title for a chat session based on the first question."""
+    try:
+        chat_model = get_chat_model(req.model_name)
+        prompt = f"Hãy rút gọn câu hỏi này thành tiêu đề ngắn (tối đa 5 từ). Chỉ trả về tiêu đề, không giải thích: '{req.question}'"
+        
+        title = chat_model.generate_text(prompt)
+        
+        # Clean up quotes if any
+        title = title.strip().strip("'\"")
+        if len(title) > 50:  # Safety check
+            title = title[:47] + "..."
+            
+        return GenerateTitleResponse(title=title)
+    except Exception as exc:
+        logger.error("Failed to generate title: %s", exc)
+        return GenerateTitleResponse(title="New Chat")
 
 
 @router.post("/query", response_model=RagQueryResponse)

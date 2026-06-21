@@ -29,6 +29,17 @@ export const useCreateChatSession = (workspaceId: string) => {
   });
 };
 
+export const useUpdateChatSession = (workspaceId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ sessionId, data }: { sessionId: string; data: { title?: string; isPinned?: boolean } }) => 
+      chatApi.updateSession(sessionId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: chatKeys.sessions(workspaceId) });
+    },
+  });
+};
+
 export const useDeleteChatSession = (workspaceId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -48,7 +59,7 @@ export const useChatMessages = (sessionId: string | null) => {
   });
 };
 
-export const useSendMessage = (sessionId: string) => {
+export const useSendMessage = (sessionId: string, workspaceId: string) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: SendMessageData) => chatApi.sendMessage(sessionId, data),
@@ -56,6 +67,7 @@ export const useSendMessage = (sessionId: string) => {
       // Typically, for chat, you might append the message optimistically.
       // We invalidate to re-fetch the latest list.
       queryClient.invalidateQueries({ queryKey: chatKeys.messages(sessionId) });
+      queryClient.invalidateQueries({ queryKey: chatKeys.sessions(workspaceId) });
     },
   });
 };

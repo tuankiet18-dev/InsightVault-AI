@@ -20,7 +20,14 @@ public interface IAiServiceClient
     Task<RagQueryResult> QueryRagAsync(
         RagQueryAiRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<GenerateTitleResult> GenerateChatTitleAsync(
+        string question,
+        string? modelName = null,
+        CancellationToken cancellationToken = default);
 }
+
+public sealed record GenerateTitleResult(string Title);
 
 public sealed record ProcessDocumentResult(
     string Status,

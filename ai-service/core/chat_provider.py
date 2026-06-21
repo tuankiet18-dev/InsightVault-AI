@@ -59,6 +59,19 @@ class GroqChatProvider:
 
 def create_chat_provider(model_name: str | None = None) -> ChatModelProvider:
     provider = settings.CHAT_PROVIDER
+    
+    # Auto-detect provider from model name if provided
+    if model_name:
+        model_name = model_name.strip()
+        if model_name.startswith("models/"):
+            model_name = model_name[7:]
+            
+        name_lower = model_name.lower()
+        if "gemini" in name_lower:
+            provider = "gemini"
+        elif any(keyword in name_lower for keyword in ["llama", "mixtral", "gemma", "groq"]):
+            provider = "groq"
+
     if provider == "gemini":
         return GeminiChatProvider(model_name or settings.GEMINI_CHAT_MODEL)
     if provider == "groq":

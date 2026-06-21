@@ -74,6 +74,31 @@ public sealed class ChatService(
         return ToSessionDto(session);
     }
 
+    public async Task<ChatSessionDto> UpdateSessionAsync(
+        Guid sessionId,
+        UpdateChatSessionRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = GetRequiredUserId();
+        var session = await GetActiveSessionForUserAsync(sessionId, userId, cancellationToken);
+        await workspacePermissionService.EnsureCanViewWorkspaceAsync(session.WorkspaceId, userId, cancellationToken);
+
+        if (request.Title is not null)
+        {
+            session.Title = NormalizeTitle(request.Title);
+        }
+
+        if (request.IsPinned.HasValue)
+        {
+            session.IsPinned = request.IsPinned.Value;
+        }
+
+        session.UpdatedAt = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync(cancellationToken);
+
+        return ToSessionDto(session);
+    }
+
     public async Task<IReadOnlyList<ChatMessageDto>> ListMessagesAsync(
         Guid sessionId,
         CancellationToken cancellationToken = default)
@@ -200,6 +225,23 @@ public sealed class ChatService(
         foreach (var source in assistantMessage.Sources)
         {
             source.ChatMessageId = assistantMessage.Id;
+        }
+
+        if (session.Title == "New Chat" && chatHistory.Count == 0)
+        {
+            try
+            {
+                var titleResult = await aiServiceClient.GenerateChatTitleAsync(
+                    content,
+                    aiSettings.ModelName,
+                    cancellationToken);
+                
+                session.Title = NormalizeTitle(titleResult.Title);
+            }
+            catch
+            {
+                // Ignore title generation errors and fallback to keeping "New Chat"
+            }
         }
 
         session.UpdatedAt = now;
@@ -673,6 +715,7 @@ public sealed class ChatService(
             session.Title,
             WebSearchEnabled: false,
             WebSearchProvider: null,
+            session.IsPinned,
             session.CreatedAt,
             session.UpdatedAt);
     }

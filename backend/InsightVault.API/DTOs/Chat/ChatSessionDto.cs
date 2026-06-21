@@ -8,5 +8,6 @@ public sealed record ChatSessionDto(
     string? Title,
     bool? WebSearchEnabled,
     ApiWebSearchProvider? WebSearchProvider,
+    bool IsPinned,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);

@@ -196,6 +196,33 @@ public sealed class AiServiceClient(HttpClient httpClient) : IAiServiceClient
                 source.Provider)).ToList());
     }
 
+    public async Task<GenerateTitleResult> GenerateChatTitleAsync(
+        string question,
+        string? modelName = null,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await httpClient.PostAsJsonAsync(
+            "/rag/generate-title",
+            new GenerateTitleRequest(question, modelName),
+            cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new InvalidOperationException($"AI service generate-title failed: {error}");
+        }
+
+        var result = await response.Content.ReadFromJsonAsync<GenerateTitleResponse>(
+            cancellationToken: cancellationToken);
+
+        if (result is null)
+        {
+            throw new InvalidOperationException("AI service returned an empty generate-title response.");
+        }
+
+        return new GenerateTitleResult(result.Title);
+    }
+
     private sealed record ProcessDocumentRequest(
         [property: JsonPropertyName("document_id")] Guid DocumentId,
         [property: JsonPropertyName("workspace_id")] Guid WorkspaceId,
@@ -306,4 +333,11 @@ public sealed class AiServiceClient(HttpClient httpClient) : IAiServiceClient
         [property: JsonPropertyName("url")] string Url,
         [property: JsonPropertyName("snippet")] string? Snippet,
         [property: JsonPropertyName("provider")] string? Provider);
+
+    private sealed record GenerateTitleRequest(
+        [property: JsonPropertyName("question")] string Question,
+        [property: JsonPropertyName("model_name")] string? ModelName);
+
+    private sealed record GenerateTitleResponse(
+        [property: JsonPropertyName("title")] string Title);
 }
