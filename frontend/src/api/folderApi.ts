@@ -15,9 +15,9 @@ export interface UpdateFolderData {
 }
 
 export const folderApi = {
-  getFolders: (workspaceId: string, parentFolderId?: string) => {
+  getFolders: (workspaceId: string, parentFolderId?: string, includeAll?: boolean) => {
     return http.get<FolderDto[]>(`/workspaces/${workspaceId}/folders`, {
-      params: { parentFolderId },
+      params: { parentFolderId, includeAll },
     });
   },
 

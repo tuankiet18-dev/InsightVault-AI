@@ -27,7 +27,7 @@ const workflow = [
 export function LandingPage() {
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <section className="mx-auto grid max-w-6xl gap-10 px-5 py-8 md:min-h-screen md:grid-cols-[0.9fr_1.1fr] md:items-center md:py-10">
+      <section className="mx-auto grid max-w-7xl gap-10 px-5 py-8 md:min-h-screen md:grid-cols-[0.8fr_1.2fr] md:items-center md:py-10">
         <div className="max-w-xl">
           <div className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 font-mono text-xs text-muted-foreground">
             <span className="flex h-6 w-6 items-center justify-center rounded bg-primary text-[10px] font-bold text-primary-foreground">

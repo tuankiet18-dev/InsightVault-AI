@@ -115,7 +115,7 @@ function FolderRow({
 
   const handleDragStart = (e: React.DragEvent) => {
     e.stopPropagation()
-    e.dataTransfer.setData('application/json', JSON.stringify({ type: 'folder', id: folder.id, parentId: folder.parentFolderId }))
+    e.dataTransfer.setData('application/json', JSON.stringify({ type: 'folder', id: folder.id, name: folder.name, parentId: folder.parentFolderId }))
     e.dataTransfer.effectAllowed = 'move'
   }
 

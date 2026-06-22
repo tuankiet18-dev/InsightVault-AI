@@ -20,20 +20,30 @@ public sealed class FolderService(
     public async Task<IReadOnlyList<FolderDto>> ListByWorkspaceAsync(
         Guid workspaceId,
         Guid? parentFolderId = null,
+        bool includeAll = false,
         CancellationToken cancellationToken = default)
     {
         var userId = GetRequiredUserId();
         await workspacePermissionService.EnsureCanViewWorkspaceAsync(workspaceId, userId, cancellationToken);
 
-        if (parentFolderId.HasValue)
-        {
-            await EnsureParentFolderExistsAsync(workspaceId, parentFolderId.Value, cancellationToken);
-        }
+        IReadOnlyList<Folder> folders;
 
-        var folders = await folderRepository.ListByWorkspaceAsync(
-            workspaceId,
-            parentFolderId,
-            cancellationToken);
+        if (includeAll)
+        {
+            folders = await folderRepository.ListActiveByWorkspaceAsync(workspaceId, cancellationToken);
+        }
+        else
+        {
+            if (parentFolderId.HasValue)
+            {
+                await EnsureParentFolderExistsAsync(workspaceId, parentFolderId.Value, cancellationToken);
+            }
+
+            folders = await folderRepository.ListByWorkspaceAsync(
+                workspaceId,
+                parentFolderId,
+                cancellationToken);
+        }
 
         return folders.Select(ToDto).ToList();
     }

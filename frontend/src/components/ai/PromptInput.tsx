@@ -43,7 +43,7 @@ export function PromptInput() {
         HTMLAttributes: {
           class: 'mention-pill',
         },
-        suggestion: getMentionSuggestion(activeWorkspaceId),
+        suggestion: getMentionSuggestion(),
       }),
     ],
     content: '',
@@ -75,7 +75,8 @@ export function PromptInput() {
     const textContent = editor.getText()
     const mentionedIds: string[] = []
 
-    const extractMentions = (node: Record<string, unknown>) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const extractMentions = (node: any) => {
       if (node.type === 'mention' && node.attrs?.id) {
         mentionedIds.push(node.attrs.id)
       }
@@ -170,18 +171,19 @@ export function PromptInput() {
           const sources = Array.isArray(eventData) ? eventData : []
           assistantMessage = {
             ...assistantMessage,
-            sources: sources.map((s: Record<string, unknown>, idx: number) => ({
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            sources: sources.map((s: Record<string, any>, idx: number) => ({
               id: `temp-source-${idx}`,
               chatMessageId: assistantMessageId,
-              documentId: s.documentId || s.DocumentId || s.document_id,
-              documentChunkId: s.chunkId || s.ChunkId || s.chunk_id,
-              fileName: s.fileName || s.FileName || s.file_name || 'Unknown source',
-              snippet: s.snippet || s.Snippet,
-              similarity: s.similarity || s.Similarity,
+              documentId: (s.documentId || s.DocumentId || s.document_id) as string | undefined,
+              documentChunkId: (s.chunkId || s.ChunkId || s.chunk_id) as string | undefined,
+              fileName: (s.fileName || s.FileName || s.file_name || 'Unknown source') as string,
+              snippet: (s.snippet || s.Snippet) as string,
+              similarity: (s.similarity || s.Similarity) as number | undefined,
               sourceOrder: idx,
               createdAt: new Date().toISOString(),
-              chunkIndex: s.chunkIndex || s.ChunkIndex || s.chunk_index,
-              pageNumber: s.pageNumber || s.PageNumber || s.page_number,
+              chunkIndex: (s.chunkIndex || s.ChunkIndex || s.chunk_index) as number | undefined,
+              pageNumber: (s.pageNumber || s.PageNumber || s.page_number) as number | undefined,
             })),
           }
           queryClient.setQueryData<ChatMessageDto[]>(chatKeys.messages(session.id), (oldMessages = []) => [
@@ -268,12 +270,12 @@ export function PromptInput() {
       const dataStr = e.dataTransfer.getData('application/json')
       if (dataStr) {
         const data = JSON.parse(dataStr)
-        if (data.type === 'document' && data.id) {
+        if ((data.type === 'document' || data.type === 'folder') && data.id) {
           editor.commands.insertContent({
             type: 'mention',
             attrs: {
               id: data.id,
-              label: data.name || 'Document',
+              label: data.name || (data.type === 'folder' ? 'Folder' : 'Document'),
             }
           })
           editor.commands.insertContent(' ')

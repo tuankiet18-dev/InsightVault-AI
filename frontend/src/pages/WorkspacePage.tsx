@@ -11,29 +11,30 @@ import { useTabStore } from '@/stores/tabStore'
 import { useWorkspace } from '@/hooks/useWorkspaces'
 import { useDocuments } from '@/hooks/useDocuments'
 import { useReports, useDeleteReport } from '@/hooks/useReports'
-import { useAiJobs } from '@/hooks/useAiJobs'
+import { useFolders } from '@/hooks/useFolders'
 import { useUiStore } from '@/stores/uiStore'
 import { StatusChip } from '@/components/document/StatusChip'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { Button } from '@/components/ui/button'
 import { getFileTypeColor, cn } from '@/lib/utils'
 import {
-  AlertTriangle,
   ArrowRight,
   BarChart3,
+  Bot,
   Download,
   File,
   FileBarChart2,
   FileText,
+  FolderPlus,
   FolderTree,
   GitCompare,
   Image as ImageIcon,
   Loader2,
-  Search,
   Share2,
   Sparkles,
   Trash2,
   Upload,
+  UploadCloud,
 } from 'lucide-react'
 import type { DocumentDto, ReportDto } from '@/types/api'
 
@@ -322,10 +323,13 @@ function ReportsPanel({ workspaceId }: { workspaceId: string }) {
 }
 
 function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; workspaceName: string }) {
-  const { data: documents = [], isLoading: documentsLoading } = useDocuments(workspaceId)
+  const { data: rawDocuments = [], isLoading: documentsLoading } = useDocuments(workspaceId)
+  const documents = rawDocuments.filter(doc => doc.folderId)
+  const { data: folders = [] } = useFolders(workspaceId)
   const { data: reports = [] } = useReports(workspaceId)
-  const { data: jobs = [] } = useAiJobs(workspaceId)
-  const { inspectorOpen, openUploadModal, setCommandPaletteOpen, setActiveNavItem, toggleInspector } = useUiStore()
+  const { inspectorOpen, openUploadModal, openCreateFolderModal, setActiveNavItem, toggleInspector } = useUiStore()
+
+  const isWorkspaceEmpty = documents.length === 0 && folders.length === 0
   const { openTab } = useTabStore()
 
   const completed = documents.filter((doc) => doc.status === 'completed').length
@@ -334,8 +338,6 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
   const readyRate = documents.length ? Math.round((completed / documents.length) * 100) : 0
   const recentDocuments = [...documents]
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-    .slice(0, 5)
-  const activeJobs = jobs.filter((job) => job.status === 'queued' || job.status === 'processing').length
 
   const openDocument = (document: DocumentDto) => {
     openTab({
@@ -381,18 +383,56 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
                   <GitCompare className="h-4 w-4" />
                   Compare
                 </Button>
-                <Button variant="ghost" onClick={() => setCommandPaletteOpen(true)} className="h-9">
-                  <Search className="h-4 w-4" />
-                  Search
-                </Button>
               </div>
             </div>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <Metric label="Documents" value={documents.length} detail={`${completed} ready`} icon={FileText} />
-              <Metric label="Ready" value={`${readyRate}%`} detail={`${processing} processing`} icon={Sparkles} />
-              <Metric label="Reports" value={reports.length} detail="stored outputs" icon={FileBarChart2} />
-              <Metric label="Needs review" value={failed} detail={`${activeJobs} active jobs`} icon={AlertTriangle} tone={failed > 0 ? 'danger' : 'neutral'} />
+            <div className="mt-5">
+              {isWorkspaceEmpty ? (
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div 
+                    onClick={() => openCreateFolderModal()}
+                    className="group cursor-pointer rounded-xl border border-border bg-surface-0 p-5 transition-all hover:border-primary-300 hover:shadow-md"
+                  >
+                    <div className="mb-3 inline-flex rounded-lg bg-primary-50 p-2 text-primary-600">
+                      <FolderPlus className="h-5 w-5" />
+                    </div>
+                    <h3 className="font-semibold text-surface-900 group-hover:text-primary-700 transition-colors">Create a folder</h3>
+                    <p className="mt-1 text-xs leading-relaxed text-surface-500">Create a folder to organize your documents.</p>
+                  </div>
+                  
+                  <div 
+                    onClick={() => openUploadModal()}
+                    className="group cursor-pointer rounded-xl border border-border bg-surface-0 p-5 transition-all hover:border-primary-300 hover:shadow-md"
+                  >
+                    <div className="mb-3 inline-flex rounded-lg bg-primary-50 p-2 text-primary-600">
+                      <UploadCloud className="h-5 w-5" />
+                    </div>
+                    <h3 className="font-semibold text-surface-900 group-hover:text-primary-700 transition-colors">Upload documents</h3>
+                    <p className="mt-1 text-xs leading-relaxed text-surface-500">Upload PDFs, docs to extract knowledge.</p>
+                  </div>
+
+                  <div 
+                    onClick={() => {
+                      setActiveNavItem('chat')
+                      if (!inspectorOpen) toggleInspector()
+                      window.setTimeout(() => document.getElementById('ai-prompt')?.focus(), 0)
+                    }}
+                    className="group cursor-pointer rounded-xl border border-border bg-surface-0 p-5 transition-all hover:border-primary-300 hover:shadow-md"
+                  >
+                    <div className="mb-3 inline-flex rounded-lg bg-primary-50 p-2 text-primary-600">
+                      <Bot className="h-5 w-5" />
+                    </div>
+                    <h3 className="font-semibold text-surface-900 group-hover:text-primary-700 transition-colors">Ask AI</h3>
+                    <p className="mt-1 text-xs leading-relaxed text-surface-500">Chat with your documents to get answers.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Metric label="Documents" value={documents.length} detail={`${completed} ready`} icon={FileText} />
+                  <Metric label="Ready" value={`${readyRate}%`} detail={`${processing} processing`} icon={Sparkles} />
+                  <Metric label="Reports" value={reports.length} detail="stored outputs" icon={FileBarChart2} />
+                </div>
+              )}
             </div>
           </div>
 

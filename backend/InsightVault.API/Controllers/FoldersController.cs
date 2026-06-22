@@ -13,11 +13,13 @@ public sealed class FoldersController(IFolderService folderService) : Controller
     public async Task<ActionResult<IReadOnlyList<FolderDto>>> ListFolders(
         Guid workspaceId,
         [FromQuery] Guid? parentFolderId,
-        CancellationToken cancellationToken)
+        [FromQuery] bool includeAll = false,
+        CancellationToken cancellationToken = default)
     {
         var folders = await folderService.ListByWorkspaceAsync(
             workspaceId,
             parentFolderId,
+            includeAll,
             cancellationToken);
 
         return Ok(folders);

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { Folder, FileText, Settings, LogOut, Plus, ChevronRight, Activity, CheckCircle, AlertTriangle, Clock, CreditCard, Mail } from 'lucide-react'
 import { useUiStore } from '@/stores/uiStore'

@@ -7,6 +7,7 @@ public interface IFolderService
     Task<IReadOnlyList<FolderDto>> ListByWorkspaceAsync(
         Guid workspaceId,
         Guid? parentFolderId = null,
+        bool includeAll = false,
         CancellationToken cancellationToken = default);
 
     Task<FolderDto> GetByIdAsync(

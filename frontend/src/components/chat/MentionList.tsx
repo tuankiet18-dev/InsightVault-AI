@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react'
-import { FileText } from 'lucide-react'
+import { FileText, Folder } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export interface MentionListRef {
@@ -7,8 +7,8 @@ export interface MentionListRef {
 }
 
 interface MentionListProps {
-  items: { id: string; label: string }[]
-  command: (item: { id: string; label: string }) => void
+  items: { id: string; label: string; type?: 'document' | 'folder' }[]
+  command: (item: { id: string; label: string; type?: 'document' | 'folder' }) => void
 }
 
 export const MentionList = forwardRef<MentionListRef, MentionListProps>((props, ref) => {
@@ -61,12 +61,16 @@ export const MentionList = forwardRef<MentionListRef, MentionListProps>((props, 
             )}
             onClick={() => selectItem(index)}
           >
-            <FileText className="w-4 h-4 shrink-0 opacity-70" />
+            {item.type === 'folder' ? (
+              <Folder className="w-4 h-4 shrink-0 opacity-70" />
+            ) : (
+              <FileText className="w-4 h-4 shrink-0 opacity-70" />
+            )}
             <span className="truncate">{item.label}</span>
           </button>
         ))
       ) : (
-        <div className="px-3 py-2 text-sm text-surface-500">No documents found</div>
+        <div className="px-3 py-2 text-sm text-surface-500">No items found</div>
       )}
     </div>
   )

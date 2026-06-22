@@ -1,4 +1,4 @@
-import { X, UploadCloud, FileType, CheckCircle2 } from 'lucide-react'
+import { X, UploadCloud, FileType, CheckCircle2, FolderPlus } from 'lucide-react'
 import { useUiStore } from '@/stores/uiStore'
 import { useState, useEffect } from 'react'
 import { cn, formatFileSize, FILE_TYPES_ACCEPTED, MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from '@/lib/utils'
@@ -208,9 +208,28 @@ export function UploadModal() {
                 Done
               </button>
             </div>
+          ) : folders.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center animate-in fade-in zoom-in duration-300">
+              <div className="w-16 h-16 bg-[var(--color-primary)]/10 rounded-full flex items-center justify-center mb-4">
+                <FolderPlus className="w-8 h-8 text-[var(--color-primary)]" />
+              </div>
+              <h3 className="text-lg font-bold text-surface-900 mb-2">No folders available</h3>
+              <p className="text-surface-500 max-w-sm mb-6 text-sm">
+                You must create a folder before uploading documents. This helps keep your workspace neatly organized.
+              </p>
+              <button 
+                onClick={() => {
+                  setUploadModalOpen(false)
+                  setTimeout(() => useUiStore.getState().openCreateFolderModal(), 300)
+                }}
+                className="px-5 py-2.5 bg-[var(--color-primary)] text-white font-medium rounded-lg hover:bg-[var(--color-primary)]/90 transition-colors shadow-sm"
+              >
+                Create a folder
+              </button>
+            </div>
           ) : (
             <>
-              {folders.length > 0 && !uploadTargetFolderId && (
+              {!uploadTargetFolderId && (
                 <div className="mb-4">
                   <Label className="mb-1.5 block text-sm font-medium text-surface-700">Destination Folder</Label>
                   <Select value={selectedFolderId} onValueChange={setSelectedFolderId}>
