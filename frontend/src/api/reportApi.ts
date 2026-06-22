@@ -4,7 +4,9 @@ import type {
   GenerateReportRequest, 
   CompareRequest, 
   ReportType,
-  AiJobDto
+  AiJobDto,
+  ShareReportRequest,
+  ShareReportResponse
 } from '../types/api';
 
 export const reportApi = {
@@ -23,6 +25,10 @@ export const reportApi = {
 
   deleteReport: (reportId: string) => {
     return http.delete<void>(`/reports/${reportId}`);
+  },
+
+  shareReport: (workspaceId: string, reportId: string, data: ShareReportRequest) => {
+    return http.post<ShareReportResponse>(`/workspaces/${workspaceId}/reports/${reportId}/share`, data);
   },
 
   // Compare

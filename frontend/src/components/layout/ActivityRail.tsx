@@ -4,9 +4,7 @@ import {
   FileBarChart2,
   FolderTree,
   GitCompare,
-  Search,
   ShieldCheck,
-  Sparkles,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
@@ -29,12 +27,9 @@ type RailAction = {
 export function ActivityRail() {
   const {
     activeNavItem,
-    inspectorOpen,
     setActiveNavItem,
-    setCommandPaletteOpen,
     setMobileDrawer,
     toggleExplorer,
-    toggleInspector,
   } = useUiStore()
   const { activeWorkspaceId } = useWorkspaceStore()
   const { openTab } = useTabStore()
@@ -52,29 +47,6 @@ export function ActivityRail() {
           return
         }
         toggleExplorer()
-      },
-    },
-    {
-      id: 'search',
-      label: 'Search',
-      icon: Search,
-      onSelect: () => {
-        setActiveNavItem('search')
-        setCommandPaletteOpen(true)
-      },
-    },
-    {
-      id: 'chat',
-      label: 'Workspace chat',
-      icon: Sparkles,
-      onSelect: () => {
-        setActiveNavItem('chat')
-        if (window.innerWidth < 1280) {
-          setMobileDrawer('inspector')
-          return
-        }
-        if (!inspectorOpen) toggleInspector()
-        window.setTimeout(() => document.getElementById('ai-prompt')?.focus(), 0)
       },
     },
     {

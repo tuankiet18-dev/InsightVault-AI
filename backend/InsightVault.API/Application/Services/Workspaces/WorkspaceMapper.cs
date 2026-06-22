@@ -27,6 +27,8 @@ internal static class WorkspaceMapper
             member.WorkspaceId,
             member.UserId,
             member.Email,
+            member.User?.FullName,
+            member.User?.AvatarUrl,
             ToApiWorkspaceRole(member.Role),
             ToApiMemberStatus(member.Status),
             member.InvitedById,

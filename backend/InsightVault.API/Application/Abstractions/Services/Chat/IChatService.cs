@@ -13,11 +13,21 @@ public interface IChatService
         CreateChatSessionRequest request,
         CancellationToken cancellationToken = default);
 
+    Task<ChatSessionDto> UpdateSessionAsync(
+        Guid sessionId,
+        UpdateChatSessionRequest request,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<ChatMessageDto>> ListMessagesAsync(
         Guid sessionId,
         CancellationToken cancellationToken = default);
 
     Task<ChatTurnResponse> SendMessageAsync(
+        Guid sessionId,
+        SendChatMessageRequest request,
+        CancellationToken cancellationToken = default);
+
+    IAsyncEnumerable<ChatStreamEventDto> StreamMessageAsync(
         Guid sessionId,
         SendChatMessageRequest request,
         CancellationToken cancellationToken = default);

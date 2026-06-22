@@ -21,6 +21,10 @@ public sealed class Report
     public DateTimeOffset UpdatedAt { get; set; }
     public DateTimeOffset? DeletedAt { get; set; }
 
+    public bool IsPublic { get; set; }
+    public string? PublicToken { get; set; }
+    public DateTimeOffset? SharedExpiresAt { get; set; }
+
     public Workspace Workspace { get; set; } = null!;
     public Folder? Folder { get; set; }
     public User? CreatedBy { get; set; }

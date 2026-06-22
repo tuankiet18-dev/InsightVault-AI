@@ -9,6 +9,7 @@ public sealed class ChatSession
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
     public DateTimeOffset? DeletedAt { get; set; }
+    public bool IsPinned { get; set; }
 
     public Workspace Workspace { get; set; } = null!;
     public User? CreatedBy { get; set; }

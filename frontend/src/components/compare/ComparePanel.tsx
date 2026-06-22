@@ -243,7 +243,7 @@ function DocumentDropZone({
         </button>
         <div className="text-sm font-semibold text-surface-500 mb-4">{label}</div>
         <File className={cn("w-12 h-12 mb-3", getFileTypeColor(document.fileType))} />
-        <div className="font-medium text-surface-900 text-center line-clamp-2 px-2">
+        <div className="font-medium text-surface-900 text-center line-clamp-2 px-2 break-all w-full">
           {document.originalFileName}
         </div>
         <button 

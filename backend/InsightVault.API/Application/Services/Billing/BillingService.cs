@@ -48,33 +48,23 @@ public sealed class BillingService(
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<BillingSummaryDto> GetWorkspaceSummaryAsync(
-        Guid workspaceId,
+    public async Task<BillingSummaryDto> GetAccountSummaryAsync(
         CancellationToken cancellationToken = default)
     {
         var userId = GetRequiredUserId();
-        await workspacePermissionService.EnsureCanViewWorkspaceAsync(
-            workspaceId,
-            userId,
-            cancellationToken);
 
         var subscription = await creditService
-            .EnsureActiveSubscriptionAsync(workspaceId, cancellationToken);
+            .EnsureActiveSubscriptionAsync(userId, cancellationToken);
 
         return ToSummary(subscription);
     }
 
     public async Task<CheckoutSessionDto> CreateCheckoutAsync(
-        Guid workspaceId,
         CreateCheckoutRequest request,
         string clientIp,
         CancellationToken cancellationToken = default)
     {
         var userId = GetRequiredUserId();
-        await workspacePermissionService.EnsureCanManageWorkspaceAsync(
-            workspaceId,
-            userId,
-            cancellationToken);
 
         if (string.IsNullOrWhiteSpace(request.ProductCode))
         {
@@ -128,7 +118,6 @@ public sealed class BillingService(
         var order = new PaymentOrder
         {
             Id = Guid.NewGuid(),
-            WorkspaceId = workspaceId,
             CreatedById = userId,
             PlanId = plan?.Id,
             CreditPackageId = creditPackage?.Id,
@@ -278,10 +267,10 @@ public sealed class BillingService(
             return PaymentNotificationOutcome.Acknowledged;
         }
 
-        await LockWorkspaceAsync(order.WorkspaceId, cancellationToken);
+        await LockUserAsync(order.CreatedById, cancellationToken);
 
         var subscription = await creditService
-            .EnsureActiveSubscriptionAsync(order.WorkspaceId, cancellationToken);
+            .EnsureActiveSubscriptionAsync(order.CreatedById, cancellationToken);
         var now = DateTimeOffset.UtcNow;
 
         if (order.PurchaseType == PaymentPurchaseType.Subscription)
@@ -376,8 +365,8 @@ public sealed class BillingService(
         return order;
     }
 
-    private async Task LockWorkspaceAsync(
-        Guid workspaceId,
+    private async Task LockUserAsync(
+        Guid userId,
         CancellationToken cancellationToken)
     {
         if (db.Database.ProviderName != "Npgsql.EntityFrameworkCore.PostgreSQL")
@@ -385,22 +374,22 @@ public sealed class BillingService(
             return;
         }
 
-        var workspace = await db.Workspaces
+        var user = await db.Users
             .FromSqlInterpolated(
-                $"SELECT * FROM workspaces WHERE id = {workspaceId} FOR UPDATE")
+                $"SELECT * FROM users WHERE id = {userId} FOR UPDATE")
             .SingleOrDefaultAsync(cancellationToken);
 
-        if (workspace is null)
+        if (user is null)
         {
             throw new ApiException(
                 StatusCodes.Status404NotFound,
-                "workspace.not_found",
-                "Workspace not found.");
+                "user.not_found",
+                "User not found.");
         }
     }
 
     private void AddGrant(
-        WorkspaceSubscription subscription,
+        UserSubscription subscription,
         PaymentOrder order,
         CreditBucket bucket,
         int credits,
@@ -411,8 +400,8 @@ public sealed class BillingService(
         db.CreditLedgerEntries.Add(new CreditLedgerEntry
         {
             Id = Guid.NewGuid(),
-            WorkspaceSubscriptionId = subscription.Id,
-            WorkspaceId = subscription.WorkspaceId,
+            UserSubscriptionId = subscription.Id,
+            UserId = subscription.UserId,
             PaymentOrderId = order.Id,
             EntryType = CreditEntryType.Grant,
             Bucket = bucket,
@@ -452,10 +441,10 @@ public sealed class BillingService(
             plan.StorageLimitBytes);
     }
 
-    private static BillingSummaryDto ToSummary(WorkspaceSubscription subscription)
+    private static BillingSummaryDto ToSummary(UserSubscription subscription)
     {
         return new BillingSummaryDto(
-            subscription.WorkspaceId,
+            subscription.UserId,
             ToDto(subscription.Plan),
             subscription.Status.ToString().ToLowerInvariant(),
             subscription.RecurringCreditsRemaining,

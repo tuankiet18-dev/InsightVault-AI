@@ -4,23 +4,29 @@ import {
   PanelLeftOpen,
   PanelRightClose,
   PanelRightOpen,
-  Search,
   Settings as SettingsIcon,
   Trash2,
   UserPlus,
   WalletCards,
+  Mail,
+  CreditCard,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useMyWorkspaceInvitations } from '@/hooks/useWorkspaceInvitations'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useWorkspace, useWorkspaces, useDeleteWorkspace } from '@/hooks/useWorkspaces'
 import { useUiStore } from '@/stores/uiStore'
 import { useAuthStore } from '@/stores/authStore'
+import { useTabStore } from '@/stores/tabStore'
+import { useChatStore } from '@/stores/chatStore'
+import { useAiStore } from '@/stores/aiStore'
 import { DropdownMenu, DropdownMenuItem } from '../ui/DropdownMenu'
 import { SettingsModal } from '../settings/SettingsModal'
 import { ConfirmModal } from '../ui/ConfirmModal'
 import { Button } from '../ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
+import { GlobalSearch } from '../search/GlobalSearch'
 
 export function TopBar() {
   const navigate = useNavigate()
@@ -32,12 +38,12 @@ export function TopBar() {
     inspectorOpen,
     toggleExplorer,
     toggleInspector,
-    setCommandPaletteOpen,
     setInviteModalOpen,
     setMobileDrawer,
   } = useUiStore()
   const { user, logout } = useAuthStore()
   const deleteWorkspaceMutation = useDeleteWorkspace()
+  const { data: invitations = [] } = useMyWorkspaceInvitations()
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isDeleteWsModalOpen, setIsDeleteWsModalOpen] = useState(false)
@@ -45,6 +51,10 @@ export function TopBar() {
   const role = activeWs?.currentUserRole
 
   const isOwner = role === 'owner'
+
+  const handleInviteClick = () => {
+    setInviteModalOpen(true)
+  }
 
   const handleDeleteWorkspace = () => {
     if (!activeWorkspaceId) return
@@ -88,7 +98,14 @@ export function TopBar() {
 
       <Select
         value={activeWorkspaceId ?? undefined}
-        onValueChange={setActiveWorkspace}
+        onValueChange={(val) => {
+          setActiveWorkspace(val)
+          useTabStore.getState().resetTabs()
+          useChatStore.getState().setActiveSession(null)
+          useAiStore.getState().setAnswer(null)
+          useAiStore.getState().setCitations([])
+          navigate(`/workspaces/${val}`)
+        }}
         disabled={!workspaces?.length}
       >
         <SelectTrigger className="h-8 w-[170px] bg-background text-sm sm:w-[210px]">
@@ -103,18 +120,7 @@ export function TopBar() {
         </SelectContent>
       </Select>
 
-      <button
-        onClick={() => setCommandPaletteOpen(true)}
-        className="mx-2 hidden h-8 max-w-xl flex-1 items-center justify-between rounded-md border border-border bg-background px-3 text-sm text-muted-foreground shadow-xs transition-colors hover:bg-accent md:flex"
-      >
-        <span className="flex items-center gap-2">
-          <Search className="h-4 w-4" />
-          <span className="truncate">Search documents, chunks, reports...</span>
-        </span>
-        <kbd className="hidden rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground sm:inline-flex">
-          Ctrl K
-        </kbd>
-      </button>
+      <GlobalSearch />
 
       {role && (
         <span className="hidden rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium capitalize text-muted-foreground md:inline-flex">
@@ -127,12 +133,12 @@ export function TopBar() {
             variant="ghost"
             size="sm"
             className="hidden sm:inline-flex"
-            onClick={() => navigate(`/workspaces/${activeWorkspaceId}/billing`)}
+            onClick={() => navigate('/billing')}
           >
             <WalletCards className="h-4 w-4" />
             Billing
           </Button>
-          <Button variant="ghost" size="sm" className="hidden sm:inline-flex" onClick={() => setInviteModalOpen(true)}>
+          <Button variant="ghost" size="sm" className="hidden sm:inline-flex" onClick={handleInviteClick}>
             <UserPlus className="h-4 w-4" />
             Invite
           </Button>
@@ -166,6 +172,22 @@ export function TopBar() {
         </div>
         <DropdownMenuItem onClick={() => setIsSettingsOpen(true)} icon={<SettingsIcon className="h-4 w-4" />}>
           Profile Settings
+        </DropdownMenuItem>
+        {user?.systemRole === 'admin' && (
+          <DropdownMenuItem onClick={() => navigate('/admin')} icon={<SettingsIcon className="h-4 w-4" />}>
+            Admin
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem onClick={() => navigate('/invitations')} icon={<Mail className="h-4 w-4" />}>
+          Invitations
+          {invitations.length > 0 && (
+            <span className="ml-auto rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
+              {invitations.length}
+            </span>
+          )}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate('/billing')} icon={<CreditCard className="h-4 w-4" />}>
+          Billing
         </DropdownMenuItem>
         {isOwner && (
           <DropdownMenuItem onClick={() => setIsDeleteWsModalOpen(true)} icon={<Trash2 className="h-4 w-4" />} destructive>

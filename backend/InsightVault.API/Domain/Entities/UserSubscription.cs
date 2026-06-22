@@ -2,10 +2,10 @@ using InsightVault.API.Domain.Enums;
 
 namespace InsightVault.API.Domain.Entities;
 
-public sealed class WorkspaceSubscription
+public sealed class UserSubscription
 {
     public Guid Id { get; set; }
-    public Guid WorkspaceId { get; set; }
+    public Guid UserId { get; set; }
     public Guid PlanId { get; set; }
     public SubscriptionStatus Status { get; set; } = SubscriptionStatus.Active;
     public int RecurringCreditsRemaining { get; set; }
@@ -16,7 +16,7 @@ public sealed class WorkspaceSubscription
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 
-    public Workspace Workspace { get; set; } = null!;
+    public User User { get; set; } = null!;
     public SubscriptionPlan Plan { get; set; } = null!;
     public List<CreditLedgerEntry> CreditLedgerEntries { get; set; } = [];
 }

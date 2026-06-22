@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { CheckCircle2, Loader2, XCircle } from 'lucide-react'
 import { billingApi, type PaymentReturnResponseDto } from '@/api/billingApi'
 import { Button } from '@/components/ui/button'
-import { pendingBillingWorkspaceKey } from '@/lib/billing'
 
 export function BillingReturnPage() {
   const [result, setResult] = useState<PaymentReturnResponseDto | null>(null)
@@ -12,7 +11,6 @@ export function BillingReturnPage() {
     query ? null : 'payOS did not return payment information.',
   )
   const confirmed = useRef(false)
-  const workspaceId = sessionStorage.getItem(pendingBillingWorkspaceKey)
 
   useEffect(() => {
     if (confirmed.current) return
@@ -24,18 +22,13 @@ export function BillingReturnPage() {
       .confirmPayOsReturn(query)
       .then((response) => {
         setResult(response)
-        if (response.successful) {
-          sessionStorage.removeItem(pendingBillingWorkspaceKey)
-        }
       })
       .catch((requestError: Error) => {
         setError(requestError.message || 'Unable to verify the payment.')
       })
   }, [query])
 
-  const billingPath = workspaceId
-    ? `/workspaces/${workspaceId}/billing`
-    : '/dashboard'
+  const billingPath = '/billing'
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface-50 px-5">
@@ -48,7 +41,7 @@ export function BillingReturnPage() {
             <h1 className="mt-5 text-2xl font-semibold">Confirming payment</h1>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               InsightVault is checking the payOS transaction status before
-              updating your workspace billing. Please keep this page open.
+              updating your account billing. Please keep this page open.
             </p>
           </>
         ) : result?.successful ? (
@@ -61,7 +54,7 @@ export function BillingReturnPage() {
               {result.message}
             </p>
             <Button asChild className="mt-6 w-full">
-              <Link to={billingPath}>View workspace billing</Link>
+              <Link to={billingPath}>View account billing</Link>
             </Button>
           </>
         ) : (

@@ -15,4 +15,7 @@ public sealed record ReportDto(
     object? StructuredResult,
     string? ModelName,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    bool IsPublic = false,
+    string? PublicToken = null,
+    DateTimeOffset? SharedExpiresAt = null);

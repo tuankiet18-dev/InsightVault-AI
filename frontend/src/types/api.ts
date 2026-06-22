@@ -59,6 +59,8 @@ export interface WorkspaceMemberDto {
   workspaceId: string;
   userId?: string | null;
   email: string;
+  fullName?: string | null;
+  avatarUrl?: string | null;
   role: WorkspaceRole;
   status: MemberStatus;
   invitedById?: string | null;
@@ -188,6 +190,7 @@ export interface ChatSessionDto {
   title?: string | null;
   webSearchEnabled?: boolean;
   webSearchProvider?: "duckduckgo" | "searxng" | "brave" | null;
+  isPinned: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -295,6 +298,21 @@ export interface ReportDto {
   modelName?: string | null;
   createdAt: string;
   updatedAt: string;
+  isPublic: boolean;
+  publicToken?: string | null;
+  sharedExpiresAt?: string | null;
+}
+
+export interface ShareReportRequest {
+  isPublic: boolean;
+  expireAfterDays?: number | null;
+}
+
+export interface ShareReportResponse {
+  isPublic: boolean;
+  publicToken?: string | null;
+  shareUrl?: string | null;
+  expiresAt?: string | null;
 }
 
 export type DocumentOriginalPreviewKind = "pdf" | "text" | "download";

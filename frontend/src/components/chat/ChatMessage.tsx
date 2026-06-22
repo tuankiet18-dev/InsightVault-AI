@@ -21,10 +21,10 @@ export function ChatMessage({ message }: { message: ChatMessageDto }) {
   return (
     <div className={cn('w-full flex', isUser ? 'justify-end' : 'justify-start')}>
       <div className={cn(
-        'max-w-3xl flex gap-3 rounded-xl border p-4 relative group',
+        'max-w-3xl flex gap-3 p-4 relative group',
         isUser
-          ? 'ml-auto w-fit max-w-[82%] border-transparent bg-transparent text-foreground'
-          : 'w-full border-border bg-slate-50/50 dark:bg-slate-900/50',
+          ? 'ml-auto w-fit max-w-[82%] text-foreground'
+          : 'w-full text-foreground',
       )}>
 
 

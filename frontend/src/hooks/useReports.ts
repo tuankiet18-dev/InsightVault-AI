@@ -55,3 +55,15 @@ export const useCompareDocuments = () => {
       reportApi.compareDocuments(workspaceId, data),
   });
 };
+
+export const useShareReport = (workspaceId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ reportId, data }: { reportId: string; data: import('../types/api').ShareReportRequest }) => 
+      reportApi.shareReport(workspaceId, reportId, data),
+    onSuccess: (_, { reportId }) => {
+      queryClient.invalidateQueries({ queryKey: reportKeys.lists(workspaceId) });
+      queryClient.invalidateQueries({ queryKey: reportKeys.detail(reportId) });
+    },
+  });
+};

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AppShell } from '@/components/layout/AppShell'
 import { TabStrip } from '@/components/document/TabStrip'
@@ -10,23 +10,31 @@ import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useTabStore } from '@/stores/tabStore'
 import { useWorkspace } from '@/hooks/useWorkspaces'
 import { useDocuments } from '@/hooks/useDocuments'
-import { useReports } from '@/hooks/useReports'
-import { useAiJobs } from '@/hooks/useAiJobs'
+import { useReports, useDeleteReport } from '@/hooks/useReports'
+import { useFolders } from '@/hooks/useFolders'
 import { useUiStore } from '@/stores/uiStore'
 import { StatusChip } from '@/components/document/StatusChip'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { Button } from '@/components/ui/button'
+import { getFileTypeColor, cn } from '@/lib/utils'
 import {
-  AlertTriangle,
   ArrowRight,
   BarChart3,
+  Bot,
+  Download,
+  File,
   FileBarChart2,
   FileText,
+  FolderPlus,
   FolderTree,
   GitCompare,
+  Image as ImageIcon,
   Loader2,
-  Search,
+  Share2,
   Sparkles,
+  Trash2,
   Upload,
+  UploadCloud,
 } from 'lucide-react'
 import type { DocumentDto, ReportDto } from '@/types/api'
 
@@ -122,9 +130,15 @@ export function WorkspacePage() {
   )
 }
 
+import { ShareReportModal } from '@/components/report/ShareReportModal'
+
 function ReportsPanel({ workspaceId }: { workspaceId: string }) {
   const { data: reports = [], isLoading } = useReports(workspaceId)
+  const { data: documents = [] } = useDocuments(workspaceId)
   const { openTab } = useTabStore()
+  const deleteMutation = useDeleteReport(workspaceId)
+  const [reportToDelete, setReportToDelete] = useState<ReportDto | null>(null)
+  const [reportToShare, setReportToShare] = useState<ReportDto | null>(null)
 
   const openReport = (report: ReportDto) => {
     openTab({
@@ -133,7 +147,112 @@ function ReportsPanel({ workspaceId }: { workspaceId: string }) {
       type: 'report',
       reportId: report.id,
       closable: true,
+      compareDocumentIds: report.sourceDocuments
     })
+  }
+
+  const handleDelete = () => {
+    if (!reportToDelete) return
+    deleteMutation.mutate(reportToDelete.id, {
+      onSuccess: () => setReportToDelete(null)
+    })
+  }
+
+  // Time grouping
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const weekAgo = new Date(today)
+  weekAgo.setDate(weekAgo.getDate() - 7)
+
+  const todayReports: ReportDto[] = []
+  const weekReports: ReportDto[] = []
+  const olderReports: ReportDto[] = []
+
+  const sortedReports = [...reports].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+
+  sortedReports.forEach(r => {
+    const d = new Date(r.updatedAt)
+    if (d >= today) todayReports.push(r)
+    else if (d >= weekAgo) weekReports.push(r)
+    else olderReports.push(r)
+  })
+
+  const renderReportGroup = (title: string, groupReports: ReportDto[]) => {
+    if (groupReports.length === 0) return null
+    return (
+      <div className="mb-8 last:mb-0">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-surface-400 mb-3 ml-1">{title}</h3>
+        <div className="flex flex-col gap-3">
+          {groupReports.map(report => {
+            const isComparison = report.reportType === 'comparison_report' && report.sourceDocuments && report.sourceDocuments.length > 0
+            const comparedDocs = isComparison 
+              ? report.sourceDocuments.map(id => documents.find(d => d.id === id)).filter(Boolean) as DocumentDto[]
+              : []
+
+            let displayTitle = report.title
+            if (displayTitle.startsWith('Comparison Report') && comparedDocs.length === 2) {
+              displayTitle = `So sánh: ${comparedDocs[0].originalFileName} & ${comparedDocs[1].originalFileName}`
+            }
+
+            return (
+              <div
+                key={report.id}
+                onClick={() => openReport(report)}
+                className="group relative flex w-full items-center justify-between gap-4 rounded-xl border border-border bg-surface-0 px-5 py-4 text-left shadow-sm transition-all hover:border-primary-200 hover:bg-surface-50 hover:shadow-md cursor-pointer"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-base font-semibold text-surface-900">{displayTitle}</div>
+                  <div className="mt-1 flex items-center gap-2">
+                    <span className="text-xs text-surface-500">{new Date(report.updatedAt).toLocaleDateString()}</span>
+                    <span className="h-1 w-1 rounded-full bg-surface-300" />
+                    <span className="text-xs font-medium text-surface-500 uppercase tracking-wider">{report.reportType.replace(/_/g, ' ')}</span>
+                  </div>
+                  
+                  {isComparison && comparedDocs.length > 0 && (
+                    <div className="mt-3 flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        {comparedDocs.map((doc, idx) => (
+                          <div key={doc.id} className="flex items-center gap-1 max-w-[200px]">
+                            {idx > 0 && <GitCompare className="h-3 w-3 text-surface-400 mx-1 shrink-0" />}
+                            <FileIcon type={doc.fileType} />
+                            <span className="truncate text-xs text-surface-600 font-medium" title={doc.originalFileName}>{doc.originalFileName}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="absolute right-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 bg-surface-0/95 backdrop-blur-sm p-1.5 rounded-lg shadow-sm border border-border">
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); alert('Tính năng tải PDF sẽ sớm được cập nhật!') }} 
+                    className="p-1.5 hover:bg-surface-100 rounded-md text-surface-500 hover:text-surface-900 transition-colors" 
+                    title="Download PDF"
+                  >
+                    <Download className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setReportToShare(report) }} 
+                    className="p-1.5 hover:bg-surface-100 rounded-md text-surface-500 hover:text-surface-900 transition-colors" 
+                    title="Share Report"
+                  >
+                    <Share2 className="w-4 h-4" />
+                  </button>
+                  <div className="w-px h-4 bg-border mx-0.5" />
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setReportToDelete(report) }} 
+                    className="p-1.5 hover:bg-danger-50 rounded-md text-surface-500 hover:text-danger-600 transition-colors" 
+                    title="Delete Report"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -148,54 +267,69 @@ function ReportsPanel({ workspaceId }: { workspaceId: string }) {
         <FileBarChart2 className="h-5 w-5 text-primary-600" />
       </header>
 
-      <main className="min-h-0 flex-1 overflow-y-auto p-5">
-        {isLoading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 5 }).map((_, index) => (
-              <div key={index} className="h-16 animate-pulse rounded-md bg-muted" />
-            ))}
-          </div>
-        ) : reports.length > 0 ? (
-          <div className="mx-auto max-w-4xl overflow-hidden rounded-lg border border-border bg-surface-0">
-            {reports.map((report) => (
-              <button
-                key={report.id}
-                type="button"
-                onClick={() => openReport(report)}
-                className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-border px-5 py-4 text-left last:border-b-0 hover:bg-muted/60"
-              >
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold text-foreground">{report.title}</div>
-                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    <span>{report.reportType.replace(/_/g, ' ')}</span>
-                    <span>{new Date(report.updatedAt).toLocaleDateString()}</span>
-                  </div>
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground" />
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="mx-auto flex min-h-[360px] max-w-md flex-col items-center justify-center text-center">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-dashed border-border bg-muted">
-              <FileBarChart2 className="h-6 w-6 text-muted-foreground" />
+      <main className="min-h-0 flex-1 overflow-y-auto p-6">
+        <div className="mx-auto max-w-4xl">
+          {isLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div key={index} className="h-24 animate-pulse rounded-xl bg-muted" />
+              ))}
             </div>
-            <h2 className="text-sm font-semibold text-foreground">No reports yet</h2>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Generate a report from the AI inspector or run Compare and save the result as a report.
-            </p>
-          </div>
-        )}
+          ) : reports.length > 0 ? (
+            <div className="pb-8">
+              {renderReportGroup('Hôm nay', todayReports)}
+              {renderReportGroup('Tuần này', weekReports)}
+              {renderReportGroup('Cũ hơn', olderReports)}
+            </div>
+          ) : (
+            <div className="mt-12 flex min-h-[400px] flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-surface-0/50 p-8 text-center">
+              <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-primary-50 text-primary-600 shadow-sm ring-1 ring-primary-100/50">
+                <FileBarChart2 className="h-10 w-10" />
+              </div>
+              <h2 className="text-2xl font-bold text-surface-900">Chưa có báo cáo nào</h2>
+              <p className="mt-3 max-w-md text-sm leading-relaxed text-surface-500">
+                Chạy tính năng Compare (So sánh) hoặc yêu cầu AI tạo báo cáo để xem kết quả được lưu trữ tại đây.
+              </p>
+              <Button 
+                className="mt-8 rounded-full px-8 shadow-md hover:-translate-y-0.5 hover:shadow-lg transition-all" 
+                onClick={() => openTab({ id: 'compare-workspace', label: 'Compare', type: 'compare', closable: true })}
+              >
+                <GitCompare className="mr-2 h-4 w-4" />
+                Tạo báo cáo mới ngay
+              </Button>
+            </div>
+          )}
+        </div>
       </main>
+
+      <ConfirmModal
+        isOpen={!!reportToDelete}
+        onClose={() => setReportToDelete(null)}
+        onConfirm={handleDelete}
+        isLoading={deleteMutation.isPending}
+        title="Xóa Báo Cáo"
+        description={`Bạn có chắc chắn muốn xóa báo cáo "${reportToDelete?.title}" không? Hành động này không thể hoàn tác.`}
+        confirmText="Xóa Báo Cáo"
+      />
+
+      <ShareReportModal
+        isOpen={!!reportToShare}
+        onClose={() => setReportToShare(null)}
+        workspaceId={workspaceId}
+        report={reportToShare}
+      />
     </div>
   )
 }
 
 function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; workspaceName: string }) {
-  const { data: documents = [], isLoading: documentsLoading } = useDocuments(workspaceId)
+  const { data: rawDocuments = [], isLoading: documentsLoading } = useDocuments(workspaceId)
+  const documents = rawDocuments.filter(doc => doc.folderId)
+  const { data: folders = [] } = useFolders(workspaceId)
   const { data: reports = [] } = useReports(workspaceId)
-  const { data: jobs = [] } = useAiJobs(workspaceId)
-  const { inspectorOpen, openUploadModal, setCommandPaletteOpen, setActiveNavItem, toggleInspector } = useUiStore()
+  const { inspectorOpen, openUploadModal, openCreateFolderModal, setActiveNavItem, toggleInspector } = useUiStore()
+
+  const isWorkspaceEmpty = documents.length === 0 && folders.length === 0
   const { openTab } = useTabStore()
 
   const completed = documents.filter((doc) => doc.status === 'completed').length
@@ -204,8 +338,6 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
   const readyRate = documents.length ? Math.round((completed / documents.length) * 100) : 0
   const recentDocuments = [...documents]
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-    .slice(0, 5)
-  const activeJobs = jobs.filter((job) => job.status === 'queued' || job.status === 'processing').length
 
   const openDocument = (document: DocumentDto) => {
     openTab({
@@ -251,18 +383,56 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
                   <GitCompare className="h-4 w-4" />
                   Compare
                 </Button>
-                <Button variant="ghost" onClick={() => setCommandPaletteOpen(true)} className="h-9">
-                  <Search className="h-4 w-4" />
-                  Search
-                </Button>
               </div>
             </div>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <Metric label="Documents" value={documents.length} detail={`${completed} ready`} icon={FileText} />
-              <Metric label="Ready" value={`${readyRate}%`} detail={`${processing} processing`} icon={Sparkles} />
-              <Metric label="Reports" value={reports.length} detail="stored outputs" icon={FileBarChart2} />
-              <Metric label="Needs review" value={failed} detail={`${activeJobs} active jobs`} icon={AlertTriangle} tone={failed > 0 ? 'danger' : 'neutral'} />
+            <div className="mt-5">
+              {isWorkspaceEmpty ? (
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div 
+                    onClick={() => openCreateFolderModal()}
+                    className="group cursor-pointer rounded-xl border border-border bg-surface-0 p-5 transition-all hover:border-primary-300 hover:shadow-md"
+                  >
+                    <div className="mb-3 inline-flex rounded-lg bg-primary-50 p-2 text-primary-600">
+                      <FolderPlus className="h-5 w-5" />
+                    </div>
+                    <h3 className="font-semibold text-surface-900 group-hover:text-primary-700 transition-colors">Create a folder</h3>
+                    <p className="mt-1 text-xs leading-relaxed text-surface-500">Create a folder to organize your documents.</p>
+                  </div>
+                  
+                  <div 
+                    onClick={() => openUploadModal()}
+                    className="group cursor-pointer rounded-xl border border-border bg-surface-0 p-5 transition-all hover:border-primary-300 hover:shadow-md"
+                  >
+                    <div className="mb-3 inline-flex rounded-lg bg-primary-50 p-2 text-primary-600">
+                      <UploadCloud className="h-5 w-5" />
+                    </div>
+                    <h3 className="font-semibold text-surface-900 group-hover:text-primary-700 transition-colors">Upload documents</h3>
+                    <p className="mt-1 text-xs leading-relaxed text-surface-500">Upload PDFs, docs to extract knowledge.</p>
+                  </div>
+
+                  <div 
+                    onClick={() => {
+                      setActiveNavItem('chat')
+                      if (!inspectorOpen) toggleInspector()
+                      window.setTimeout(() => document.getElementById('ai-prompt')?.focus(), 0)
+                    }}
+                    className="group cursor-pointer rounded-xl border border-border bg-surface-0 p-5 transition-all hover:border-primary-300 hover:shadow-md"
+                  >
+                    <div className="mb-3 inline-flex rounded-lg bg-primary-50 p-2 text-primary-600">
+                      <Bot className="h-5 w-5" />
+                    </div>
+                    <h3 className="font-semibold text-surface-900 group-hover:text-primary-700 transition-colors">Ask AI</h3>
+                    <p className="mt-1 text-xs leading-relaxed text-surface-500">Chat with your documents to get answers.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Metric label="Documents" value={documents.length} detail={`${completed} ready`} icon={FileText} />
+                  <Metric label="Ready" value={`${readyRate}%`} detail={`${processing} processing`} icon={Sparkles} />
+                  <Metric label="Reports" value={reports.length} detail="stored outputs" icon={FileBarChart2} />
+                </div>
+              )}
             </div>
           </div>
 
@@ -435,4 +605,21 @@ function HealthRow({
 
 function formatDocumentType(value: string) {
   return value.replace(/_/g, ' ')
+}
+
+function FileIcon({ type }: { type: string }) {
+  const color = getFileTypeColor(type)
+  const normalized = type.toLowerCase()
+  
+  if (normalized === 'pdf') {
+    return <FileText className={cn("w-4 h-4 shrink-0", color)} />
+  }
+  if (normalized === 'docx' || normalized === 'doc') {
+    return <File className={cn("w-4 h-4 shrink-0", color)} />
+  }
+  if (normalized === 'png' || normalized === 'jpg' || normalized === 'jpeg') {
+    return <ImageIcon className={cn("w-4 h-4 shrink-0", color)} />
+  }
+  
+  return <FileText className={cn("w-4 h-4 shrink-0", color)} />
 }

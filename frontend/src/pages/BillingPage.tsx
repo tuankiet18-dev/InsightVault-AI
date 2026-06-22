@@ -1,4 +1,4 @@
-import { Link, Navigate, useParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import {
   ArrowLeft,
   Check,
@@ -12,26 +12,18 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { useWorkspace } from '@/hooks/useWorkspaces'
 import {
   useBillingCatalog,
   useCreateBillingCheckout,
-  useWorkspaceBilling,
+  useAccountBilling,
 } from '@/hooks/useBilling'
-import { pendingBillingWorkspaceKey } from '@/lib/billing'
 
 export function BillingPage() {
-  const { workspaceId } = useParams()
-  const { data: workspace, isLoading: workspaceLoading } = useWorkspace(
-    workspaceId ?? null,
-  )
-  const billing = useWorkspaceBilling(workspaceId)
+  const billing = useAccountBilling()
   const { plans, creditPackages } = useBillingCatalog()
-  const checkout = useCreateBillingCheckout(workspaceId ?? '')
+  const checkout = useCreateBillingCheckout()
   const currentPlanCode = billing.data?.plan.code
-  const isOwner = workspace?.currentUserRole === 'owner'
   const isLoading =
-    workspaceLoading ||
     billing.isLoading ||
     plans.isLoading ||
     creditPackages.isLoading
@@ -39,8 +31,6 @@ export function BillingPage() {
   const activeProduct = checkout.variables
 
   const startCheckout = async (productCode: string) => {
-    if (!workspaceId || !isOwner) return
-
     try {
       const session = await checkout.mutateAsync(productCode)
       const checkoutUrl = new URL(session.checkoutUrl)
@@ -52,7 +42,6 @@ export function BillingPage() {
         return
       }
 
-      sessionStorage.setItem(pendingBillingWorkspaceKey, workspaceId)
       window.location.assign(checkoutUrl.toString())
     } catch {
       // The mutation surfaces the API error through its onError handler.
@@ -63,27 +52,22 @@ export function BillingPage() {
     ? new Date(billing.data.currentPeriodEnd).toLocaleDateString('vi-VN')
     : null
 
-  if (!workspaceId) return <Navigate to="/dashboard" replace />
-
   return (
     <div className="min-h-screen bg-surface-50 text-foreground">
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" asChild>
-              <Link to={`/workspaces/${workspaceId}`} aria-label="Back to workspace">
+              <Link to="/dashboard" aria-label="Back to dashboard">
                 <ArrowLeft className="h-4 w-4" />
               </Link>
             </Button>
             <div>
-              <div className="text-sm font-semibold">Workspace billing</div>
+              <div className="text-sm font-semibold">Account Billing</div>
               <div className="text-xs text-muted-foreground">
-                {workspace?.name ?? 'InsightVault'}
+                Manage your personal credits and subscription
               </div>
             </div>
-          </div>
-          <div className="rounded-full border border-border bg-background px-3 py-1 text-xs font-medium capitalize text-muted-foreground">
-            {workspace?.currentUserRole ?? 'member'}
           </div>
         </div>
       </header>
@@ -93,26 +77,15 @@ export function BillingPage() {
           <div className="max-w-2xl">
             <p className="text-sm font-medium text-primary">AI usage plans</p>
             <h1 className="mt-2 text-3xl font-bold tracking-tight">
-              Choose the capacity your workspace needs
+              Choose the capacity your account needs
             </h1>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">
-              Credits are shared by all workspace members. Recurring credits are
+              Credits are tied to your account and shared across all your workspaces. Recurring credits are
               used first, while top-up credits remain available across billing
               periods.
             </p>
           </div>
         </section>
-
-        {!isOwner && (
-          <Alert>
-            <CreditCard className="h-4 w-4" />
-            <AlertTitle>Owner permission required</AlertTitle>
-            <AlertDescription>
-              You can view usage, but only the workspace owner can purchase a
-              plan or top up credits.
-            </AlertDescription>
-          </Alert>
-        )}
 
         {isLoading ? (
           <div className="space-y-8">
@@ -234,7 +207,7 @@ export function BillingPage() {
                       <Button
                         className="mt-7 w-full"
                         variant={plan.code === 'pro' ? 'default' : 'outline'}
-                        disabled={!isOwner || !isPurchasable || isCurrent || checkout.isPending}
+                        disabled={!isPurchasable || isCurrent || checkout.isPending}
                         onClick={() => startCheckout(plan.code)}
                       >
                         {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -283,7 +256,7 @@ export function BillingPage() {
                       <Button
                         variant="secondary"
                         className="mt-5 w-full hover:bg-secondary/80"
-                        disabled={!isOwner || checkout.isPending}
+                        disabled={checkout.isPending}
                         onClick={() => startCheckout(creditPackage.code)}
                       >
                         {isPending && <Loader2 className="h-4 w-4 animate-spin" />}

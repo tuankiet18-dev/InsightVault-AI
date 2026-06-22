@@ -20,7 +20,18 @@ public interface IAiServiceClient
     Task<RagQueryResult> QueryRagAsync(
         RagQueryAiRequest request,
         CancellationToken cancellationToken = default);
+
+    IAsyncEnumerable<RagStreamEvent> StreamRagAsync(
+        RagQueryAiRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<GenerateTitleResult> GenerateChatTitleAsync(
+        string question,
+        string? modelName = null,
+        CancellationToken cancellationToken = default);
 }
+
+public sealed record GenerateTitleResult(string Title);
 
 public sealed record ProcessDocumentResult(
     string Status,
@@ -102,6 +113,10 @@ public sealed record RagQueryResult(
     string Answer,
     IReadOnlyList<RagSourceResult> Sources,
     IReadOnlyList<RagWebSourceResult> WebSources);
+
+public sealed record RagStreamEvent(
+    string Event,
+    System.Text.Json.JsonElement Data);
 
 public sealed record RagSourceResult(
     Guid? ChunkId,

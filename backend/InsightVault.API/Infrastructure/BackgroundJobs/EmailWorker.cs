@@ -29,8 +29,6 @@ public sealed class EmailWorker(
 
         var mqOptions = rabbitMqOptions.Value;
 
-        try
-        {
             var factory = new ConnectionFactory
             {
                 HostName = mqOptions.Host,
@@ -85,12 +83,6 @@ public sealed class EmailWorker(
             var tcs = new TaskCompletionSource();
             stoppingToken.Register(() => tcs.SetResult());
             await tcs.Task;
-        }
-        catch (Exception ex)
-        {
-            logger.LogCritical(ex, "Failed to start EmailWorker.");
-            // Do not throw here if it causes crash loop, just log
-        }
     }
 
     private async Task SendEmailAsync(EmailMessage message, CancellationToken cancellationToken)

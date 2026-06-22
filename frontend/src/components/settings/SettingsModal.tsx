@@ -1,6 +1,7 @@
-import { X, User, Settings, Bell, Shield, Palette, Sun, Moon, Monitor } from 'lucide-react'
+import { X, User, Settings, Bell, Shield, Palette, Sun, Moon, Monitor, CreditCard } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
 import { useThemeStore } from '@/stores/themeStore'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -12,6 +13,7 @@ interface SettingsModalProps {
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<'profile' | 'appearance' | 'notifications' | 'security'>('profile')
   const { user } = useAuthStore()
+  const navigate = useNavigate()
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -68,6 +70,18 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             >
               Security
             </TabButton>
+            <div className="pt-4 mt-4 border-t border-border">
+              <button
+                onClick={() => {
+                  onClose()
+                  navigate('/billing')
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-muted-foreground hover:bg-accent hover:text-card-foreground"
+              >
+                <CreditCard className="w-4 h-4" />
+                Billing
+              </button>
+            </div>
           </nav>
         </div>
 

@@ -6,9 +6,39 @@ from fastapi import APIRouter, HTTPException
 
 from models.rag import RagQueryRequest, RagQueryResponse, RagSource
 from services.rag_service import query as rag_query
+from services.rag_service import query_stream as rag_query_stream
+from pydantic import BaseModel
+from fastapi.responses import StreamingResponse
+from core.chat_provider import get_chat_model
 
 router = APIRouter(prefix="/rag")
 logger = logging.getLogger(__name__)
+
+class GenerateTitleRequest(BaseModel):
+    question: str
+    model_name: str | None = None
+
+class GenerateTitleResponse(BaseModel):
+    title: str
+
+@router.post("/generate-title", response_model=GenerateTitleResponse)
+async def generate_title(req: GenerateTitleRequest) -> GenerateTitleResponse:
+    """Generate a short title for a chat session based on the first question."""
+    try:
+        chat_model = get_chat_model(req.model_name)
+        prompt = f"Hãy rút gọn câu hỏi này thành tiêu đề ngắn (tối đa 5 từ). Chỉ trả về tiêu đề, không giải thích: '{req.question}'"
+        
+        title = chat_model.generate_text(prompt)
+        
+        # Clean up quotes if any
+        title = title.strip().strip("'\"")
+        if len(title) > 50:  # Safety check
+            title = title[:47] + "..."
+            
+        return GenerateTitleResponse(title=title)
+    except Exception as exc:
+        logger.error("Failed to generate title: %s", exc)
+        return GenerateTitleResponse(title="New Chat")
 
 
 @router.post("/query", response_model=RagQueryResponse)
@@ -56,3 +86,32 @@ async def rag_chat(req: RagQueryRequest) -> RagQueryResponse:
         sources=[RagSource(**s) for s in result["sources"]],
         web_sources=result.get("web_sources", []),
     )
+
+
+@router.post("/stream")
+async def rag_chat_stream(req: RagQueryRequest) -> StreamingResponse:
+    """
+    Execute RAG query and stream the answer with source citations.
+    Returns Server-Sent Events (SSE).
+    """
+    if req.scope == "folder" and not req.folder_id:
+        raise HTTPException(status_code=422, detail="folder_id is required when scope='folder'")
+    if req.scope == "document" and not req.document_ids:
+        raise HTTPException(status_code=422, detail="document_ids is required when scope='document'")
+    if req.scope == "report" and not req.report_context:
+        raise HTTPException(status_code=422, detail="report_context is required when scope='report'")
+
+    stream = rag_query_stream(
+        question=req.question,
+        workspace_id=req.workspace_id,
+        scope=req.scope,
+        folder_id=req.folder_id,
+        document_ids=req.document_ids,
+        report_context=req.report_context,
+        top_k=req.top_k,
+        chat_history=[m.model_dump() for m in req.chat_history],
+        model_name=req.model_name,
+        web_search_options=req.web_search_options.model_dump() if req.web_search_options else None,
+    )
+
+    return StreamingResponse(stream, media_type="text/event-stream")

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AlertCircle, Braces, Hash, Loader2 } from 'lucide-react'
 import { useDocumentChunks } from '@/hooks/useDocuments'
 import { cn } from '@/lib/utils'
@@ -15,6 +15,12 @@ export function DocumentChunksViewer({
 }) {
   const { data: chunks = [], isLoading, isError } = useDocumentChunks(document.id)
   const targetRef = useRef<HTMLElement | null>(null)
+
+  const [expandedChunks, setExpandedChunks] = useState<Record<string, boolean>>({})
+
+  const toggleChunk = (id: string) => {
+    setExpandedChunks(prev => ({ ...prev, [id]: !prev[id] }))
+  }
 
   useEffect(() => {
     targetRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
@@ -67,12 +73,15 @@ export function DocumentChunksViewer({
         const isTarget = (!!sourceChunkId && chunk.id === sourceChunkId)
           || (sourceChunkIndex != null && chunk.chunkIndex === sourceChunkIndex)
 
+        const isExpanded = !!expandedChunks[chunk.id]
+
         return (
         <article
           key={chunk.id}
           ref={isTarget ? targetRef : undefined}
+          onClick={() => toggleChunk(chunk.id)}
           className={cn(
-            "rounded-lg border bg-surface-0 p-3 transition-colors",
+            "rounded-lg border bg-surface-0 p-3 transition-colors cursor-pointer hover:bg-accent/30",
             isTarget ? "border-ai-400 bg-ai-50 ring-2 ring-ai-100" : "border-border",
           )}
         >
@@ -88,7 +97,7 @@ export function DocumentChunksViewer({
               )}
             </div>
           </header>
-          <p className="line-clamp-4 whitespace-pre-wrap text-sm leading-6 text-surface-700">{chunk.content}</p>
+          <p className={cn("whitespace-pre-wrap text-sm leading-6 text-surface-700 transition-all", !isExpanded && "line-clamp-4")}>{chunk.content}</p>
         </article>
         )
       })}

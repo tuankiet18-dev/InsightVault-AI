@@ -69,6 +69,8 @@ export type WorkspaceMemberDto = {
   workspaceId: string
   userId?: string | null
   email: string
+  fullName?: string | null
+  avatarUrl?: string | null
   role: WorkspaceRole
   status: MemberStatus
   invitedById?: string | null

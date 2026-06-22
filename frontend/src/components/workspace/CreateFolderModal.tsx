@@ -1,4 +1,4 @@
-import { X } from 'lucide-react'
+import { X, Info } from 'lucide-react'
 import { useUiStore } from '@/stores/uiStore'
 import { useState } from 'react'
 import { useCreateFolder } from '@/hooks/useFolders'
@@ -58,8 +58,15 @@ export function CreateFolderModal() {
           </button>
         </header>
 
-        <form onSubmit={handleSubmit} className="p-6">
-          <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 pt-5">
+          <div className="mb-5 rounded-lg bg-[var(--color-primary)]/10 p-3 text-sm text-[var(--color-primary)] border border-[var(--color-primary)]/20 flex gap-2.5">
+            <Info className="h-4 w-4 shrink-0 mt-0.5 opacity-80" />
+            <p className="leading-relaxed">
+              Create a folder to organize your uploaded documents and reports. You can also mention (<strong>@</strong>) this folder in the AI Assistant to narrow down the chat context.
+            </p>
+          </div>
+
+          <div className="space-y-5">
             <div>
               <label htmlFor="folder-name" className="block text-sm font-medium text-card-foreground mb-1.5">
                 Folder Name <span className="text-danger-500">*</span>
@@ -70,10 +77,23 @@ export function CreateFolderModal() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Q3 Financial Reports"
-                className="w-full h-10 px-3 rounded-lg border border-border bg-card text-card-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full h-10 px-3 rounded-lg border border-border bg-card text-card-foreground focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                 autoFocus
                 required
               />
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] text-muted-foreground mr-1 uppercase font-semibold tracking-wider">Suggestions:</span>
+                {['Research', 'Meeting Notes', 'Requirements', 'Specs'].map(s => (
+                  <button 
+                    key={s} 
+                    type="button" 
+                    onClick={() => setName(s)}
+                    className="text-[11px] bg-surface-100 hover:bg-surface-200 text-surface-700 px-2 py-0.5 rounded transition-colors"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
             </div>
             
             <div>

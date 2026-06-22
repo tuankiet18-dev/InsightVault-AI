@@ -31,15 +31,16 @@ public sealed class BillingCreditTests
     public async Task Consume_uses_recurring_before_topup_and_is_idempotent()
     {
         await using var db = CreateDbContext();
+        var userId = Guid.NewGuid();
         var workspaceId = Guid.NewGuid();
-        await SeedSubscriptionAsync(db, workspaceId, recurringCredits: 3, topUpCredits: 5);
+        await SeedSubscriptionAsync(db, userId, recurringCredits: 3, topUpCredits: 5);
         var service = CreateService(db);
         var jobId = Guid.NewGuid();
 
-        await service.ConsumeAsync(workspaceId, jobId, 6, "compare_documents");
-        await service.ConsumeAsync(workspaceId, jobId, 6, "compare_documents");
+        await service.ConsumeAsync(userId, workspaceId, jobId, 6, "compare_documents");
+        await service.ConsumeAsync(userId, workspaceId, jobId, 6, "compare_documents");
 
-        var subscription = await db.WorkspaceSubscriptions.SingleAsync();
+        var subscription = await db.UserSubscriptions.SingleAsync();
         Assert.Equal(0, subscription.RecurringCreditsRemaining);
         Assert.Equal(2, subscription.TopUpCreditsRemaining);
         Assert.Equal(2, await db.CreditLedgerEntries.CountAsync());
@@ -49,12 +50,14 @@ public sealed class BillingCreditTests
     public async Task Consume_rejects_request_when_workspace_has_insufficient_credits()
     {
         await using var db = CreateDbContext();
+        var userId = Guid.NewGuid();
         var workspaceId = Guid.NewGuid();
-        await SeedSubscriptionAsync(db, workspaceId, recurringCredits: 2, topUpCredits: 1);
+        await SeedSubscriptionAsync(db, userId, recurringCredits: 2, topUpCredits: 1);
         var service = CreateService(db);
 
         var exception = await Assert.ThrowsAsync<ApiException>(() =>
             service.ConsumeAsync(
+                userId,
                 workspaceId,
                 Guid.NewGuid(),
                 5,
@@ -68,16 +71,17 @@ public sealed class BillingCreditTests
     public async Task Refund_restores_the_original_buckets_and_is_idempotent()
     {
         await using var db = CreateDbContext();
+        var userId = Guid.NewGuid();
         var workspaceId = Guid.NewGuid();
-        await SeedSubscriptionAsync(db, workspaceId, recurringCredits: 2, topUpCredits: 5);
+        await SeedSubscriptionAsync(db, userId, recurringCredits: 2, topUpCredits: 5);
         var service = CreateService(db);
         var jobId = Guid.NewGuid();
 
-        await service.ConsumeAsync(workspaceId, jobId, 4, "generate_report");
-        await service.RefundAsync(workspaceId, jobId, "queue_failure");
-        await service.RefundAsync(workspaceId, jobId, "queue_failure");
+        await service.ConsumeAsync(userId, workspaceId, jobId, 4, "generate_report");
+        await service.RefundAsync(userId, workspaceId, jobId, "queue_failure");
+        await service.RefundAsync(userId, workspaceId, jobId, "queue_failure");
 
-        var subscription = await db.WorkspaceSubscriptions.SingleAsync();
+        var subscription = await db.UserSubscriptions.SingleAsync();
         Assert.Equal(2, subscription.RecurringCreditsRemaining);
         Assert.Equal(5, subscription.TopUpCreditsRemaining);
         Assert.Equal(4, await db.CreditLedgerEntries.CountAsync());
@@ -101,7 +105,7 @@ public sealed class BillingCreditTests
 
     private static async Task SeedSubscriptionAsync(
         InsightVaultDbContext db,
-        Guid workspaceId,
+        Guid userId,
         int recurringCredits,
         int topUpCredits)
     {
@@ -119,10 +123,10 @@ public sealed class BillingCreditTests
             CreatedAt = now,
             UpdatedAt = now
         };
-        var subscription = new WorkspaceSubscription
+        var subscription = new UserSubscription
         {
             Id = Guid.NewGuid(),
-            WorkspaceId = workspaceId,
+            UserId = userId,
             PlanId = plan.Id,
             Plan = plan,
             Status = SubscriptionStatus.Active,
@@ -135,7 +139,7 @@ public sealed class BillingCreditTests
         };
 
         db.SubscriptionPlans.Add(plan);
-        db.WorkspaceSubscriptions.Add(subscription);
+        db.UserSubscriptions.Add(subscription);
         await db.SaveChangesAsync();
     }
 }

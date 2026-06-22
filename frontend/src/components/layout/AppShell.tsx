@@ -8,6 +8,7 @@ import { CreateWorkspaceModal } from '../workspace/CreateWorkspaceModal'
 import { CreateFolderModal } from '../workspace/CreateFolderModal'
 import { InviteMemberModal } from '../workspace/InviteMemberModal'
 import { CommandPalette } from '../search/CommandPalette'
+import { UpgradeModal } from '../ui/UpgradeModal'
 import { useUiStore } from '@/stores/uiStore'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { useMediaQuery } from '@/hooks/use-media-query'
@@ -75,6 +76,7 @@ export function AppShell({ children, rightPanel }: { children: ReactNode; rightP
       <CreateFolderModal />
       <InviteMemberModal />
       <CommandPalette />
+      <UpgradeModal />
       {mobileDrawer && (
         <div className="fixed inset-0 z-50 bg-surface-900/45 backdrop-blur-sm xl:hidden" onClick={() => setMobileDrawer(null)}>
           <aside

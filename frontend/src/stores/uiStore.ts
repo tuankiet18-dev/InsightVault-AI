@@ -14,6 +14,13 @@ type UiState = {
   mobileDrawer: 'explorer' | 'inspector' | null
   focusMode: boolean
 
+  upgradeModalState: {
+    isOpen: boolean;
+    title: string;
+    description: string;
+    featureName?: string;
+  }
+
   toggleExplorer: () => void
   toggleInspector: () => void
   setUploadModalOpen: (open: boolean) => void
@@ -26,6 +33,8 @@ type UiState = {
   setActiveNavItem: (id: string) => void
   setMobileDrawer: (drawer: 'explorer' | 'inspector' | null) => void
   setFocusMode: (active: boolean) => void
+  openUpgradeModal: (title: string, description: string, featureName?: string) => void
+  closeUpgradeModal: () => void
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -41,6 +50,11 @@ export const useUiStore = create<UiState>((set) => ({
   activeNavItem: 'explorer',
   mobileDrawer: null,
   focusMode: false,
+  upgradeModalState: {
+    isOpen: false,
+    title: '',
+    description: '',
+  },
 
   toggleExplorer: () => set((s) => ({ explorerOpen: !s.explorerOpen })),
   toggleInspector: () => set((s) => ({ inspectorOpen: !s.inspectorOpen })),
@@ -54,4 +68,8 @@ export const useUiStore = create<UiState>((set) => ({
   setActiveNavItem: (id) => set({ activeNavItem: id }),
   setMobileDrawer: (drawer) => set({ mobileDrawer: drawer }),
   setFocusMode: (active) => set({ focusMode: active }),
+  openUpgradeModal: (title, description, featureName) => 
+    set({ upgradeModalState: { isOpen: true, title, description, featureName } }),
+  closeUpgradeModal: () => 
+    set((s) => ({ upgradeModalState: { ...s.upgradeModalState, isOpen: false } })),
 }))
