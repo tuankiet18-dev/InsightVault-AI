@@ -45,6 +45,8 @@ public static class DependencyInjection
             .Validate(options => !string.IsNullOrWhiteSpace(options.DocumentProcessingQueue), "RabbitMQ:DocumentProcessingQueue is required.")
             .Validate(options => !string.IsNullOrWhiteSpace(options.AiJobsQueue), "RabbitMQ:AiJobsQueue is required.")
             .Validate(options => !string.IsNullOrWhiteSpace(options.EmailQueue), "RabbitMQ:EmailQueue is required.")
+            .Validate(options => options.EmailMaxDeliveryAttempts > 0, "RabbitMQ:EmailMaxDeliveryAttempts must be greater than zero.")
+            .Validate(options => options.EmailRetryDelaySeconds > 0, "RabbitMQ:EmailRetryDelaySeconds must be greater than zero.")
             .ValidateOnStart();
         services.AddOptions<SmtpOptions>()
             .Bind(configuration.GetSection("Smtp"))

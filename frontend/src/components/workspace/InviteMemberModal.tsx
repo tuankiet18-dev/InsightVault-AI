@@ -5,7 +5,7 @@ import { useWorkspaceMembers, useUpdateWorkspaceMember, useRemoveWorkspaceMember
 import { useCreateWorkspaceInvitation } from '@/hooks/useWorkspaceInvitations'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useAuthStore } from '@/stores/authStore'
-import { useAccountBilling } from '@/hooks/useBilling'
+import { useWorkspaceBilling } from '@/hooks/useBilling'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import type { WorkspaceRole } from '@/types/api'
@@ -42,7 +42,7 @@ export function InviteMemberModal() {
     return filteredMembers.slice(start, start + itemsPerPage)
   }, [filteredMembers, currentPage, itemsPerPage])
 
-  const billing = useAccountBilling()
+  const billing = useWorkspaceBilling(activeWorkspaceId ?? undefined)
 
   if (!inviteModalOpen || !activeWorkspaceId) return null
 

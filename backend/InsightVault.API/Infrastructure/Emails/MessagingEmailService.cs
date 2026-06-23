@@ -4,9 +4,10 @@ using InsightVault.API.Application.Abstractions.Services.Emails;
 namespace InsightVault.API.Infrastructure.Emails;
 
 public sealed class MessagingEmailService(
-    IMessagePublisher messagePublisher) : IEmailService
+    IMessagePublisher messagePublisher,
+    ILogger<MessagingEmailService> logger) : IEmailService
 {
-    public Task SendLoginNotificationAsync(
+    public async Task SendLoginNotificationAsync(
         string email,
         string fullName,
         DateTimeOffset loginTime,
@@ -22,10 +23,10 @@ public sealed class MessagingEmailService(
         ";
 
         var message = new EmailMessage(email, subject, body);
-        return messagePublisher.PublishEmailAsync(message, cancellationToken);
+        await TryQueueAsync(message, cancellationToken);
     }
 
-    public Task SendWorkspaceInviteAsync(
+    public async Task SendWorkspaceInviteAsync(
         string email,
         string inviterName,
         string workspaceName,
@@ -50,10 +51,10 @@ public sealed class MessagingEmailService(
         ";
 
         var message = new EmailMessage(email, subject, body);
-        return messagePublisher.PublishEmailAsync(message, cancellationToken);
+        await TryQueueAsync(message, cancellationToken);
     }
 
-    public Task SendRoleUpdatedAsync(
+    public async Task SendRoleUpdatedAsync(
         string email,
         string workspaceName,
         string newRole,
@@ -67,10 +68,10 @@ public sealed class MessagingEmailService(
         ";
 
         var message = new EmailMessage(email, subject, body);
-        return messagePublisher.PublishEmailAsync(message, cancellationToken);
+        await TryQueueAsync(message, cancellationToken);
     }
 
-    public Task SendRemovedFromWorkspaceAsync(
+    public async Task SendRemovedFromWorkspaceAsync(
         string email,
         string workspaceName,
         CancellationToken cancellationToken = default)
@@ -84,6 +85,28 @@ public sealed class MessagingEmailService(
         ";
 
         var message = new EmailMessage(email, subject, body);
-        return messagePublisher.PublishEmailAsync(message, cancellationToken);
+        await TryQueueAsync(message, cancellationToken);
+    }
+
+    private async Task TryQueueAsync(
+        EmailMessage message,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await messagePublisher.PublishEmailAsync(message, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(
+                exception,
+                "Could not queue email with subject {Subject} for {Email}. The primary operation will continue.",
+                message.Subject,
+                message.ToEmail);
+        }
     }
 }

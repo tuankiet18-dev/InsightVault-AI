@@ -1,7 +1,10 @@
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { ArrowLeft, CheckCircle2, XCircle } from 'lucide-react'
 
 export function BillingResultPage({ status }: { status: 'success' | 'cancel' }) {
+  const location = useLocation()
+  const params = new URLSearchParams(location.search)
+  const workspaceId = params.get('workspaceId')
   const isSuccess = status === 'success'
 
   return (
@@ -28,7 +31,7 @@ export function BillingResultPage({ status }: { status: 'success' | 'cancel' }) 
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
           <Link
-            to="/billing"
+            to={workspaceId ? `/workspaces/${workspaceId}/billing` : '/billing'}
             className="inline-flex h-10 items-center justify-center rounded-md bg-[var(--color-primary)] px-4 text-sm font-semibold text-white"
           >
             Back to billing

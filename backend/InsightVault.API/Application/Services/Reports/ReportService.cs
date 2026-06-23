@@ -107,7 +107,6 @@ public sealed class ReportService(
 
         await db.AiJobs.AddAsync(job, cancellationToken);
         await creditService.ConsumeAsync(
-            userId,
             workspaceId,
             job.Id,
             BillingCreditCosts.ForReport(billingOptions.Value),
@@ -165,7 +164,6 @@ public sealed class ReportService(
 
         await db.AiJobs.AddAsync(job, cancellationToken);
         await creditService.ConsumeAsync(
-            userId,
             workspaceId,
             job.Id,
             BillingCreditCosts.ForCompare(sources.Count, billingOptions.Value),
@@ -433,15 +431,11 @@ public sealed class ReportService(
         }
         catch (Exception exception)
         {
-            if (job.CreatedById.HasValue)
-            {
-                await creditService.RefundAsync(
-                    job.CreatedById.Value,
-                    job.WorkspaceId!.Value,
-                    job.Id,
-                    $"{usageType}_queue_failure",
-                    CancellationToken.None);
-            }
+            await creditService.RefundAsync(
+                job.WorkspaceId!.Value,
+                job.Id,
+                $"{usageType}_queue_failure",
+                CancellationToken.None);
 
             var now = DateTimeOffset.UtcNow;
             job.Status = AiJobStatus.Failed;
