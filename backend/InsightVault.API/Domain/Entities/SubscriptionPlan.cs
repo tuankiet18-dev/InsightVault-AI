@@ -16,6 +16,6 @@ public sealed class SubscriptionPlan
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 
-    public List<UserSubscription> UserSubscriptions { get; set; } = [];
+    public List<WorkspaceSubscription> WorkspaceSubscriptions { get; set; } = [];
     public List<PaymentOrder> PaymentOrders { get; set; } = [];
 }

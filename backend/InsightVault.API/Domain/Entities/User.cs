@@ -22,7 +22,5 @@ public sealed class User
     public List<AiJob> AiJobs { get; set; } = [];
     public List<ChatSession> ChatSessions { get; set; } = [];
     public List<Report> Reports { get; set; } = [];
-    public UserSubscription? Subscription { get; set; }
     public List<PaymentOrder> PaymentOrders { get; set; } = [];
-    public List<CreditLedgerEntry> CreditLedgerEntries { get; set; } = [];
 }

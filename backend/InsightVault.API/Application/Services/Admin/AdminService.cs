@@ -103,12 +103,14 @@ public sealed class AdminService(
             .Where(document => document.UploadedById == userId && document.DeletedAt == null)
             .SumAsync(document => (long?)document.FileSizeBytes, cancellationToken) ?? 0;
 
-        var userSubscription = await db.UserSubscriptions
-            .AsNoTracking()
-            .FirstOrDefaultAsync(subscription => subscription.UserId == userId, cancellationToken);
-        var aiCreditsRemaining = userSubscription != null
-            ? userSubscription.RecurringCreditsRemaining + userSubscription.TopUpCreditsRemaining
-            : 0;
+        var aiCreditsRemaining = ownedWorkspaceIds.Count == 0
+            ? 0
+            : await db.WorkspaceSubscriptions
+                .AsNoTracking()
+                .Where(subscription => ownedWorkspaceIds.Contains(subscription.WorkspaceId))
+                .SumAsync(subscription =>
+                    (int?)(subscription.RecurringCreditsRemaining + subscription.TopUpCreditsRemaining),
+                    cancellationToken) ?? 0;
 
         var paymentOrderCount = await db.PaymentOrders
             .AsNoTracking()
@@ -393,8 +395,8 @@ public sealed class AdminService(
         var query = db.Workspaces
             .AsNoTracking()
             .Include(workspace => workspace.Owner)
-                .ThenInclude(owner => owner.Subscription)
-                    .ThenInclude(subscription => subscription!.Plan)
+            .Include(workspace => workspace.Subscription)
+                .ThenInclude(subscription => subscription!.Plan)
             .AsQueryable();
 
         if (!includeDeleted)
@@ -427,9 +429,9 @@ public sealed class AdminService(
                     .Sum(document => (long?)document.FileSizeBytes) ?? 0,
                 workspace.Reports.Count(report => report.DeletedAt == null),
                 workspace.AiJobs.Count,
-                workspace.Owner.Subscription != null ? workspace.Owner.Subscription.Plan.Name : null,
-                workspace.Owner.Subscription != null
-                    ? workspace.Owner.Subscription.RecurringCreditsRemaining + workspace.Owner.Subscription.TopUpCreditsRemaining
+                workspace.Subscription != null ? workspace.Subscription.Plan.Name : null,
+                workspace.Subscription != null
+                    ? workspace.Subscription.RecurringCreditsRemaining + workspace.Subscription.TopUpCreditsRemaining
                     : 0,
                 workspace.CreatedAt,
                 workspace.UpdatedAt,
@@ -446,6 +448,7 @@ public sealed class AdminService(
 
         var orders = await db.PaymentOrders
             .AsNoTracking()
+            .Include(order => order.Workspace)
             .Include(order => order.CreatedBy)
             .OrderByDescending(order => order.CreatedAt)
             .Take(DefaultListLimit)
@@ -461,7 +464,7 @@ public sealed class AdminService(
         var pendingOrderCount = await db.PaymentOrders
             .AsNoTracking()
             .CountAsync(order => order.Status == PaymentOrderStatus.Pending, cancellationToken);
-        var activeSubscriptionCount = await db.UserSubscriptions
+        var activeSubscriptionCount = await db.WorkspaceSubscriptions
             .AsNoTracking()
             .CountAsync(subscription => subscription.Status == SubscriptionStatus.Active, cancellationToken);
 
@@ -751,8 +754,8 @@ public sealed class AdminService(
     {
         return new AdminPaymentOrderDto(
             order.Id,
-            Guid.Empty,
-            "",
+            order.WorkspaceId,
+            order.Workspace.Name,
             order.CreatedById,
             order.CreatedBy.Email,
             order.PurchaseType.ToString(),

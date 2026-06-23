@@ -166,10 +166,10 @@ public sealed class WorkspaceInvitationTests(InsightVaultApiFactory factory)
             UpdatedAt = now
         };
 
-        var subscription = new UserSubscription
+        var subscription = new WorkspaceSubscription
         {
             Id = Guid.NewGuid(),
-            UserId = owner.Id,
+            WorkspaceId = workspaceId,
             PlanId = plan.Id,
             Plan = plan,
             Status = SubscriptionStatus.Active,
@@ -185,7 +185,7 @@ public sealed class WorkspaceInvitationTests(InsightVaultApiFactory factory)
         db.Workspaces.Add(workspace);
         db.WorkspaceMembers.Add(ownerMember);
         db.SubscriptionPlans.Add(plan);
-        db.UserSubscriptions.Add(subscription);
+        db.WorkspaceSubscriptions.Add(subscription);
         await db.SaveChangesAsync();
 
         var tokenService = scope.ServiceProvider.GetRequiredService<IJwtTokenService>();

@@ -9,4 +9,6 @@ public sealed class RabbitMqOptions
     public string DocumentProcessingQueue { get; set; } = "document-processing";
     public string AiJobsQueue { get; set; } = "ai-jobs";
     public string EmailQueue { get; set; } = "emails";
+    public int EmailMaxDeliveryAttempts { get; set; } = 3;
+    public int EmailRetryDelaySeconds { get; set; } = 5;
 }

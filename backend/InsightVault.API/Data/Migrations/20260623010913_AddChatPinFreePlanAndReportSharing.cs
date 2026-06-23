@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace InsightVault.API.Data.Migrations
 {
     /// <inheritdoc />
-    public partial class AddReportSharingFields : Migration
+    public partial class AddChatPinFreePlanAndReportSharing : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -30,6 +30,20 @@ namespace InsightVault.API.Data.Migrations
                 table: "reports",
                 type: "timestamp with time zone",
                 nullable: true);
+
+            migrationBuilder.AddColumn<bool>(
+                name: "is_pinned",
+                table: "chat_sessions",
+                type: "boolean",
+                nullable: false,
+                defaultValue: false);
+
+            migrationBuilder.UpdateData(
+                table: "subscription_plans",
+                keyColumn: "id",
+                keyValue: new Guid("10000000-0000-0000-0000-000000000001"),
+                column: "max_members",
+                value: 2);
 
             migrationBuilder.CreateIndex(
                 name: "ix_reports_public_token",
@@ -56,6 +70,17 @@ namespace InsightVault.API.Data.Migrations
             migrationBuilder.DropColumn(
                 name: "shared_expires_at",
                 table: "reports");
+
+            migrationBuilder.DropColumn(
+                name: "is_pinned",
+                table: "chat_sessions");
+
+            migrationBuilder.UpdateData(
+                table: "subscription_plans",
+                keyColumn: "id",
+                keyValue: new Guid("10000000-0000-0000-0000-000000000001"),
+                column: "max_members",
+                value: 1);
         }
     }
 }

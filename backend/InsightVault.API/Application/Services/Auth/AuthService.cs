@@ -15,7 +15,8 @@ public sealed class AuthService(
     ICurrentUserService currentUserService,
     IUserRepository userRepository,
     IEmailService emailService,
-    InsightVaultDbContext db) : IAuthService
+    InsightVaultDbContext db,
+    ILogger<AuthService> logger) : IAuthService
 {
     public async Task<AuthResponse> LoginWithGoogleAsync(
         GoogleLoginRequest request,
@@ -33,7 +34,7 @@ public sealed class AuthService(
         var user = await userRepository.GetByGoogleIdAsync(googleUser.GoogleId, cancellationToken)
             ?? await userRepository.GetByEmailAsync(normalizedEmail, cancellationToken);
 
-        var shouldSendLoginNotification = true;
+        var shouldSendLoginNotification = user is null || user.LastLoginAt is null;
 
         if (user is null)
         {
@@ -75,7 +76,21 @@ public sealed class AuthService(
 
         if (shouldSendLoginNotification)
         {
-            await emailService.SendLoginNotificationAsync(user.Email, user.FullName, now, cancellationToken);
+            try
+            {
+                await emailService.SendLoginNotificationAsync(user.Email, user.FullName, now, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                logger.LogWarning(
+                    exception,
+                    "Login succeeded, but the notification email could not be queued for user {UserId}.",
+                    user.Id);
+            }
         }
 
         return new AuthResponse(

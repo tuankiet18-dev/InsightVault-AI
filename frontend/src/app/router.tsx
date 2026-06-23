@@ -90,6 +90,10 @@ const router = createBrowserRouter([
     element: <ProtectedRoute><BillingPage /></ProtectedRoute>,
   },
   {
+    path: '/workspaces/:workspaceId/billing',
+    element: <ProtectedRoute><BillingPage /></ProtectedRoute>,
+  },
+  {
     path: '/billing/return',
     element: <BillingReturnPage />,
   },

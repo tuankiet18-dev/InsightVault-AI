@@ -6,8 +6,8 @@ export const billingKeys = {
   all: ['billing'] as const,
   plans: () => [...billingKeys.all, 'plans'] as const,
   packages: () => [...billingKeys.all, 'credit-packages'] as const,
-  account: () =>
-    [...billingKeys.all, 'account'] as const,
+  workspace: (workspaceId: string) =>
+    [...billingKeys.all, 'workspace', workspaceId] as const,
 }
 
 export function useBillingCatalog() {
@@ -23,29 +23,32 @@ export function useBillingCatalog() {
   return { plans, creditPackages }
 }
 
-export function useAccountBilling() {
+export function useWorkspaceBilling(workspaceId: string | undefined) {
   return useQuery({
-    queryKey: billingKeys.account(),
-    queryFn: () => billingApi.getAccountBilling(),
+    queryKey: billingKeys.workspace(workspaceId!),
+    queryFn: () => billingApi.getWorkspaceBilling(workspaceId!),
+    enabled: Boolean(workspaceId),
   })
 }
 
-export function useCreateBillingCheckout() {
+export function useCreateBillingCheckout(workspaceId: string) {
   return useMutation({
     mutationFn: (productCode: string) =>
-      billingApi.createCheckout(productCode),
+      billingApi.createCheckout(workspaceId, productCode),
     onError: (error: Error) => {
       toast.error(error.message || 'Unable to start payment')
     },
   })
 }
 
-export function useRefreshAccountBilling() {
+export function useRefreshWorkspaceBilling(workspaceId: string | null) {
   const queryClient = useQueryClient()
 
   return () => {
-    queryClient.invalidateQueries({
-      queryKey: billingKeys.account(),
-    })
+    if (workspaceId) {
+      queryClient.invalidateQueries({
+        queryKey: billingKeys.workspace(workspaceId),
+      })
+    }
   }
 }

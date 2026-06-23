@@ -18,12 +18,12 @@ export const billingApi = {
   getCreditPackages: () =>
     http.get<CreditPackageDto[]>('/billing/credit-packages'),
 
-  getAccountBilling: () =>
-    http.get<BillingSummaryDto>(`/billing/summary`),
+  getWorkspaceBilling: (workspaceId: string) =>
+    http.get<BillingSummaryDto>(`/workspaces/${workspaceId}/billing`),
 
-  createCheckout: (productCode: string) =>
+  createCheckout: (workspaceId: string, productCode: string) =>
     http.post<CheckoutSessionDto>(
-      `/billing/checkout`,
+      `/workspaces/${workspaceId}/billing/checkout`,
       { productCode },
     ),
 
