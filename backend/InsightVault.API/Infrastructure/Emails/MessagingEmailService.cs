@@ -7,17 +7,21 @@ public sealed class MessagingEmailService(
     IMessagePublisher messagePublisher,
     ILogger<MessagingEmailService> logger) : IEmailService
 {
+    private static readonly TimeZoneInfo VietnamTimeZone =
+        TimeZoneInfo.FindSystemTimeZoneById("Asia/Ho_Chi_Minh");
     public async Task SendLoginNotificationAsync(
         string email,
         string fullName,
         DateTimeOffset loginTime,
         CancellationToken cancellationToken = default)
     {
+        var loginTimeVietnam = TimeZoneInfo.ConvertTime(loginTime, VietnamTimeZone);
+
         var subject = "New login to your InsightVault AI account";
         var body = $@"
             <h2>Hello {fullName},</h2>
             <p>We noticed a new login to your InsightVault AI account.</p>
-            <p><strong>Time:</strong> {loginTime:yyyy-MM-dd HH:mm:ss} UTC</p>
+            <p><strong>Time:</strong> {loginTimeVietnam:yyyy-MM-dd HH:mm:ss} (UTC+7)</p>
             <p>If this was you, you can safely ignore this email.</p>
             <p>Thanks,<br/>The InsightVault AI Team</p>
         ";
@@ -35,11 +39,13 @@ public sealed class MessagingEmailService(
         DateTimeOffset expiresAt,
         CancellationToken cancellationToken = default)
     {
+        var expiresAtVietnam = TimeZoneInfo.ConvertTime(expiresAt, VietnamTimeZone);
+
         var subject = $"You've been invited to join {workspaceName} on InsightVault AI";
         var body = $@"
             <h2>Hello!</h2>
             <p><strong>{inviterName}</strong> has invited you to join the workspace <strong>{workspaceName}</strong> as a <strong>{role}</strong>.</p>
-            <p>This invitation was intended for <strong>{email}</strong> and expires on <strong>{expiresAt:yyyy-MM-dd HH:mm:ss} UTC</strong>.</p>
+            <p>This invitation was intended for <strong>{email}</strong> and expires on <strong>{expiresAtVietnam:yyyy-MM-dd HH:mm:ss} (UTC+7)</strong>.</p>
             <p>
                 <a href=""{viewInvitationUrl}"" style=""display:inline-block;padding:10px 16px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;"">
                     View invitation
