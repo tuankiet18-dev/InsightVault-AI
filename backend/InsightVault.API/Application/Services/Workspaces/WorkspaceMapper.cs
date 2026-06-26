@@ -16,6 +16,8 @@ internal static class WorkspaceMapper
             workspace.Description,
             workspace.IsArchived,
             ToApiWorkspaceRole(currentUserRole),
+            workspace.Subscription?.Plan?.Code,
+            workspace.Subscription?.Plan?.Name,
             workspace.CreatedAt,
             workspace.UpdatedAt);
     }

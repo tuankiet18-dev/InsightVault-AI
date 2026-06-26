@@ -6,6 +6,7 @@ services:
       context: ../frontend
       target: dev
     container_name: insightvault_frontend
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
     ports:
       - "5173:5173"
     volumes:
@@ -85,7 +86,7 @@ services:
       rabbitmq:
         condition: service_healthy
       ai-service:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
 
   ai-service:
@@ -93,7 +94,10 @@ services:
       context: ../ai-service
     container_name: insightvault_ai_service
     env_file:
-      - ../ai-service/.env
+      - path: ../ai-service/.env
+        required: false
+      - path: ./.env
+        required: false
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in infra/.env}@postgres:5432/${POSTGRES_DB:-insightvault}
       MINIO_ENDPOINT: minio:9000
@@ -101,6 +105,12 @@ services:
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in infra/.env}
     ports:
       - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; import sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').getcode() == 200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       postgres:
         condition: service_healthy

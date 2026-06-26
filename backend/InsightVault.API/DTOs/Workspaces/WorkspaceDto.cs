@@ -9,5 +9,7 @@ public sealed record WorkspaceDto(
     string? Description,
     bool IsArchived,
     ApiWorkspaceRole CurrentUserRole,
+    string? BillingPlanCode,
+    string? BillingPlanName,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);

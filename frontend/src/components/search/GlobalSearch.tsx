@@ -112,7 +112,9 @@ export function GlobalSearch() {
                   <ResultIcon type={result.type} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="truncate text-sm font-semibold text-foreground">{result.title}</span>
+                      <span className="truncate text-sm font-semibold text-foreground">
+                        <HighlightedText text={result.title} query={query} />
+                      </span>
                       <span className={cn(
                         'rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase',
                         result.type === 'chunk' ? 'bg-ai-50 text-ai-700' : 'bg-muted text-muted-foreground',
@@ -121,7 +123,9 @@ export function GlobalSearch() {
                       </span>
                     </div>
                     {result.snippet && (
-                      <p className="mt-1 line-clamp-1 text-xs leading-5 text-surface-600">{result.snippet}</p>
+                      <p className="mt-1 line-clamp-1 text-xs leading-5 text-surface-600">
+                        <HighlightedText text={result.snippet} query={query} />
+                      </p>
                     )}
                   </div>
                 </button>
@@ -132,6 +136,32 @@ export function GlobalSearch() {
       </PopoverContent>
     </Popover>
   )
+}
+
+function HighlightedText({ text, query }: { text: string; query: string }) {
+  const normalizedQuery = query.trim()
+  if (!normalizedQuery) return <>{text}</>
+
+  const pattern = new RegExp(`(${escapeRegExp(normalizedQuery)})`, 'ig')
+  const parts = text.split(pattern)
+
+  return (
+    <>
+      {parts.map((part, index) => (
+        part.toLowerCase() === normalizedQuery.toLowerCase() ? (
+          <mark key={index} className="rounded bg-amber-100 px-0.5 text-amber-900">
+            {part}
+          </mark>
+        ) : (
+          <span key={index}>{part}</span>
+        )
+      ))}
+    </>
+  )
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 function ResultIcon({ type }: { type: WorkspaceSearchResultDto['type'] }) {

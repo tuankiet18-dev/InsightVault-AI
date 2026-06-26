@@ -10,6 +10,16 @@ namespace InsightVault.API.Infrastructure.Persistence.Repositories;
 public sealed class WorkspaceRepository(InsightVaultDbContext db)
     : GenericRepository<Workspace>(db), IWorkspaceRepository
 {
+    public override async Task<Workspace?> GetByIdAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        return await Db.Workspaces
+            .Include(workspace => workspace.Subscription!)
+                .ThenInclude(subscription => subscription.Plan)
+            .FirstOrDefaultAsync(workspace => workspace.Id == id, cancellationToken);
+    }
+
     public async Task<Workspace?> GetByIdWithMembersAsync(
         Guid workspaceId,
         CancellationToken cancellationToken = default)
@@ -49,6 +59,8 @@ public sealed class WorkspaceRepository(InsightVaultDbContext db)
     {
         var q = Db.Workspaces
             .AsNoTracking()
+            .Include(w => w.Subscription!)
+                .ThenInclude(subscription => subscription.Plan)
             .Where(w => w.DeletedAt == null
                 && w.Members.Any(m => m.UserId == userId
                     && m.Status == MemberStatus.Active));

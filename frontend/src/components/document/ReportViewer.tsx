@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { useTabStore } from '@/stores/tabStore'
-import { FileText, Download, Share2 } from 'lucide-react'
+import { FileText, Download, Share2, Printer } from 'lucide-react'
 import { useReport } from '@/hooks/useReports'
 import { useDocuments } from '@/hooks/useDocuments'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
@@ -7,11 +8,14 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
 import { createDocumentTab } from '@/lib/documentTabs'
+import { ShareReportModal } from '@/components/report/ShareReportModal'
+import { downloadReportMarkdown } from '@/lib/reportDownloads'
 
 export function ReportViewer() {
   const { getActiveTab, openTab } = useTabStore()
   const activeTab = getActiveTab()
   const { activeWorkspaceId } = useWorkspaceStore()
+  const [shareOpen, setShareOpen] = useState(false)
   
   const reportId = activeTab?.type === 'report' ? (activeTab.reportId || '1') : null
   const { data: report, isLoading } = useReport(reportId)
@@ -32,7 +36,7 @@ export function ReportViewer() {
 
   const cleanTitle = report.title.replace(/\s*-\s*\d+\s*documents?/i, '')
 
-  const handlePrint = () => {
+  const handleExportPdf = () => {
     const printWindow = window.open('', '', 'width=800,height=600')
     if (!printWindow) return
 
@@ -51,13 +55,40 @@ export function ReportViewer() {
           ${styles}
           <style>
             body { background-color: white; color: black; }
+            .print-toolbar {
+              position: sticky;
+              top: 0;
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              gap: 12px;
+              padding: 12px 16px;
+              margin: -32px -32px 24px;
+              border-bottom: 1px solid #e2e8f0;
+              background: white;
+              font-family: ui-sans-serif, system-ui, sans-serif;
+            }
+            .print-toolbar button {
+              border: 0;
+              border-radius: 8px;
+              background: #2563eb;
+              color: white;
+              cursor: pointer;
+              font-weight: 600;
+              padding: 8px 14px;
+            }
             @media print {
               @page { margin: 1cm; }
               body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .print-toolbar { display: none; }
             }
           </style>
         </head>
         <body class="p-8">
+          <div class="print-toolbar">
+            <span>Choose "Save as PDF" in the print dialog to export this report.</span>
+            <button onclick="window.print()">Save as PDF</button>
+          </div>
           <div class="max-w-4xl mx-auto">
             <h1 class="text-3xl font-bold mb-8">${cleanTitle}</h1>
             ${reportContent.innerHTML}
@@ -71,7 +102,6 @@ export function ReportViewer() {
 
     setTimeout(() => {
       printWindow.print()
-      printWindow.close()
     }, 250)
   }
 
@@ -110,15 +140,25 @@ export function ReportViewer() {
           </div>
           
           <div className="flex items-center gap-2">
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-surface-600 border border-border hover:bg-surface-100 transition-colors shadow-sm">
+            <button
+              onClick={() => setShareOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-surface-600 border border-border hover:bg-surface-100 transition-colors shadow-sm"
+            >
               <Share2 className="w-4 h-4" />
               Share
             </button>
-            <button 
-              onClick={handlePrint}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+            <button
+              onClick={() => downloadReportMarkdown(report)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-surface-600 border border-border hover:bg-surface-100 transition-colors shadow-sm"
             >
               <Download className="w-4 h-4" />
+              Download
+            </button>
+            <button 
+              onClick={handleExportPdf}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+            >
+              <Printer className="w-4 h-4" />
               Export PDF
             </button>
           </div>
@@ -134,6 +174,15 @@ export function ReportViewer() {
           </article>
         </div>
       </div>
+
+      {activeWorkspaceId && (
+        <ShareReportModal
+          isOpen={shareOpen}
+          onClose={() => setShareOpen(false)}
+          workspaceId={activeWorkspaceId}
+          report={report}
+        />
+      )}
     </div>
   )
 }

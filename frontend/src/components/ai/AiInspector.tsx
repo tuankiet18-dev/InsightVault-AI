@@ -4,7 +4,7 @@ import { useAiStore } from '@/stores/aiStore'
 import { useChatStore } from '@/stores/chatStore'
 import { useChatMessages, useChatSessions, useCreateChatSession } from '@/hooks/useChat'
 import { ChatMessage } from '@/components/chat/ChatMessage'
-import { Sparkles, Plus, History, MessageSquare, MoreHorizontal, Pin, PinOff, Edit2, Trash2, Check, X } from 'lucide-react'
+import { Sparkles, Plus, History, MessageSquare, MoreHorizontal, Pin, PinOff, Edit2, Trash2, Check, X, Square } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { DropdownMenu } from '@/components/ui/DropdownMenu'
 import { formatRelativeTime, cn } from '@/lib/utils'
@@ -41,8 +41,21 @@ export function AiInspector() {
 }
 
 function NewChatButton({ workspaceId }: { workspaceId: string }) {
-  const { setActiveSession } = useChatStore()
+  const { setActiveSession, activeRequestController, abortActiveRequest } = useChatStore()
   const createSession = useCreateChatSession(workspaceId)
+
+  if (activeRequestController) {
+    return (
+      <button
+        onClick={abortActiveRequest}
+        className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-medium text-danger-700 bg-danger-50 hover:bg-danger-100 transition-colors shrink-0 border border-danger-100"
+        title="Stop current response"
+      >
+        <Square className="h-3 w-3" />
+        <span>Stop</span>
+      </button>
+    )
+  }
 
   const handleNewChat = () => {
     createSession.mutate(
@@ -244,7 +257,7 @@ function ChatHistoryItem({ session, workspaceId }: { session: ChatSessionDto, wo
 }
 
 function InspectorChatTranscript({ workspaceId }: { workspaceId: string }) {
-  const { activeSessionId, setActiveSession } = useChatStore()
+  const { activeSessionId, setActiveSession, pendingTurn } = useChatStore()
   const { isLoading } = useAiStore()
   const { data: sessions = [] } = useChatSessions(workspaceId)
   
@@ -258,12 +271,18 @@ function InspectorChatTranscript({ workspaceId }: { workspaceId: string }) {
   const sessionId = activeSessionId
   const { data: messages = [] } = useChatMessages(sessionId)
   const scrollRef = useRef<HTMLDivElement | null>(null)
+  const shouldShowPendingTurn = Boolean(
+    pendingTurn
+    && pendingTurn.workspaceId === workspaceId
+    && (!pendingTurn.sessionId || pendingTurn.sessionId === sessionId)
+    && !messages.some(message => message.role === 'user' && message.content === pendingTurn.userContent)
+  )
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ block: 'end' })
   }, [messages.length, isLoading])
 
-  if (!sessionId || messages.length === 0) {
+  if ((!sessionId || messages.length === 0) && !shouldShowPendingTurn && !isLoading) {
     return (
       <div className="mt-8 flex flex-col items-center justify-center text-center text-surface-500">
         <Sparkles className="h-8 w-8 text-surface-300 mb-3" />
@@ -276,22 +295,43 @@ function InspectorChatTranscript({ workspaceId }: { workspaceId: string }) {
   return (
     <div className="mt-3 space-y-3">
       <div className="space-y-3">
+        {shouldShowPendingTurn && pendingTurn && (
+          <>
+            <ChatMessage
+              message={{
+                id: 'pending-user-message',
+                chatSessionId: sessionId ?? 'pending-session',
+                role: 'user',
+                status: 'pending',
+                content: pendingTurn.userContent,
+                contexts: [],
+                sources: [],
+                createdAt: new Date().toISOString(),
+              }}
+            />
+            <ThinkingBubble />
+          </>
+        )}
         {messages.map(message => (
           <ChatMessage key={message.id} message={message} />
         ))}
-        {isLoading && (
-          <div className="w-full flex justify-start">
-            <div className="w-full max-w-3xl border border-border bg-slate-50/50 dark:bg-slate-900/50 flex gap-3 rounded-xl p-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse">
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
-                  AI is thinking...
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {isLoading && !shouldShowPendingTurn && <ThinkingBubble />}
         <div ref={scrollRef} />
+      </div>
+    </div>
+  )
+}
+
+function ThinkingBubble() {
+  return (
+    <div className="w-full flex justify-start">
+      <div className="w-full max-w-3xl border border-border bg-slate-50/50 dark:bg-slate-900/50 flex gap-3 rounded-xl p-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
+            AI is thinking...
+          </div>
+        </div>
       </div>
     </div>
   )

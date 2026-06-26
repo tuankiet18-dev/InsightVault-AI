@@ -14,13 +14,58 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Mention from '@tiptap/extension-mention'
+import { Extension } from '@tiptap/core'
+import { Plugin, PluginKey } from '@tiptap/pm/state'
+import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import { getMentionSuggestion } from '@/components/chat/MentionSuggestion'
 import { useState } from 'react'
+
+const MentionHighlightPlugin = Extension.create({
+  name: 'mentionHighlight',
+
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey('mentionHighlight'),
+        state: {
+          init() {
+            return DecorationSet.empty
+          },
+          apply(tr) {
+            const decorations: Decoration[] = []
+            const doc = tr.doc
+            doc.descendants((node, pos) => {
+              if (node.isText && node.text) {
+                const regex = /@[^\s,.;:!?，。،]+(?:\.[^\s,.;:!?，。.,]+)*/g
+                let match
+                while ((match = regex.exec(node.text)) !== null) {
+                  if (match[0].length > 1) {
+                    decorations.push(
+                      Decoration.inline(pos + match.index, pos + match.index + match[0].length, {
+                        class: 'inline-flex max-w-full items-center rounded-full border border-primary-200 bg-primary-50 px-2 py-0.5 text-xs font-semibold text-primary-800 align-baseline shadow-sm',
+                      })
+                    )
+                  }
+                }
+              }
+            })
+            return DecorationSet.create(doc, decorations)
+          },
+        },
+        props: {
+          decorations(state) {
+            return this.getState(state)
+          },
+        },
+      }),
+    ]
+  },
+})
 
 export function PromptInput() {
   const { setAnswer, setCitations, setSuggestions, isLoading, setIsLoading } = useAiStore()
   const { activeWorkspaceId } = useWorkspaceStore()
-  const { activeSessionId, setActiveSession } = useChatStore()
+  const { activeSessionId, setActiveSession, setPendingTurn, setActiveRequestController } = useChatStore()
   const queryClient = useQueryClient()
   const { data: sessions = [] } = useChatSessions(activeWorkspaceId)
   
@@ -41,10 +86,11 @@ export function PromptInput() {
       }),
       Mention.configure({
         HTMLAttributes: {
-          class: 'mention-pill',
+          class: 'inline-flex items-center gap-1 bg-primary-100 text-primary-800 px-2 py-0.5 rounded-full text-[13px] font-semibold select-none shadow-sm border border-primary-300 mx-0.5 whitespace-nowrap ring-1 ring-primary-200/70',
         },
         suggestion: getMentionSuggestion(),
       }),
+      MentionHighlightPlugin,
     ],
     content: '',
     onUpdate: ({ editor }) => {
@@ -52,6 +98,7 @@ export function PromptInput() {
     },
     editorProps: {
       attributes: {
+        id: 'ai-prompt',
         class: 'min-h-[60px] w-full resize-none bg-transparent p-3 text-sm focus:outline-none focus:ring-0 prose prose-sm prose-primary max-w-none leading-normal overflow-y-auto max-h-48',
       },
       handleKeyDown: (_, event) => {
@@ -98,7 +145,16 @@ export function PromptInput() {
 
     const currentPrompt = textContent.trim()
     const optimisticMessageId = `temp-${Date.now()}`
+    const assistantMessageId = `temp-assistant-${Date.now()}`
     let targetSessionId: string | null = null
+    let persistedUserMessageId: string | null = null
+    setPendingTurn({
+      workspaceId: activeWorkspaceId,
+      sessionId: activeSessionId,
+      userContent: currentPrompt,
+    })
+    const abortController = new AbortController()
+    setActiveRequestController(abortController)
     editor.commands.clearContent()
 
     try {
@@ -109,6 +165,11 @@ export function PromptInput() {
       }
 
       targetSessionId = session.id
+      setPendingTurn({
+        workspaceId: activeWorkspaceId,
+        sessionId: session.id,
+        userContent: currentPrompt,
+      })
       queryClient.setQueryData<ChatSessionDto[]>(chatKeys.sessions(activeWorkspaceId), (oldSessions = []) => [
         session,
         ...oldSessions.filter((candidate) => candidate.id !== session.id),
@@ -122,6 +183,7 @@ export function PromptInput() {
         id: optimisticMessageId,
         chatSessionId: session.id,
         role: 'user',
+        status: 'pending',
         content: currentPrompt,
         contexts: [],
         sources: [],
@@ -133,16 +195,20 @@ export function PromptInput() {
         optimisticMessage,
       ])
 
-      const stream = chatApi.streamMessage(session.id, {
-        content: currentPrompt,
-        contexts: buildChatContexts(mentionedIds),
-      })
+      const stream = chatApi.streamMessage(
+        session.id,
+        {
+          content: currentPrompt,
+          contexts: buildChatContexts(mentionedIds),
+        },
+        abortController.signal,
+      )
 
-      const assistantMessageId = `temp-assistant-${Date.now()}`
       let assistantMessage: ChatMessageDto = {
         id: assistantMessageId,
         chatSessionId: session.id,
         role: 'assistant',
+        status: 'pending',
         content: '',
         contexts: [],
         sources: [],
@@ -161,6 +227,7 @@ export function PromptInput() {
         const eventData = chunk.data || chunk.Data
 
         if (eventType === 'user_message') {
+          persistedUserMessageId = eventData.id
           // Replace optimistic user message with the real one from DB
           queryClient.setQueryData<ChatMessageDto[]>(chatKeys.messages(session.id), (oldMessages = []) => [
             ...oldMessages.filter((m) => m.id !== optimisticMessageId && m.id !== eventData.id),
@@ -203,6 +270,12 @@ export function PromptInput() {
         }
       }
 
+      assistantMessage = { ...assistantMessage, status: 'completed' }
+      queryClient.setQueryData<ChatMessageDto[]>(chatKeys.messages(session.id), (oldMessages = []) => [
+        ...oldMessages.filter((m) => m.id !== assistantMessageId),
+        assistantMessage,
+      ])
+
       queryClient.invalidateQueries({ queryKey: chatKeys.sessions(activeWorkspaceId) })
       queryClient.invalidateQueries({ queryKey: chatKeys.messages(session.id) })
 
@@ -230,6 +303,25 @@ export function PromptInput() {
           : ['Try asking about a completed document', 'Open a report or document to narrow the scope']
       )
     } catch (error) {
+      if (isAbortError(error)) {
+        setAnswer('Request stopped before the AI finished responding.')
+        setSuggestions(['Edit your question and send again'])
+        if (targetSessionId) {
+          queryClient.setQueryData<ChatMessageDto[]>(chatKeys.messages(targetSessionId), (oldMessages = []) =>
+            oldMessages
+              .filter((message) => message.id !== assistantMessageId)
+              .map((message) => {
+                if (message.id === optimisticMessageId || message.id === persistedUserMessageId) {
+                  return { ...message, status: 'cancelled' as const }
+                }
+                return message
+              }),
+          )
+          queryClient.invalidateQueries({ queryKey: chatKeys.messages(targetSessionId) })
+        }
+        return
+      }
+
       const errorMessage = formatChatError(error)
       setAnswer(errorMessage)
       editor.commands.setContent(currentPrompt)
@@ -241,6 +333,7 @@ export function PromptInput() {
           id: `error-${Date.now()}`,
           chatSessionId: targetSessionId,
           role: 'assistant',
+          status: 'failed',
           content: errorMessage,
           contexts: [],
           sources: [],
@@ -248,13 +341,21 @@ export function PromptInput() {
         }
 
         queryClient.setQueryData<ChatMessageDto[]>(chatKeys.messages(targetSessionId), (oldMessages = []) => [
-          ...oldMessages,
+          ...oldMessages
+            .filter((message) => message.id !== assistantMessageId)
+            .map((message) => (
+              message.id === optimisticMessageId || message.id === persistedUserMessageId
+                ? { ...message, status: 'failed' as const }
+                : message
+            )),
           localErrorMessage,
         ])
         queryClient.invalidateQueries({ queryKey: chatKeys.sessions(activeWorkspaceId) })
       }
     } finally {
       setIsLoading(false)
+      setPendingTurn(null)
+      setActiveRequestController(null)
     }
   }
   
@@ -321,6 +422,10 @@ export function PromptInput() {
 
 function hasDocumentSource(source: ChatSourceDto): source is ChatSourceDto & { documentId: string } {
   return !!source.documentId
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === 'AbortError'
 }
 
 function formatChatError(error: unknown) {

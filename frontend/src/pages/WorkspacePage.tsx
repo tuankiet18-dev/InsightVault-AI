@@ -8,6 +8,7 @@ import { AiInspector } from '@/components/ai/AiInspector'
 import { ComparePanel } from '@/components/compare/ComparePanel'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useTabStore } from '@/stores/tabStore'
+import { useAiStore } from '@/stores/aiStore'
 import { useWorkspace } from '@/hooks/useWorkspaces'
 import { useDocuments } from '@/hooks/useDocuments'
 import { useReports, useDeleteReport } from '@/hooks/useReports'
@@ -37,13 +38,15 @@ import {
   UploadCloud,
 } from 'lucide-react'
 import type { DocumentDto, ReportDto } from '@/types/api'
+import { downloadReportMarkdown } from '@/lib/reportDownloads'
+import { resetWorkspaceSurface } from '@/lib/workspaceSwitch'
 
 export function WorkspacePage() {
   const { workspaceId } = useParams()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { setActiveWorkspace } = useWorkspaceStore()
-  const { tabs, getActiveTab, resetTabs } = useTabStore()
+  const { tabs, getActiveTab } = useTabStore()
   const activeTab = getActiveTab()
   const { data: workspace, isLoading, isError } = useWorkspace(workspaceId ?? null)
   const { inspectorOpen, setActiveNavItem, toggleInspector } = useUiStore()
@@ -52,12 +55,12 @@ export function WorkspacePage() {
 
   useEffect(() => {
     if (previousWorkspaceIdRef.current && previousWorkspaceIdRef.current !== workspaceId) {
-      resetTabs()
+      resetWorkspaceSurface()
     }
     previousWorkspaceIdRef.current = workspaceId ?? null
     setActiveWorkspace(workspaceId ?? null)
     return () => setActiveWorkspace(null)
-  }, [resetTabs, setActiveWorkspace, workspaceId])
+  }, [setActiveWorkspace, workspaceId])
 
   useEffect(() => {
     if (!workspaceId) return
@@ -225,9 +228,9 @@ function ReportsPanel({ workspaceId }: { workspaceId: string }) {
                 
                 <div className="absolute right-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 bg-surface-0/95 backdrop-blur-sm p-1.5 rounded-lg shadow-sm border border-border">
                   <button 
-                    onClick={(e) => { e.stopPropagation(); alert('Tính năng tải PDF sẽ sớm được cập nhật!') }} 
+                    onClick={(e) => { e.stopPropagation(); downloadReportMarkdown(report) }}
                     className="p-1.5 hover:bg-surface-100 rounded-md text-surface-500 hover:text-surface-900 transition-colors" 
-                    title="Download PDF"
+                    title="Download report"
                   >
                     <Download className="w-4 h-4" />
                   </button>
@@ -328,6 +331,7 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
   const { data: folders = [] } = useFolders(workspaceId)
   const { data: reports = [] } = useReports(workspaceId)
   const { inspectorOpen, openUploadModal, openCreateFolderModal, setActiveNavItem, toggleInspector } = useUiStore()
+  const { setScope } = useAiStore()
 
   const isWorkspaceEmpty = documents.length === 0 && folders.length === 0
   const { openTab } = useTabStore()
@@ -375,20 +379,20 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Button onClick={() => openUploadModal()} className="h-9">
+                <Button onClick={() => openUploadModal()} className="h-9 max-w-full">
                   <Upload className="h-4 w-4" />
-                  Upload
+                  <span className="hidden sm:inline truncate">Upload</span>
                 </Button>
-                <Button variant="outline" onClick={startCompare} className="h-9">
+                <Button variant="outline" onClick={startCompare} className="h-9 max-w-full">
                   <GitCompare className="h-4 w-4" />
-                  Compare
+                  <span className="hidden sm:inline truncate">Compare</span>
                 </Button>
               </div>
             </div>
 
             <div className="mt-5">
               {isWorkspaceEmpty ? (
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(170px,1fr))]">
                   <div 
                     onClick={() => openCreateFolderModal()}
                     className="group cursor-pointer rounded-xl border border-border bg-surface-0 p-5 transition-all hover:border-primary-300 hover:shadow-md"
@@ -396,8 +400,8 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
                     <div className="mb-3 inline-flex rounded-lg bg-primary-50 p-2 text-primary-600">
                       <FolderPlus className="h-5 w-5" />
                     </div>
-                    <h3 className="font-semibold text-surface-900 group-hover:text-primary-700 transition-colors">Create a folder</h3>
-                    <p className="mt-1 text-xs leading-relaxed text-surface-500">Create a folder to organize your documents.</p>
+                    <h3 className="truncate font-semibold text-surface-900 group-hover:text-primary-700 transition-colors">Create a folder</h3>
+                    <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-surface-500">Create a folder to organize your documents.</p>
                   </div>
                   
                   <div 
@@ -407,12 +411,13 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
                     <div className="mb-3 inline-flex rounded-lg bg-primary-50 p-2 text-primary-600">
                       <UploadCloud className="h-5 w-5" />
                     </div>
-                    <h3 className="font-semibold text-surface-900 group-hover:text-primary-700 transition-colors">Upload documents</h3>
-                    <p className="mt-1 text-xs leading-relaxed text-surface-500">Upload PDFs, docs to extract knowledge.</p>
+                    <h3 className="truncate font-semibold text-surface-900 group-hover:text-primary-700 transition-colors">Upload documents</h3>
+                    <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-surface-500">Upload PDFs, docs to extract knowledge.</p>
                   </div>
 
                   <div 
                     onClick={() => {
+                      setScope('workspace')
                       setActiveNavItem('chat')
                       if (!inspectorOpen) toggleInspector()
                       window.setTimeout(() => document.getElementById('ai-prompt')?.focus(), 0)
@@ -422,12 +427,12 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
                     <div className="mb-3 inline-flex rounded-lg bg-primary-50 p-2 text-primary-600">
                       <Bot className="h-5 w-5" />
                     </div>
-                    <h3 className="font-semibold text-surface-900 group-hover:text-primary-700 transition-colors">Ask AI</h3>
-                    <p className="mt-1 text-xs leading-relaxed text-surface-500">Chat with your documents to get answers.</p>
+                    <h3 className="truncate font-semibold text-surface-900 group-hover:text-primary-700 transition-colors">Ask AI</h3>
+                    <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-surface-500">Chat with your documents to get answers.</p>
                   </div>
                 </div>
               ) : (
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))]">
                   <Metric label="Documents" value={documents.length} detail={`${completed} ready`} icon={FileText} />
                   <Metric label="Ready" value={`${readyRate}%`} detail={`${processing} processing`} icon={Sparkles} />
                   <Metric label="Reports" value={reports.length} detail="stored outputs" icon={FileBarChart2} />
@@ -457,6 +462,7 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
             <button
               type="button"
               onClick={() => {
+                setScope('workspace')
                 setActiveNavItem('chat')
                 if (window.innerWidth < 1280) {
                   useUiStore.getState().setMobileDrawer('inspector')
@@ -479,9 +485,9 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
               <div>
                 <h2 className="text-sm font-semibold text-foreground">Recent documents</h2>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => openUploadModal()}>
+              <Button variant="ghost" size="sm" onClick={() => openUploadModal()} className="max-w-[84px]">
                 <Upload className="h-4 w-4" />
-                Add
+                <span className="hidden sm:inline truncate">Add</span>
               </Button>
             </div>
 
@@ -525,7 +531,7 @@ function WorkspaceHome({ workspaceId, workspaceName }: { workspaceId: string; wo
                 <h3 className="text-sm font-semibold text-foreground">No documents yet</h3>
                 <Button className="mt-4" onClick={() => openUploadModal()}>
                   <Upload className="h-4 w-4" />
-                  Upload first document
+                  <span className="hidden sm:inline truncate">Upload first document</span>
                 </Button>
               </div>
             )}
