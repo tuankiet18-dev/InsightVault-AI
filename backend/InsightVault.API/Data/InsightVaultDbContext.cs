@@ -396,11 +396,17 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
     private static void ConfigureChatMessages(ModelBuilder modelBuilder)
     {
         var roleConverter = new EnumToStringConverter<ChatMessageRole>();
+        var statusConverter = new EnumToStringConverter<ChatMessageStatus>();
 
         modelBuilder.Entity<ChatMessage>(entity =>
         {
             entity.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.Property(x => x.Role).HasConversion(roleConverter).HasMaxLength(50).IsRequired();
+            entity.Property(x => x.Status)
+                .HasConversion(statusConverter)
+                .HasMaxLength(50)
+                .HasDefaultValue(ChatMessageStatus.Completed)
+                .IsRequired();
             entity.Property(x => x.Content).IsRequired();
             entity.Property(x => x.ModelName).HasMaxLength(255);
             entity.Property(x => x.Metadata).HasColumnType("jsonb").HasDefaultValueSql("'{}'::jsonb");
@@ -415,6 +421,7 @@ public sealed class InsightVaultDbContext(DbContextOptions<InsightVaultDbContext
             entity.HasAlternateKey(x => new { x.Id, x.WorkspaceId });
             entity.HasIndex(x => x.ChatSessionId);
             entity.HasIndex(x => x.WorkspaceId);
+            entity.HasIndex(x => x.Status);
             entity.HasIndex(x => x.CreatedAt);
         });
     }

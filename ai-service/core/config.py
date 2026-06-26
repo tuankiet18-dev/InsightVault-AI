@@ -4,13 +4,17 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def _read_gemini_api_key() -> str:
+    return os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY", "")
+
+
 class Settings:
     # Generation provider
     CHAT_PROVIDER: str = os.getenv("CHAT_PROVIDER", "gemini").lower()
     CHAT_TEMPERATURE: float = float(os.getenv("CHAT_TEMPERATURE", "0.2"))
 
     # Gemini
-    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_API_KEY: str = _read_gemini_api_key()
     GEMINI_EMBEDDING_MODEL: str = os.getenv("GEMINI_EMBEDDING_MODEL", "models/gemini-embedding-001")
     GEMINI_EMBEDDING_DIMENSION: int = 768
     GEMINI_CHAT_MODEL: str = os.getenv("GEMINI_CHAT_MODEL", "models/gemini-2.5-flash")
@@ -45,6 +49,9 @@ class Settings:
 
 
 settings = Settings()
+
+if settings.GEMINI_API_KEY and not os.getenv("GOOGLE_API_KEY"):
+    os.environ["GOOGLE_API_KEY"] = settings.GEMINI_API_KEY
 
 
 def current_chat_model_name() -> str:

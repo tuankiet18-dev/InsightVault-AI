@@ -10,6 +10,8 @@ import {
   WalletCards,
   Mail,
   CreditCard,
+  Crown,
+  Sparkles,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -18,9 +20,7 @@ import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useWorkspace, useWorkspaces, useDeleteWorkspace } from '@/hooks/useWorkspaces'
 import { useUiStore } from '@/stores/uiStore'
 import { useAuthStore } from '@/stores/authStore'
-import { useTabStore } from '@/stores/tabStore'
-import { useChatStore } from '@/stores/chatStore'
-import { useAiStore } from '@/stores/aiStore'
+import { resetWorkspaceSurface } from '@/lib/workspaceSwitch'
 import { DropdownMenu, DropdownMenuItem } from '../ui/DropdownMenu'
 import { SettingsModal } from '../settings/SettingsModal'
 import { ConfirmModal } from '../ui/ConfirmModal'
@@ -100,10 +100,7 @@ export function TopBar() {
         value={activeWorkspaceId ?? undefined}
         onValueChange={(val) => {
           setActiveWorkspace(val)
-          useTabStore.getState().resetTabs()
-          useChatStore.getState().setActiveSession(null)
-          useAiStore.getState().setAnswer(null)
-          useAiStore.getState().setCitations([])
+          resetWorkspaceSurface()
           navigate(`/workspaces/${val}`)
         }}
         disabled={!workspaces?.length}
@@ -114,13 +111,16 @@ export function TopBar() {
         <SelectContent align="start">
           {workspaces?.map((ws) => (
             <SelectItem key={ws.id} value={ws.id}>
-              {ws.name}
+              <span className="flex min-w-0 items-center gap-2">
+                <WorkspacePlanBadge code={ws.billingPlanCode} />
+                <span className="truncate">{ws.name}</span>
+              </span>
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
 
-      <GlobalSearch />
+      <GlobalSearch key={activeWorkspaceId ?? 'no-workspace'} />
 
       {role && (
         <span className="hidden rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium capitalize text-muted-foreground md:inline-flex">
@@ -132,15 +132,16 @@ export function TopBar() {
           <Button
             variant="ghost"
             size="sm"
-            className="hidden sm:inline-flex"
+            className="hidden sm:inline-flex max-w-[104px] overflow-hidden"
             onClick={() => navigate('/billing')}
+            title="Billing"
           >
             <WalletCards className="h-4 w-4" />
-            Billing
+            <span className="hidden lg:inline truncate">Billing</span>
           </Button>
-          <Button variant="ghost" size="sm" className="hidden sm:inline-flex" onClick={handleInviteClick}>
+          <Button variant="ghost" size="sm" className="hidden sm:inline-flex max-w-[96px] overflow-hidden" onClick={handleInviteClick} title="Invite">
             <UserPlus className="h-4 w-4" />
-            Invite
+            <span className="hidden lg:inline truncate">Invite</span>
           </Button>
         </>
       )}
@@ -223,5 +224,24 @@ export function TopBar() {
         isDestructive
       />
     </header>
+  )
+}
+
+function WorkspacePlanBadge({ code }: { code?: string | null }) {
+  const normalized = code?.toLowerCase()
+  const isPaid = normalized && normalized !== 'free'
+
+  if (isPaid) {
+    return (
+      <span title={code ?? 'Paid plan'} className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+        <Crown className="h-3 w-3" />
+      </span>
+    )
+  }
+
+  return (
+    <span title="Free plan" className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface-100 text-surface-500">
+      <Sparkles className="h-3 w-3" />
+    </span>
   )
 }

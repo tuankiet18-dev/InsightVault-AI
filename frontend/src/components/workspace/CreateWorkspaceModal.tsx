@@ -1,12 +1,15 @@
 import { X, Info } from 'lucide-react'
 import { useUiStore } from '@/stores/uiStore'
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useCreateWorkspace } from '@/hooks/useWorkspaces'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { resetWorkspaceSurface } from '@/lib/workspaceSwitch'
 
 export function CreateWorkspaceModal() {
   const { createWorkspaceModalOpen, setCreateWorkspaceModalOpen } = useUiStore()
   const { setActiveWorkspace } = useWorkspaceStore()
+  const navigate = useNavigate()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   
@@ -31,6 +34,8 @@ export function CreateWorkspaceModal() {
       {
         onSuccess: (newWorkspace) => {
           setActiveWorkspace(newWorkspace.id)
+          resetWorkspaceSurface()
+          navigate(`/workspaces/${newWorkspace.id}`)
           resetAndClose()
         }
       }

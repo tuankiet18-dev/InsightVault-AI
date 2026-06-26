@@ -41,7 +41,7 @@ export const chatApi = {
     return http.post<ChatTurnResponse>(`/chat-sessions/${sessionId}/messages`, data);
   },
 
-  streamMessage: async function* (sessionId: string, data: SendMessageData) {
+  streamMessage: async function* (sessionId: string, data: SendMessageData, signal?: AbortSignal) {
     const token = getToken();
     const response = await fetch(`${API_BASE_URL}/chat-sessions/${sessionId}/messages/stream`, {
       method: 'POST',
@@ -50,6 +50,7 @@ export const chatApi = {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify(data),
+      signal,
     });
 
     if (!response.ok) {

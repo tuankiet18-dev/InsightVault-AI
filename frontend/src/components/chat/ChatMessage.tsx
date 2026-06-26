@@ -1,4 +1,4 @@
-import { FileText, Copy, Check } from 'lucide-react'
+import { AlertCircle, Ban, Check, Copy, FileText, Loader2 } from 'lucide-react'
 import type { ChatMessageDto } from '@/types/api-contract'
 import { cn } from '@/lib/utils'
 import { useTabStore } from '@/stores/tabStore'
@@ -11,9 +11,10 @@ export function ChatMessage({ message }: { message: ChatMessageDto }) {
   const isUser = message.role === 'user'
   const { openTab } = useTabStore()
   const [copied, setCopied] = useState(false)
+  const displayContent = normalizeChatMarkers(message.content)
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(message.content)
+    navigator.clipboard.writeText(displayContent)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -25,19 +26,20 @@ export function ChatMessage({ message }: { message: ChatMessageDto }) {
         isUser
           ? 'ml-auto w-fit max-w-[82%] text-foreground'
           : 'w-full text-foreground',
+        message.status === 'cancelled' && 'opacity-75',
       )}>
 
 
         <div className="flex-1 min-w-0">
-
+          <MessageStatusBadge status={message.status} />
 
           {isUser ? (
             <div className="whitespace-pre-wrap text-sm leading-6 text-foreground">
-              {message.content}
+              <MentionedText text={message.content} />
             </div>
           ) : (
             <div className="prose prose-sm prose-slate max-w-none text-surface-900 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayContent}</ReactMarkdown>
             </div>
           )}
 
@@ -80,5 +82,76 @@ export function ChatMessage({ message }: { message: ChatMessageDto }) {
         </button>
       </div>
     </div>
+  )
+}
+
+function normalizeAiMarkers(content: string) {
+  return content
+    .replace(/\s*\^\[ambiguous\]/gi, ' (cần kiểm chứng)')
+    .replace(/\s*\^\[inferred\]/gi, ' (suy luận từ tài liệu)')
+}
+
+function normalizeChatMarkers(content: string) {
+  return normalizeAiMarkers(content
+    .replace(/\s*\^\[ambiguous\]/gi, ' (cần kiểm chứng)')
+    .replace(/\s*\^\[inferred\]/gi, ' (suy luận từ tài liệu)'))
+}
+
+function MessageStatusBadge({ status }: { status: ChatMessageDto['status'] }) {
+  if (status === 'completed' || status === 'pending') return null
+
+  const config = {
+    pending: {
+      label: 'Sending',
+      icon: Loader2,
+      className: 'border-primary-100 bg-primary-50 text-primary-700',
+      iconClassName: 'animate-spin',
+    },
+    failed: {
+      label: 'Failed',
+      icon: AlertCircle,
+      className: 'border-danger-100 bg-danger-50 text-danger-700',
+      iconClassName: '',
+    },
+    cancelled: {
+      label: 'Stopped',
+      icon: Ban,
+      className: 'border-surface-200 bg-surface-100 text-surface-600',
+      iconClassName: '',
+    },
+  }[status]
+
+  const Icon = config.icon
+
+  return (
+    <div className="mb-2">
+      <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold', config.className)}>
+        <Icon className={cn('h-3 w-3', config.iconClassName)} />
+        {config.label}
+      </span>
+    </div>
+  )
+}
+
+function MentionedText({ text }: { text: string }) {
+  const parts = text.split(/(@[^\s,.;:!?，。،]+(?:\.[^\s,.;:!?，。،]+)*)/g)
+
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (!part.startsWith('@') || part.length <= 1) {
+          return <span key={index}>{part}</span>
+        }
+
+        return (
+          <span
+            key={index}
+            className="inline-flex max-w-full items-center rounded-full border border-primary-200 bg-primary-50 px-2 py-0.5 text-xs font-semibold text-primary-800 align-baseline shadow-sm"
+          >
+            {part}
+          </span>
+        )
+      })}
+    </>
   )
 }

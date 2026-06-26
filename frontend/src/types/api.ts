@@ -23,6 +23,7 @@ export type AiJobType =
   | "compare_documents";
 export type AiJobStatus = "queued" | "processing" | "completed" | "failed" | "cancelled";
 export type ChatMessageRole = "user" | "assistant";
+export type ChatMessageStatus = "pending" | "completed" | "failed" | "cancelled";
 export type ReportType =
   | "summary_report"
   | "comparison_report"
@@ -50,6 +51,8 @@ export interface WorkspaceDto {
   description?: string | null;
   isArchived: boolean;
   currentUserRole: WorkspaceRole;
+  billingPlanCode?: string | null;
+  billingPlanName?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -236,6 +239,7 @@ export interface ChatMessageDto {
   id: string;
   chatSessionId: string;
   role: ChatMessageRole;
+  status: ChatMessageStatus;
   content: string;
   modelName?: string | null;
   contexts: ChatMessageContextDto[];

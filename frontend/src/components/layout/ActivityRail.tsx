@@ -31,7 +31,7 @@ export function ActivityRail() {
     setMobileDrawer,
     toggleExplorer,
   } = useUiStore()
-  const { activeWorkspaceId } = useWorkspaceStore()
+  const { activeWorkspaceId, clearWorkspaceSelection } = useWorkspaceStore()
   const { openTab } = useTabStore()
   const { user } = useAuthStore()
 
@@ -55,6 +55,7 @@ export function ActivityRail() {
       icon: GitCompare,
       onSelect: () => {
         setActiveNavItem('compare')
+        clearWorkspaceSelection()
         openTab({
           id: 'compare-workspace',
           label: 'Compare',
@@ -69,6 +70,7 @@ export function ActivityRail() {
       icon: FileBarChart2,
       onSelect: () => {
         setActiveNavItem('reports')
+        clearWorkspaceSelection()
         openTab({
           id: 'reports-workspace',
           label: 'Reports',

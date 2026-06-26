@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { FileText, Folder } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -13,26 +13,35 @@ interface MentionListProps {
 
 export const MentionList = forwardRef<MentionListRef, MentionListProps>((props, ref) => {
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const selectedItemRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     setSelectedIndex(0)
   }, [props.items])
 
+  useEffect(() => {
+    selectedItemRef.current?.scrollIntoView({ block: 'nearest' })
+  }, [selectedIndex])
+
   useImperativeHandle(ref, () => ({
     onKeyDown: ({ event }) => {
+      if (props.items.length === 0) {
+        return false
+      }
+
       if (event.key === 'ArrowUp') {
         event.preventDefault()
-        setSelectedIndex((selectedIndex + props.items.length - 1) % props.items.length)
+        setSelectedIndex((index) => (index + props.items.length - 1) % props.items.length)
         return true
       }
 
       if (event.key === 'ArrowDown') {
         event.preventDefault()
-        setSelectedIndex((selectedIndex + 1) % props.items.length)
+        setSelectedIndex((index) => (index + 1) % props.items.length)
         return true
       }
 
-      if (event.key === 'Enter') {
+      if (event.key === 'Enter' || event.key === 'Tab') {
         event.preventDefault()
         selectItem(selectedIndex)
         return true
@@ -55,11 +64,13 @@ export const MentionList = forwardRef<MentionListRef, MentionListProps>((props, 
         props.items.map((item, index) => (
           <button
             key={index}
+            ref={index === selectedIndex ? selectedItemRef : undefined}
             className={cn(
               "w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-surface-50 transition-colors",
-              index === selectedIndex && "bg-primary-50 text-primary-700"
+              index === selectedIndex && "bg-primary-50 text-primary-700 ring-1 ring-inset ring-primary-200"
             )}
             onClick={() => selectItem(index)}
+            aria-selected={index === selectedIndex}
           >
             {item.type === 'folder' ? (
               <Folder className="w-4 h-4 shrink-0 opacity-70" />

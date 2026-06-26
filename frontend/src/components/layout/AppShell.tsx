@@ -33,7 +33,7 @@ export function AppShell({ children, rightPanel }: { children: ReactNode; rightP
                 id="explorer-panel"
                 defaultSize="20%"
                 minSize="220px"
-                maxSize="40%"
+                maxSize="32%"
                 groupResizeBehavior="preserve-pixel-size"
                 className="min-w-0"
               >
@@ -44,7 +44,7 @@ export function AppShell({ children, rightPanel }: { children: ReactNode; rightP
             )}
             {showExplorerPanel && <ResizableHandle withHandle />}
 
-            <ResizablePanel id="main-panel" defaultSize="60%" minSize="360px" className="min-w-0">
+            <ResizablePanel id="main-panel" defaultSize="60%" minSize="640px" className="min-w-0">
               <main className="flex h-full w-full flex-col bg-background min-h-0 min-w-0 overflow-hidden">
                 {children}
               </main>
@@ -56,7 +56,7 @@ export function AppShell({ children, rightPanel }: { children: ReactNode; rightP
                 id="inspector-panel"
                 defaultSize="20%"
                 minSize="300px"
-                maxSize="40%"
+                maxSize="34%"
                 groupResizeBehavior="preserve-pixel-size"
                 className="min-w-0"
               >

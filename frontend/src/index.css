@@ -31,5 +31,5 @@ body {
   pointer-events: none;
 }
 .mention-pill {
-  @apply inline-flex items-center gap-1 bg-primary-100 text-primary-700 px-1.5 py-0.5 rounded text-xs font-semibold select-none shadow-sm border border-primary-200 mx-0.5 whitespace-nowrap;
+  @apply inline-flex items-center gap-1 bg-primary-100 text-primary-800 px-2 py-0.5 rounded-full text-xs font-semibold select-none shadow-sm border border-primary-300 mx-0.5 whitespace-nowrap ring-1 ring-primary-200/70;
 }
