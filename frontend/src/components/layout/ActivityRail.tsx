@@ -105,7 +105,7 @@ export function ActivityRail() {
         <div className="flex w-full flex-col items-center gap-1 border-t border-white/10 pt-2">
           <RailLink
             label="Billing"
-            to={activeWorkspaceId ? `/billing?workspaceId=${activeWorkspaceId}` : '/billing'}
+            to={activeWorkspaceId ? `/workspaces/${activeWorkspaceId}/billing` : '/dashboard'}
           >
             <CreditCard className="h-5 w-5 pointer-events-none" />
           </RailLink>
