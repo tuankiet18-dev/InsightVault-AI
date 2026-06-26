@@ -41,11 +41,12 @@ export function ShareReportModal({ isOpen, onClose, workspaceId, report }: Share
       const days = Math.round(
         (new Date(report.sharedExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
       )
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setExpireAfterDays(days > 0 ? days.toString() : '0')
     } else {
       setExpireAfterDays('0')
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [report?.id, isOpen])
 
   const shareUrl = localPublicToken
