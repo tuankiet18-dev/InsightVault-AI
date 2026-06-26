@@ -509,7 +509,10 @@ public sealed class ReportService(
             DeserializeObject(report.StructuredResult),
             report.ModelName,
             report.CreatedAt,
-            report.UpdatedAt);
+            report.UpdatedAt,
+            report.IsPublic,
+            report.PublicToken,
+            report.SharedExpiresAt);
     }
 
     public static string ToApiReportTypeString(ReportType reportType)

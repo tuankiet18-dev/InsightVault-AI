@@ -47,6 +47,11 @@ public interface IAdminService
         bool includeDeleted = false,
         CancellationToken cancellationToken = default);
 
+    Task DeleteWorkspaceAsync(
+        Guid workspaceId,
+        CancellationToken cancellationToken = default);
+
+
     Task<AdminBillingOverviewDto> GetBillingOverviewAsync(
         CancellationToken cancellationToken = default);
 

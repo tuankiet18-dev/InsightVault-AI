@@ -106,6 +106,16 @@ public sealed class AdminController(IAdminService adminService) : ControllerBase
         return Ok(workspaces);
     }
 
+    [HttpDelete("api/admin/workspaces/{workspaceId:guid}")]
+    public async Task<IActionResult> DeleteWorkspace(
+        Guid workspaceId,
+        CancellationToken cancellationToken)
+    {
+        await adminService.DeleteWorkspaceAsync(workspaceId, cancellationToken);
+
+        return NoContent();
+    }
+
     [HttpGet("api/admin/billing")]
     public async Task<ActionResult<AdminBillingOverviewDto>> GetBilling(
         CancellationToken cancellationToken)
