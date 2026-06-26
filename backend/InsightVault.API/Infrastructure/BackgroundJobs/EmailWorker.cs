@@ -220,9 +220,21 @@ public sealed class EmailWorker(
         mimeMessage.Body = new TextPart(TextFormat.Html) { Text = message.HtmlBody };
 
         using var client = new SmtpClient();
-        var secureSocketOptions = smtp.UseSsl
-            ? SecureSocketOptions.StartTls
-            : SecureSocketOptions.Auto;
+        
+        // Bypass SSL certificate validation to prevent issues inside Docker/EC2 environments
+        client.ServerCertificateValidationCallback = (s, c, h, e) => true;
+
+        SecureSocketOptions secureSocketOptions;
+        if (smtp.UseSsl)
+        {
+            secureSocketOptions = smtp.Port == 465
+                ? SecureSocketOptions.SslOnConnect
+                : SecureSocketOptions.StartTls;
+        }
+        else
+        {
+            secureSocketOptions = SecureSocketOptions.None;
+        }
 
         await client.ConnectAsync(smtp.Host, smtp.Port, secureSocketOptions, cancellationToken);
 
