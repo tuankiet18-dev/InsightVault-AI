@@ -10,14 +10,16 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { useUiStore } from '@/stores/uiStore'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 
 export function UpgradeModal() {
   const navigate = useNavigate()
   const { upgradeModalState, closeUpgradeModal } = useUiStore()
+  const { activeWorkspaceId } = useWorkspaceStore()
 
   const handleUpgradeClick = () => {
     closeUpgradeModal()
-    navigate('/billing')
+    navigate(activeWorkspaceId ? `/workspaces/${activeWorkspaceId}/billing` : '/billing')
   }
 
   return (

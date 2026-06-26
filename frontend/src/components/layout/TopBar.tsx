@@ -133,7 +133,7 @@ export function TopBar() {
             variant="ghost"
             size="sm"
             className="hidden sm:inline-flex max-w-[104px] overflow-hidden"
-            onClick={() => navigate('/billing')}
+            onClick={() => navigate(activeWorkspaceId ? `/workspaces/${activeWorkspaceId}/billing` : '/billing')}
             title="Billing"
           >
             <WalletCards className="h-4 w-4" />
@@ -187,7 +187,7 @@ export function TopBar() {
             </span>
           )}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigate('/billing')} icon={<CreditCard className="h-4 w-4" />}>
+        <DropdownMenuItem onClick={() => navigate(activeWorkspaceId ? `/workspaces/${activeWorkspaceId}/billing` : '/billing')} icon={<CreditCard className="h-4 w-4" />}>
           Billing
         </DropdownMenuItem>
         {isOwner && (
