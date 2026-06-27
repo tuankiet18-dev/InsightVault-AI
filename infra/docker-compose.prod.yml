@@ -49,6 +49,7 @@ services:
       RabbitMQ__EmailMaxDeliveryAttempts: ${RABBITMQ_EMAIL_MAX_DELIVERY_ATTEMPTS:-3}
       RabbitMQ__EmailRetryDelaySeconds: ${RABBITMQ_EMAIL_RETRY_DELAY_SECONDS:-5}
       AIService__BaseUrl: http://ai-service:8000
+      WorkspaceInvitation__FrontendBaseUrl: ${FRONTEND_BASE_URL:-http://localhost:5173}
       Smtp__Enabled: ${SMTP_ENABLED:-false}
       Smtp__Host: ${SMTP_HOST:-smtp.gmail.com}
       Smtp__Port: ${SMTP_PORT:-587}
