@@ -441,6 +441,35 @@ public sealed class AdminService(
         return workspaces;
     }
 
+    public async Task DeleteWorkspaceAsync(
+        Guid workspaceId,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsureCurrentUserIsAdminAsync(cancellationToken);
+
+        var workspace = await db.Workspaces.FirstOrDefaultAsync(
+            candidate => candidate.Id == workspaceId,
+            cancellationToken)
+            ?? throw new ApiException(
+                StatusCodes.Status404NotFound,
+                "admin.workspace_not_found",
+                "Workspace not found.");
+
+        if (workspace.DeletedAt is not null)
+        {
+            throw new ApiException(
+                StatusCodes.Status409Conflict,
+                "admin.workspace_already_deleted",
+                "Workspace is already deleted.");
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        workspace.DeletedAt = now;
+        workspace.UpdatedAt = now;
+
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<AdminBillingOverviewDto> GetBillingOverviewAsync(
         CancellationToken cancellationToken = default)
     {

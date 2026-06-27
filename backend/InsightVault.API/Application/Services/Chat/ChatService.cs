@@ -28,7 +28,7 @@ public sealed class ChatService(
     IAiServiceClient aiServiceClient,
     ISystemSettingReader systemSettingReader) : IChatService
 {
-    private const int DefaultTopK = 5;
+    private const int DefaultTopK = 12;
     private const int MaxTitleLength = 255;
     private const int ChatHistoryMessageLimit = 12;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
@@ -145,6 +145,7 @@ public sealed class ChatService(
             WorkspaceId = session.WorkspaceId,
             ChatSessionId = session.Id,
             Role = ChatMessageRole.User,
+            Status = ChatMessageStatus.Pending,
             Content = content,
             Metadata = "{}",
             CreatedAt = now,
@@ -194,6 +195,10 @@ public sealed class ChatService(
         }
         catch (InvalidOperationException exception)
         {
+            userMessage.Status = ChatMessageStatus.Failed;
+            session.UpdatedAt = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync(CancellationToken.None);
+
             throw new ApiException(
                 StatusCodes.Status502BadGateway,
                 "chat.ai_failed",
@@ -206,6 +211,7 @@ public sealed class ChatService(
             WorkspaceId = session.WorkspaceId,
             ChatSessionId = session.Id,
             Role = ChatMessageRole.Assistant,
+            Status = ChatMessageStatus.Completed,
             Content = ragResult.Answer,
             ModelName = aiSettings.ModelName,
             Metadata = "{}",
@@ -248,6 +254,7 @@ public sealed class ChatService(
         }
 
         session.UpdatedAt = now;
+        userMessage.Status = ChatMessageStatus.Completed;
         await db.ChatMessages.AddAsync(assistantMessage, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
 
@@ -280,6 +287,7 @@ public sealed class ChatService(
             WorkspaceId = session.WorkspaceId,
             ChatSessionId = session.Id,
             Role = ChatMessageRole.User,
+            Status = ChatMessageStatus.Pending,
             Content = content,
             Metadata = "{}",
             CreatedAt = now,
@@ -349,6 +357,7 @@ public sealed class ChatService(
             WorkspaceId = session.WorkspaceId,
             ChatSessionId = session.Id,
             Role = ChatMessageRole.Assistant,
+            Status = ChatMessageStatus.Pending,
             Content = string.Empty,
             ModelName = aiSettings.ModelName,
             Metadata = "{}",
@@ -357,58 +366,108 @@ public sealed class ChatService(
         };
 
         var answerBuilder = new StringBuilder();
+        var streamFailed = false;
+        var streamCompleted = false;
         var streamEnumerable = aiServiceClient.StreamRagAsync(streamRequest, cancellationToken);
 
-        await foreach (var streamEvent in streamEnumerable)
+        try
         {
-            yield return new ChatStreamEventDto(streamEvent.Event, streamEvent.Data);
+            await using var streamEnumerator = streamEnumerable.GetAsyncEnumerator(cancellationToken);
+            while (true)
+            {
+                RagStreamEvent? streamEvent = null;
+                ChatStreamEventDto? pendingErrorEvent = null;
+                try
+                {
+                    if (!await streamEnumerator.MoveNextAsync())
+                    {
+                        break;
+                    }
 
-            if (streamEvent.Event == "sources")
-            {
-                try
+                    streamEvent = streamEnumerator.Current;
+                }
+                catch (Exception exception) when (exception is not OperationCanceledException)
                 {
-                    var snakeCaseOptions = new JsonSerializerOptions(JsonOptions)
+                    streamFailed = true;
+                    var errorMessage = "The AI service could not answer right now. Check that the Gemini API key is configured and try again.";
+                    answerBuilder.Clear();
+                    answerBuilder.Append(errorMessage);
+                    pendingErrorEvent = new ChatStreamEventDto("error", JsonSerializer.SerializeToElement(errorMessage, JsonOptions));
+                }
+
+                if (pendingErrorEvent is not null)
+                {
+                    yield return pendingErrorEvent;
+                    break;
+                }
+
+                if (streamEvent is null)
+                {
+                    break;
+                }
+
+                yield return new ChatStreamEventDto(streamEvent.Event, streamEvent.Data);
+
+                if (streamEvent.Event == "sources")
+                {
+                    try
                     {
-                        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
-                    };
-                    var sources = streamEvent.Data.Deserialize<IReadOnlyList<RagSourceResult>>(snakeCaseOptions);
-                    if (sources is not null)
-                    {
-                        assistantMessage.Sources = sources.Select((source, index) => new ChatMessageSource
+                        var snakeCaseOptions = new JsonSerializerOptions(JsonOptions)
                         {
-                            Id = Guid.NewGuid(),
-                            ChatMessageId = assistantMessage.Id,
-                            DocumentId = source.DocumentId,
-                            DocumentChunkId = source.ChunkId,
-                            FileName = string.IsNullOrWhiteSpace(source.FileName) ? "Unknown source" : source.FileName,
-                            Snippet = source.Snippet,
-                            SimilarityScore = source.Similarity,
-                            Metadata = BuildSourceMetadata(source),
-                            SourceOrder = index,
-                            CreatedAt = now
-                        }).ToList();
+                            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+                        };
+                        var sources = streamEvent.Data.Deserialize<IReadOnlyList<RagSourceResult>>(snakeCaseOptions);
+                        if (sources is not null)
+                        {
+                            assistantMessage.Sources = sources.Select((source, index) => new ChatMessageSource
+                            {
+                                Id = Guid.NewGuid(),
+                                ChatMessageId = assistantMessage.Id,
+                                DocumentId = source.DocumentId,
+                                DocumentChunkId = source.ChunkId,
+                                FileName = string.IsNullOrWhiteSpace(source.FileName) ? "Unknown source" : source.FileName,
+                                Snippet = source.Snippet,
+                                SimilarityScore = source.Similarity,
+                                Metadata = BuildSourceMetadata(source),
+                                SourceOrder = index,
+                                CreatedAt = now
+                            }).ToList();
+                        }
                     }
+                    catch (JsonException) { }
                 }
-                catch (JsonException) { }
-            }
-            else if (streamEvent.Event == "chunk")
-            {
-                try
+                else if (streamEvent.Event == "chunk")
                 {
-                    var chunkText = streamEvent.Data.Deserialize<string>(JsonOptions);
-                    if (chunkText is not null)
+                    try
                     {
-                        answerBuilder.Append(chunkText);
+                        var chunkText = streamEvent.Data.Deserialize<string>(JsonOptions);
+                        if (chunkText is not null)
+                        {
+                            answerBuilder.Append(chunkText);
+                        }
                     }
+                    catch (JsonException) { }
                 }
-                catch (JsonException) { }
+            }
+
+            assistantMessage.Content = answerBuilder.ToString();
+            assistantMessage.Status = streamFailed ? ChatMessageStatus.Failed : ChatMessageStatus.Completed;
+            userMessage.Status = ChatMessageStatus.Completed;
+            session.UpdatedAt = DateTimeOffset.UtcNow;
+
+            await db.ChatMessages.AddAsync(assistantMessage, cancellationToken);
+            await db.SaveChangesAsync(cancellationToken);
+            streamCompleted = true;
+        }
+        finally
+        {
+            if (!streamCompleted && cancellationToken.IsCancellationRequested)
+            {
+                userMessage.Status = ChatMessageStatus.Cancelled;
+                session.UpdatedAt = DateTimeOffset.UtcNow;
+                await db.SaveChangesAsync(CancellationToken.None);
             }
         }
-
-        assistantMessage.Content = answerBuilder.ToString();
-        
-        await db.ChatMessages.AddAsync(assistantMessage, cancellationToken);
-        await db.SaveChangesAsync(cancellationToken);
     }
 
     public async Task DeleteSessionAsync(
@@ -455,7 +514,8 @@ public sealed class ChatService(
             .AsNoTracking()
             .Where(message => message.ChatSessionId == session.Id
                 && message.WorkspaceId == session.WorkspaceId
-                && message.Role != ChatMessageRole.System)
+                && message.Role != ChatMessageRole.System
+                && message.Status == ChatMessageStatus.Completed)
             .OrderByDescending(message => message.CreatedAt)
             .Take(ChatHistoryMessageLimit)
             .OrderBy(message => message.CreatedAt)
@@ -886,6 +946,7 @@ public sealed class ChatService(
             message.Id,
             message.ChatSessionId,
             ToApiRole(message.Role),
+            ToApiStatus(message.Status),
             message.Content,
             message.ModelName,
             message.Contexts
@@ -943,6 +1004,21 @@ public sealed class ChatService(
                 StatusCodes.Status409Conflict,
                 "chat.unsupported_role",
                 "Chat message role is not supported by the public API.")
+        };
+    }
+
+    private static ApiChatMessageStatus ToApiStatus(ChatMessageStatus status)
+    {
+        return status switch
+        {
+            ChatMessageStatus.Pending => ApiChatMessageStatus.Pending,
+            ChatMessageStatus.Completed => ApiChatMessageStatus.Completed,
+            ChatMessageStatus.Failed => ApiChatMessageStatus.Failed,
+            ChatMessageStatus.Cancelled => ApiChatMessageStatus.Cancelled,
+            _ => throw new ApiException(
+                StatusCodes.Status409Conflict,
+                "chat.unsupported_status",
+                "Chat message status is not supported by the public API.")
         };
     }
 

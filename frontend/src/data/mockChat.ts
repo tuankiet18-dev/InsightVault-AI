@@ -35,6 +35,7 @@ export const mockChatMessages: ChatMessageDto[] = [
     id: 'msg-001',
     chatSessionId: 'chat-001',
     role: 'user',
+    status: 'completed',
     content: 'MVP của project gồm những chức năng nào?',
     modelName: null,
     contexts: [],
@@ -45,6 +46,7 @@ export const mockChatMessages: ChatMessageDto[] = [
     id: 'msg-002',
     chatSessionId: 'chat-001',
     role: 'assistant',
+    status: 'completed',
     content: `Dựa trên tài liệu trong workspace, MVP của InsightVault AI bao gồm các chức năng chính sau:
 
 **1. Authentication & Authorization**
@@ -113,6 +115,7 @@ export const mockChatMessages: ChatMessageDto[] = [
     id: 'msg-003',
     chatSessionId: 'chat-001',
     role: 'user',
+    status: 'completed',
     content: 'Có những chức năng nào nằm ngoài scope MVP?',
     modelName: null,
     contexts: [],
@@ -123,6 +126,7 @@ export const mockChatMessages: ChatMessageDto[] = [
     id: 'msg-004',
     chatSessionId: 'chat-001',
     role: 'assistant',
+    status: 'completed',
     content: `Theo tài liệu, các chức năng sau **nằm ngoài scope MVP**:
 
 - Realtime collaborative editing

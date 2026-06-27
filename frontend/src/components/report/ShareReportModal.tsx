@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
@@ -19,28 +19,38 @@ export function ShareReportModal({ isOpen, onClose, workspaceId, report }: Share
   const [expireAfterDays, setExpireAfterDays] = useState<string>('0')
   const [copied, setCopied] = useState(false)
   const [localPublicToken, setLocalPublicToken] = useState<string | null>(null)
-  
+  // Track whether a save just completed so the refetch-triggered useEffect
+  // doesn't overwrite the freshly-set local state.
+  const justSavedRef = useRef(false)
+
   const shareMutation = useShareReport(workspaceId)
 
+  // Sync state from the report prop only when the modal opens (or the report
+  // changes identity), NOT on every query refetch while the modal is open.
   useEffect(() => {
-    if (report) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsPublic(report.isPublic)
-       
-      setLocalPublicToken(report.publicToken || null)
-      if (report.sharedExpiresAt) {
-        const days = Math.round((new Date(report.sharedExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-         
-        setExpireAfterDays(days > 0 ? days.toString() : '0')
-      } else {
-         
-        setExpireAfterDays('0')
-      }
+    if (!isOpen || !report) return
+    // Skip the reset if we just saved — the refetch will catch up on its own,
+    // and our local state already reflects the correct post-save values.
+    if (justSavedRef.current) {
+      justSavedRef.current = false
+      return
     }
-  }, [report, isOpen])
+    setIsPublic(report.isPublic)
+    setLocalPublicToken(report.publicToken || null)
+    if (report.sharedExpiresAt) {
+      const days = Math.round(
+        (new Date(report.sharedExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+      )
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setExpireAfterDays(days > 0 ? days.toString() : '0')
+    } else {
+      setExpireAfterDays('0')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [report?.id, isOpen])
 
-  const shareUrl = localPublicToken 
-    ? `${window.location.origin}/shared/reports/${localPublicToken}` 
+  const shareUrl = localPublicToken
+    ? `${window.location.origin}/shared/reports/${localPublicToken}`
     : ''
 
   const handleCopy = () => {
@@ -56,22 +66,27 @@ export function ShareReportModal({ isOpen, onClose, workspaceId, report }: Share
 
     const days = parseInt(expireAfterDays, 10)
     shareMutation.mutate(
-      { 
-        reportId: report.id, 
-        data: { 
-          isPublic, 
-          expireAfterDays: isPublic && days > 0 ? days : null 
-        } 
+      {
+        reportId: report.id,
+        data: {
+          isPublic,
+          expireAfterDays: isPublic && days > 0 ? days : null,
+        },
       },
       {
         onSuccess: (data) => {
           if (!isPublic) {
             onClose()
-          } else if (data.publicToken) {
-            setLocalPublicToken(data.publicToken)
+          } else {
+            // Mark that we just saved so the refetch-triggered useEffect
+            // doesn't clobber the state we're about to set.
+            justSavedRef.current = true
+            if (data.publicToken) {
+              setLocalPublicToken(data.publicToken)
+            }
           }
-        }
-      }
+        },
+      },
     )
   }
 

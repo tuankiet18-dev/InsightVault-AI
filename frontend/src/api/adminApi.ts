@@ -152,6 +152,10 @@ export const adminApi = {
     return http.get<AdminWorkspaceDto[]>('/admin/workspaces', { params: { q, includeDeleted } });
   },
 
+  deleteWorkspace: (workspaceId: string) => {
+    return http.delete<void>(`/admin/workspaces/${workspaceId}`);
+  },
+
   getBilling: () => {
     return http.get<AdminBillingOverviewDto>('/admin/billing');
   },

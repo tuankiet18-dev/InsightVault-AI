@@ -9,6 +9,8 @@ services:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:?Set VITE_API_BASE_URL in infra/.env}
         VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
     container_name: insightvault_frontend
+    networks:
+      - public
     depends_on:
       backend:
         condition: service_started
@@ -47,6 +49,7 @@ services:
       RabbitMQ__EmailMaxDeliveryAttempts: ${RABBITMQ_EMAIL_MAX_DELIVERY_ATTEMPTS:-3}
       RabbitMQ__EmailRetryDelaySeconds: ${RABBITMQ_EMAIL_RETRY_DELAY_SECONDS:-5}
       AIService__BaseUrl: http://ai-service:8000
+      WorkspaceInvitation__FrontendBaseUrl: ${FRONTEND_BASE_URL:-http://localhost:5173}
       Smtp__Enabled: ${SMTP_ENABLED:-false}
       Smtp__Host: ${SMTP_HOST:-smtp.gmail.com}
       Smtp__Port: ${SMTP_PORT:-587}
@@ -76,8 +79,11 @@ services:
       rabbitmq:
         condition: service_healthy
       ai-service:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
+    networks:
+      - public
+      - internal
 
   ai-service:
     build:
@@ -107,12 +113,20 @@ services:
       RAG_SIMILARITY_THRESHOLD: ${RAG_SIMILARITY_THRESHOLD:-0.5}
       GEMINI_MAX_RETRIES: ${GEMINI_MAX_RETRIES:-3}
       GEMINI_RETRY_DELAY: ${GEMINI_RETRY_DELAY:-2.0}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; import sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').getcode() == 200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       postgres:
         condition: service_healthy
       minio:
         condition: service_started
     restart: unless-stopped
+    networks:
+      - internal
 
   postgres:
     image: pgvector/pgvector:pg16
@@ -121,6 +135,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in infra/.env}
       POSTGRES_DB: ${POSTGRES_DB:-insightvault}
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -129,18 +145,23 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    networks:
+      - internal
 
   minio:
     image: minio/minio
     container_name: insightvault_minio
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in infra/.env}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in infra/.env}
       MINIO_API_CORS_ALLOW_ORIGIN: ${MINIO_CORS_ALLOW_ORIGIN:-*}
     volumes:
       - minio_data:/data
     restart: unless-stopped
+    networks:
+      - public
+      - internal
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -156,6 +177,8 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    networks:
+      - internal
 
   caddy:
     image: caddy:2-alpine
@@ -180,6 +203,8 @@ services:
         condition: service_started
       minio:
         condition: service_started
+    networks:
+      - public
 
 volumes:
   postgres_data:
@@ -187,3 +212,7 @@ volumes:
   rabbitmq_data:
   caddy_data:
   caddy_config:
+
+networks:
+  public:
+  internal:

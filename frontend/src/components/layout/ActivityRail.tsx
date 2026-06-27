@@ -31,7 +31,7 @@ export function ActivityRail() {
     setMobileDrawer,
     toggleExplorer,
   } = useUiStore()
-  const { activeWorkspaceId } = useWorkspaceStore()
+  const { activeWorkspaceId, clearWorkspaceSelection } = useWorkspaceStore()
   const { openTab } = useTabStore()
   const { user } = useAuthStore()
 
@@ -55,6 +55,7 @@ export function ActivityRail() {
       icon: GitCompare,
       onSelect: () => {
         setActiveNavItem('compare')
+        clearWorkspaceSelection()
         openTab({
           id: 'compare-workspace',
           label: 'Compare',
@@ -69,6 +70,7 @@ export function ActivityRail() {
       icon: FileBarChart2,
       onSelect: () => {
         setActiveNavItem('reports')
+        clearWorkspaceSelection()
         openTab({
           id: 'reports-workspace',
           label: 'Reports',
@@ -103,7 +105,7 @@ export function ActivityRail() {
         <div className="flex w-full flex-col items-center gap-1 border-t border-white/10 pt-2">
           <RailLink
             label="Billing"
-            to={activeWorkspaceId ? `/billing?workspaceId=${activeWorkspaceId}` : '/billing'}
+            to={activeWorkspaceId ? `/workspaces/${activeWorkspaceId}/billing` : '/dashboard'}
           >
             <CreditCard className="h-5 w-5 pointer-events-none" />
           </RailLink>

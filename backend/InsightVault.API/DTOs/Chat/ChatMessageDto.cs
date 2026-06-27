@@ -6,6 +6,7 @@ public sealed record ChatMessageDto(
     Guid Id,
     Guid ChatSessionId,
     ApiChatMessageRole Role,
+    ApiChatMessageStatus Status,
     string Content,
     string? ModelName,
     IReadOnlyList<ChatMessageContextDto> Contexts,

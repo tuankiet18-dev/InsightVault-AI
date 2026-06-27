@@ -45,6 +45,41 @@ _CHAT_HISTORY_SECTION = """LỊCH SỬ HỘI THOẠI:
 """
 
 
+_CHAT_HISTORY_SECTION = """LICH SU HOI THOAI GAN DAY:
+{history}
+
+"""
+
+_RAG_PROMPT_TEMPLATE = """Ban la tro ly AI cua InsightVault. Tra loi dua tren cac doan tai lieu trong Context va lich su hoi thoai neu co.
+
+NGUYEN TAC BAT BUOC:
+- Chi dua ra ket luan khi co bang chung trong Context. Neu thieu bang chung, noi ro "Chua du bang chung trong tai lieu duoc truy xuat" thay vi suy doan.
+- Khi so sanh nhieu file, hay lan luot kiem tra tung file duoc mention; khong ket luan mot service/thanh phan "khong co" neu Context cua file do khong du day du.
+- Uu tien cau tra loi ngan, co cau truc: ket luan truc tiep, diem khac nhau/giong nhau, bang chung, gap/rui ro.
+- Tra loi bang ngon ngu cua cau hoi.
+- Khong sinh cac marker ky thuat nhu ^[ambiguous] hoac ^[inferred]. Neu can, viet tu nhien: "can kiem chung" hoac "day la suy luan tu tai lieu".
+- Trich dan nguon bang [1], [2] tuong ung voi Context khi co the.
+- Neu Context khong du thong tin, noi ro phan nao thieu va de xuat nguoi dung mo chunk/source lien quan.
+
+{chat_history_section}
+
+CONTEXT:
+---
+{context}
+---
+
+CAU HOI: {question}
+
+TRA LOI:"""
+
+
+def _clean_answer_markers(answer: str) -> str:
+    return (
+        answer.replace("^[ambiguous]", " (can kiem chung)")
+        .replace("^[inferred]", " (suy luan tu tai lieu)")
+    )
+
+
 def _build_context_block(chunks: list[dict]) -> str:
     """Format retrieved chunks into a context string."""
     parts = []
@@ -155,7 +190,7 @@ def query(
 
     for attempt in range(1, settings.GEMINI_MAX_RETRIES + 1):
         try:
-            answer = model.generate_text(prompt)
+            answer = _clean_answer_markers(model.generate_text(prompt))
             break
         except Exception as exc:
             last_error = exc
@@ -255,6 +290,7 @@ def query_stream(
     model = get_chat_model(model_name)
     try:
         for text_chunk in model.generate_text_stream(prompt):
+            text_chunk = _clean_answer_markers(text_chunk)
             yield f"data: {json.dumps({'event': 'chunk', 'data': text_chunk})}\n\n"
     except Exception as exc:
         logger.error("RAG Gemini stream failed: %s", exc)

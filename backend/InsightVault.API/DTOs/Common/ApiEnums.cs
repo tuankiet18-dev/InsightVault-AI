@@ -137,6 +137,22 @@ public enum ApiChatMessageRole
     Assistant
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter<ApiChatMessageStatus>))]
+public enum ApiChatMessageStatus
+{
+    [JsonStringEnumMemberName("pending")]
+    Pending,
+
+    [JsonStringEnumMemberName("completed")]
+    Completed,
+
+    [JsonStringEnumMemberName("failed")]
+    Failed,
+
+    [JsonStringEnumMemberName("cancelled")]
+    Cancelled
+}
+
 [JsonConverter(typeof(JsonStringEnumConverter<ApiReportType>))]
 public enum ApiReportType
 {
